@@ -22,7 +22,8 @@ import (
 	"os/exec"
 )
 
-
+// SelinuxRelabel will check if a context file exists, setfiles command exists and if both are true, will run the setfiles
+// with the context against the target, to relabel all files
 func SelinuxRelabel(target string, fs afero.Fs, raiseError bool) error {
 	var err error
 

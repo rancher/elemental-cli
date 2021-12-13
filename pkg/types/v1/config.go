@@ -21,15 +21,16 @@ import (
 )
 
 const (
-	GPT = "gpt"
-	ESP = "esp"
-	BIOS = "bios_grub"
+	GPT   = "gpt"
+	ESP   = "esp"
+	BIOS  = "bios_grub"
 	MSDOS = "msdos"
-	BOOT = "boot"
+	BOOT  = "boot"
 )
 
 type RunConfigOptions func(a *RunConfig) error
 
+// WithFs allows to pass a afero.Fs interface to the chroot struct as an option in order to override the default filesystem
 func WithFs(fs afero.Fs) func(r *RunConfig) error {
 	return func(r *RunConfig) error {
 		r.fs = fs
@@ -37,7 +38,7 @@ func WithFs(fs afero.Fs) func(r *RunConfig) error {
 	}
 }
 
-func NewRunConfig(opts...RunConfigOptions) *RunConfig {
+func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	r := &RunConfig{
 		fs: afero.NewOsFs(),
 	}
@@ -50,21 +51,26 @@ func NewRunConfig(opts...RunConfigOptions) *RunConfig {
 	return r
 }
 
+// RunConfig represents the full config needed when running commands like install, upgrade, reset, cloud-init, etc...
+// So basically anything that its not building an iso,raw image, artifacts
 type RunConfig struct {
-	Device string `yaml:"device,omitempty" mapstructure:"device"`
-	Target string `yaml:"target,omitempty" mapstructure:"target"`
-	Source string `yaml:"source,omitempty" mapstructure:"source"`
+	Device    string `yaml:"device,omitempty" mapstructure:"device"`
+	Target    string `yaml:"target,omitempty" mapstructure:"target"`
+	Source    string `yaml:"source,omitempty" mapstructure:"source"`
 	CloudInit string `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
-	ForceEfi bool `yaml:"force-efi,omitempty" mapstructure:"force-efi"`
-	ForceGpt bool `yaml:"force-gpt,omitempty" mapstructure:"force-gpt"`
+	ForceEfi  bool   `yaml:"force-efi,omitempty" mapstructure:"force-efi"`
+	ForceGpt  bool   `yaml:"force-gpt,omitempty" mapstructure:"force-gpt"`
 	PartTable string
-	BootFlag string
-	fs afero.Fs
-	logger Logger
+	BootFlag  string
+	fs        afero.Fs
+	logger    Logger
+	// TODO: Should RunConfig just accept also a syscall, runner, mounter and other functions can just refer to the config?
+	// TODO: We should allow overriding those, but maybe its just easier to have all those interfaces just in the config for the X command
 }
 
+// SetupStyle will set the parttable and bootflag for the current system in order to be used by the partitioner and/or grub
 func (r *RunConfig) SetupStyle() {
-	var part,boot string
+	var part, boot string
 
 	_, err := r.fs.Stat("/sys/firmware/efi")
 	efiExists := err == nil
@@ -84,6 +90,7 @@ func (r *RunConfig) SetupStyle() {
 	r.BootFlag = boot
 }
 
+// BuildConfig represents the config needed to build artifacts, isos, raw images.
 type BuildConfig struct {
 	Label string `yaml:"label,omitempty" mapstructure:"label"`
 }

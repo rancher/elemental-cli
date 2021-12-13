@@ -2,6 +2,7 @@ package v1
 
 import "os/exec"
 
+// Runner represents an interface that can run commands
 type Runner interface {
 	Run(string, ...string) ([]byte, error)
 }

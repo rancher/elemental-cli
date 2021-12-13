@@ -21,11 +21,12 @@ import (
 	"github.com/rancher-sandbox/elemental-cli/pkg/types/v1"
 )
 
+// InstallAction represents the action that will install cos to a device
 type InstallAction struct {
 	Config *v1.RunConfig
 }
 
-func NewInstallAction(config *v1.RunConfig) *InstallAction{
+func NewInstallAction(config *v1.RunConfig) *InstallAction {
 	return &InstallAction{Config: config}
 }
 

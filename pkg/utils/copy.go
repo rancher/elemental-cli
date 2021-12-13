@@ -10,27 +10,33 @@ import (
 	"time"
 )
 
+// DoCopy will Rsync from source to target and will get the cloudinit to the target, if any
+// TODO: Should probably separate the cloudinit into a different function??
 func DoCopy(config *v1.RunConfig) error {
 	fmt.Printf("Copying cOS..\n")
 	// Make sure the values have a / at the end.
 	var source, target string
 	if strings.HasSuffix(config.Source, "/") == false {
 		source = fmt.Sprintf("%s/", config.Source)
-	} else { source = config.Source }
+	} else {
+		source = config.Source
+	}
 
 	if strings.HasSuffix(config.Target, "/") == false {
 		target = fmt.Sprintf("%s/", config.Target)
-	} else { target = config.Target }
+	} else {
+		target = config.Target
+	}
 
 	// 1 - rsync all the system from source to target
 	task := grsync.NewTask(
 		source,
 		target,
 		grsync.RsyncOptions{
-			Quiet: false,
+			Quiet:   false,
 			Archive: true,
-			XAttrs: true,
-			ACLs: true,
+			XAttrs:  true,
+			ACLs:    true,
 			Exclude: []string{"mnt", "proc", "sys", "dev", "tmp"},
 		},
 	)
@@ -44,7 +50,7 @@ func DoCopy(config *v1.RunConfig) error {
 				state.Total,
 				state.Speed,
 			)
-			<- time.After(time.Second)
+			<-time.After(time.Second)
 		}
 	}()
 	if err := task.Run(); err != nil {

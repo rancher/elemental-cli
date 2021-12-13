@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-
+// GetUrl will try to obtain the url and copy it into the destionation
 func GetUrl(client v1.HTTPClient, url string, destination string) error {
 	var source io.Reader
 	var err error
@@ -34,22 +34,30 @@ func GetUrl(client v1.HTTPClient, url string, destination string) error {
 	case strings.HasPrefix(url, "http"), strings.HasPrefix(url, "ftp"), strings.HasPrefix(url, "tftp"):
 		fmt.Printf("Downloading from %s to %s\n", url, destination)
 		resp, err := client.Get(url)
-		if err != nil {return err}
+		if err != nil {
+			return err
+		}
 		source = resp.Body
 		defer resp.Body.Close()
 	default:
 		fmt.Printf("Copying from %s to %s\n", url, destination)
 		file, err := os.Open(url)
-		if err != nil {return err}
+		if err != nil {
+			return err
+		}
 		source = file
 		defer file.Close()
 	}
 
 	dest, err := os.Create(destination)
 	defer dest.Close()
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	nBytes, err := io.Copy(dest, source)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	fmt.Printf("Copied %d bytes\n", nBytes)
 
 	return nil
@@ -60,7 +68,8 @@ func commandExists(command string) bool {
 	return err == nil
 }
 
+// BootedFrom will try to check if we booted from the given label
 func BootedFrom(runner v1.Runner, label string) bool {
-	out, _ := runner.Run("cat",  "/proc/cmdline")
+	out, _ := runner.Run("cat", "/proc/cmdline")
 	return strings.Contains(string(out), label)
 }
