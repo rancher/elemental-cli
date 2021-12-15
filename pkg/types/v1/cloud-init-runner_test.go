@@ -16,15 +16,15 @@ import (
 )
 
 // unit test stolen from yip
-var _ = Describe("Executor", func() {
-	Context("Loading entities via yaml", func() {
+var _ = Describe("CloudRunner", func() {
+	Context("loading yaml files", func() {
 		logger := logrus.New()
 		logger.SetOutput(ioutil.Discard)
 
 		runner := CloudInitRunner(logger)
 		testConsole := console.NewStandardConsole(console.WithLogger(logger))
 
-		It("Run cloud-init files", func() {
+		It("executes commands", func() {
 
 			fs2, cleanup2, err := vfst.NewTestFS(map[string]interface{}{})
 			Expect(err).Should(BeNil())
