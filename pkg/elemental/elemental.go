@@ -23,8 +23,8 @@ import (
 	part "github.com/rancher-sandbox/elemental-cli/pkg/partitioner"
 	v1 "github.com/rancher-sandbox/elemental-cli/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental-cli/pkg/utils"
+	"github.com/spf13/afero"
 	"github.com/zloylos/grsync"
-	"net/http"
 	"os"
 	"strings"
 )
@@ -184,12 +184,11 @@ func (c *Elemental) CopyCos() error {
 // CopyCloudConfig will check if there is a cloud init in the config and store it on the target
 func (c *Elemental) CopyCloudConfig() error {
 	if c.config.CloudInit != "" {
-		client := &http.Client{}
 		customConfig := fmt.Sprintf("%s/oem/99_custom.yaml", c.config.Target)
 		c.config.Logger.Infof("Trying to copy cloud config file %s to %s", c.config.CloudInit, customConfig)
 
 		if err :=
-			utils.GetUrl(client, c.config.Logger, c.config.CloudInit, customConfig); err != nil {
+			utils.GetUrl(c.config.Client, c.config.Logger, c.config.CloudInit, customConfig); err != nil {
 			return err
 		}
 
@@ -227,7 +226,7 @@ func (c *Elemental) SelinuxRelabel(raiseError bool) error {
 // CheckNoFormat will make sure that if we set the no format option, the system doesnt already contain a cos system
 // by checking the active/passive labels. If they are set then we check if we have the force flag, which means that we
 // don't care and proceed to overwrite
-func (c Elemental) CheckNoFormat() error {
+func (c *Elemental) CheckNoFormat() error {
 	if c.config.NoFormat {
 		// User asked for no format, lets check if there is already those labeled partitions in the disk
 		for _, label := range []string{c.config.ActiveLabel, c.config.PassiveLabel} {
@@ -246,6 +245,138 @@ func (c Elemental) CheckNoFormat() error {
 					return errors.New(msg)
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// GetRecoveryDir will return the proper dir for the recovery, depending on if we are booting from squashfs or not
+func (c *Elemental) GetRecoveryDir() string {
+	if c.BootedFromSquash() {
+		return cnst.RecoveryDirSquash
+	} else {
+		return cnst.RecoveryDir
+	}
+}
+
+// BootedFromSquash will check if we are booting from squashfs
+func (c Elemental) BootedFromSquash() bool {
+	if utils.BootedFrom(c.config.Runner, cnst.RecoveryLabel) {
+		return true
+	}
+	return false
+}
+
+// GetIso will check if iso flag is set and if true will try to:
+// download the iso to a temp file
+// and mount the iso file as loop,
+// and modify the IsoMnt var to point to the newly mounted dir
+func (c *Elemental) GetIso() error {
+	if c.config.Iso != "" {
+		tmpDir, err := afero.TempDir(c.config.Fs, "", "elemental")
+		if err != nil {
+			return err
+		}
+		tmpFile := fmt.Sprintf("%s/cOs.iso", tmpDir)
+		err = utils.GetUrl(c.config.Client, c.config.Logger, c.config.Iso, tmpFile)
+		if err != nil {
+			defer c.config.Fs.RemoveAll(tmpDir)
+			return err
+		}
+		tmpIsoMount, err := afero.TempDir(c.config.Fs, "", "elemental-iso")
+		if err != nil {
+			defer c.config.Fs.RemoveAll(tmpDir)
+			return err
+		}
+		var mountOptions []string
+		err = c.config.Mounter.Mount(tmpFile, tmpIsoMount, "loop", mountOptions)
+		if err != nil {
+			defer c.config.Fs.RemoveAll(tmpDir)
+			defer c.config.Fs.RemoveAll(tmpIsoMount)
+			return err
+		}
+		// Store the new extracted iso dir into IsoMnt, so we can use it down the line
+		c.config.IsoMnt = tmpDir
+		return nil
+	}
+	return nil
+}
+
+// CopyRecovery will
+// Check if we are booting from squash -> false? return
+// true? -> :
+// mkdir -p RECOVERYDIR
+// mount RECOVERY into RECOVERYDIR
+// mkdir -p  RECOVERYDIR/cOS
+// if squash -> cp -a RECOVERYSQUASHFS to RECOVERYDIR/cOS/recovery.squashfs
+// if not -> cp -a STATEDIR/cOS/active.img to RECOVERYDIR/cOS/recovery.img
+// Where:
+// RECOVERYDIR is GetRecoveryDir
+// ISOMNT is /run/initramfs/live by default, can be set to a different dir if COS_INSTALL_ISO_URL is set
+// RECOVERYSQUASHFS is $ISOMNT/recovery.squashfs
+// RECOVERY is set by the device partition method,
+// either is get from the system if NoFormat is enabled (searching for label COS_RECOVERY) or is a newly generated partition
+func (c *Elemental) CopyRecovery() error {
+	var err error
+	if !c.BootedFromSquash() {
+		return nil
+	}
+	recoveryDir := c.GetRecoveryDir()
+	recoveryDirCos := fmt.Sprintf("%s/cOS", recoveryDir)
+	recoveryDirCosSquashTarget := fmt.Sprintf("%s/cOS/%s", recoveryDir, cnst.RecoverySquashFile)
+	isoMntCosSquashSource := fmt.Sprintf("%s/%s", c.config.IsoMnt, cnst.RecoverySquashFile)
+	imgCosSource := fmt.Sprintf("%s/cOS/%s", c.config.StateDir, cnst.ActiveImgFile)
+	imgCosTarget := fmt.Sprintf("%s/cOS/%s", recoveryDir, cnst.RecoveryImgFile)
+
+	err = c.config.Fs.MkdirAll(recoveryDir, 0644)
+	if err != nil {
+		return err
+	}
+	var mountOptions []string
+	// TODO: c.config.Recovery is empty here!!! It should be set by the partitioner after formatting the disk, or with no format, getting the recovery partiton!!!!
+	err = c.config.Mounter.Mount(recoveryDir, c.config.Recovery, "auto", mountOptions)
+	if err != nil {
+		return err
+	}
+	err = c.config.Fs.MkdirAll(recoveryDirCos, 0644)
+	if err != nil {
+		return err
+	}
+	if exists, _ := afero.Exists(c.config.Fs, isoMntCosSquashSource); exists {
+		c.config.Logger.Infof("Copying squashfs..")
+		sourceSquash, err := afero.ReadFile(c.config.Fs, isoMntCosSquashSource)
+		if err != nil {
+			return err
+		}
+		sourceSquashStat, err := c.config.Fs.Stat(isoMntCosSquashSource)
+		if err != nil {
+			return err
+		}
+		err = afero.WriteFile(c.config.Fs, recoveryDirCosSquashTarget, sourceSquash, sourceSquashStat.Mode())
+		if err != nil {
+			return err
+		}
+	} else {
+		c.config.Logger.Infof("Copying image file..")
+		sourceImg, err := afero.ReadFile(c.config.Fs, imgCosSource)
+		if err != nil {
+			return err
+		}
+		sourceImgStat, err := c.config.Fs.Stat(imgCosSource)
+		if err != nil {
+			return err
+		}
+		err = afero.WriteFile(c.config.Fs, imgCosTarget, sourceImg, sourceImgStat.Mode())
+		if err != nil {
+			return err
+		}
+		_, err = c.config.Runner.Run("sync")
+		if err != nil {
+			return err
+		}
+		_, err = c.config.Runner.Run("tune2fs", "-L", cnst.SystemLabel, imgCosSource)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

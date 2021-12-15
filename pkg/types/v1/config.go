@@ -20,6 +20,7 @@ import (
 	"github.com/rancher-sandbox/elemental-cli/pkg/constants"
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
+	"net/http"
 )
 
 const (
@@ -68,6 +69,13 @@ func WithRunner(runner Runner) func(r *RunConfig) error {
 	}
 }
 
+func WithClient(client HTTPClient) func(r *RunConfig) error {
+	return func(r *RunConfig) error {
+		r.Client = client
+		return nil
+	}
+}
+
 func WithCloudInitRunner(ci CloudInitRunner) func(r *RunConfig) error {
 	return func(r *RunConfig) error {
 		r.CloudInitRunner = ci
@@ -83,6 +91,7 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		Runner:          &RealRunner{},
 		Syscall:         &RealSyscall{},
 		CloudInitRunner: NewYipCloudInitRunner(log),
+		Client:          &http.Client{},
 	}
 	for _, o := range opts {
 		err := o(r)
@@ -135,6 +144,7 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		PLabel: constants.PersistentPLabel,
 		FS:     constants.LinuxFs,
 	}
+
 	if r.persistentLabel != "" {
 		r.PersistentPart.Label = r.persistentLabel
 	}
@@ -145,6 +155,7 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		PLabel: constants.OEMPLabel,
 		FS:     constants.LinuxFs,
 	}
+
 	if r.oEMLabel != "" {
 		r.OEMPart.Label = r.oEMLabel
 	}
@@ -157,6 +168,9 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	}
 	if r.stateLabel != "" {
 		r.StatePart.Label = r.stateLabel
+	}
+	if r.IsoMnt == "" {
+		r.IsoMnt = constants.IsoMnt
 	}
 	return r
 }
@@ -198,6 +212,10 @@ type RunConfig struct {
 	PersistentPart  Partition
 	StatePart       Partition
 	OEMPart         Partition
+	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
+	IsoMnt          string
+	Recovery        string // Temporary, this should be set by the partitioner workflow
+	Client          HTTPClient
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB
