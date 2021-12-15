@@ -8,10 +8,15 @@ import (
 // CloudInitRunner returns a default cloud init executor with the Elemental plugin set.
 // It accepts a logger which is used inside the runner.
 func CloudInitRunner(l Logger) executor.Executor {
-	return executor.NewExecutor(executor.WithConditionals(plugins.NodeConditional,
-		plugins.IfConditional),
+	return executor.NewExecutor(
+		executor.WithConditionals(
+			plugins.NodeConditional,
+			plugins.IfConditional,
+		),
 		executor.WithLogger(l),
-		executor.WithPlugins(plugins.DNS,
+		executor.WithPlugins(
+			// Note, the plugin execution order depends on the order passed here
+			plugins.DNS,
 			plugins.Download,
 			plugins.Git,
 			plugins.Entities,
@@ -29,5 +34,7 @@ func CloudInitRunner(l Logger) executor.Executor {
 			plugins.Environment,
 			plugins.SystemdFirstboot,
 			plugins.DataSources,
-			plugins.Layout))
+			plugins.Layout,
+		),
+	)
 }
