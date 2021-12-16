@@ -160,7 +160,6 @@ func (c *Elemental) CopyCos() error {
 	} else {
 		target = c.config.Target
 	}
-
 	// 1 - rsync all the system from source to target
 	task := grsync.NewTask(
 		source,
@@ -188,14 +187,14 @@ func (c *Elemental) CopyCloudConfig() error {
 		c.config.Logger.Infof("Trying to copy cloud config file %s to %s", c.config.CloudInit, customConfig)
 
 		if err :=
-			utils.GetUrl(c.config.Client, c.config.Logger, c.config.CloudInit, customConfig); err != nil {
+			c.GetUrl(c.config.CloudInit, customConfig); err != nil {
 			return err
 		}
 
-		if err := os.Chmod(customConfig, 0600); err != nil {
+		if err := c.config.Fs.Chmod(customConfig, os.ModePerm); err != nil {
 			return err
 		}
-		c.config.Logger.Infof("Finished copying cloud config file to %s", c.config.CloudInit, customConfig)
+		c.config.Logger.Infof("Finished copying cloud config file %s to %s", c.config.CloudInit, customConfig)
 	}
 	return nil
 }
@@ -278,26 +277,56 @@ func (c *Elemental) GetIso() error {
 			return err
 		}
 		tmpFile := fmt.Sprintf("%s/cOs.iso", tmpDir)
-		err = utils.GetUrl(c.config.Client, c.config.Logger, c.config.Iso, tmpFile)
+		err = c.GetUrl(c.config.Iso, tmpFile)
 		if err != nil {
 			defer c.config.Fs.RemoveAll(tmpDir)
 			return err
 		}
-		tmpIsoMount, err := afero.TempDir(c.config.Fs, "", "elemental-iso")
+		tmpIsoMount, err := afero.TempDir(c.config.Fs, "", "elemental-iso-mounted-")
 		if err != nil {
 			defer c.config.Fs.RemoveAll(tmpDir)
 			return err
 		}
 		var mountOptions []string
+		c.config.Logger.Infof("Mounting iso %s into %s", tmpFile, tmpIsoMount)
 		err = c.config.Mounter.Mount(tmpFile, tmpIsoMount, "loop", mountOptions)
 		if err != nil {
 			defer c.config.Fs.RemoveAll(tmpDir)
 			defer c.config.Fs.RemoveAll(tmpIsoMount)
 			return err
 		}
-		// Store the new extracted iso dir into IsoMnt, so we can use it down the line
-		c.config.IsoMnt = tmpDir
+		// Store the new mounted dir into IsoMnt, so we can use it down the line
+		c.config.IsoMnt = tmpIsoMount
 		return nil
+	}
+	return nil
+}
+
+// GetUrl is a simple method that will try to get an url to a destination, no matter if its an http url, ftp, tftp or a file
+func (c *Elemental) GetUrl(url string, destination string) error {
+	var source []byte
+	var err error
+
+	switch {
+	case strings.HasPrefix(url, "http"), strings.HasPrefix(url, "ftp"), strings.HasPrefix(url, "tftp"):
+		c.config.Logger.Infof("Downloading from %s to %s", url, destination)
+		resp, err := c.config.Client.Get(url)
+		if err != nil {
+			return err
+		}
+		_, err = resp.Body.Read(source)
+		defer resp.Body.Close()
+	default:
+		c.config.Logger.Infof("Copying from %s to %s", url, destination)
+		source, err = afero.ReadFile(c.config.Fs, url)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = afero.WriteFile(c.config.Fs, destination, source, os.ModePerm)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -379,5 +408,6 @@ func (c *Elemental) CopyRecovery() error {
 			return err
 		}
 	}
+	c.config.Logger.Infof("Recovery copied")
 	return nil
 }
