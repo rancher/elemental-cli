@@ -228,7 +228,7 @@ func TestPartitionAndFormatDevice(t *testing.T) {
 		}, {
 			"parted", "--script", "--machine", "--", "/some/device", "unit", "s",
 			"mkpart", "p.grub", "vfat", "2048", "133119", "set", "1", "esp", "on",
-		}, {
+		}, {"mkfs.vfat", "-i", "COS_GRUB", "/some/device1"}, {
 			"parted", "--script", "--machine", "--", "/some/device", "unit", "s",
 			"mkpart", "p.oem", "ext4", "133120", "264191",
 		}, {
@@ -240,8 +240,7 @@ func TestPartitionAndFormatDevice(t *testing.T) {
 		}, {
 			"parted", "--script", "--machine", "--", "/some/device", "unit", "s",
 			"mkpart", "p.persistent", "ext4", "48498688", "100%",
-		}, {"mkfs.vfat", "-i", "COS_GRUB", "/some/device1"},
-		{"mkfs.ext4", "-L", "COS_OEM", "/some/device2"},
+		}, {"mkfs.ext4", "-L", "COS_OEM", "/some/device2"},
 		{"mkfs.ext4", "-L", "COS_STATE", "/some/device3"},
 		{"mkfs.ext4", "-L", "COS_RECOVERY", "/some/device4"},
 		{"mkfs.ext4", "-L", "COS_PERSISTENT", "/some/device5"},
@@ -331,27 +330,7 @@ func TestPartitionAndFormatDeviceErrors(t *testing.T) {
 	el := NewElemental(conf)
 
 	// Fails efi partition
-	partNum, errPart, printOut = 0, 1, printOutput
-	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
-	Expect(partNum).To(Equal(errPart))
-
-	// Fails oem partition
-	partNum, errPart, printOut = 0, 2, printOutput
-	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
-	Expect(partNum).To(Equal(errPart))
-
-	// Fails state partition
-	partNum, errPart, printOut = 0, 3, printOutput
-	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
-	Expect(partNum).To(Equal(errPart))
-
-	// Fails recovery partition
-	partNum, errPart, printOut = 0, 4, printOutput
-	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
-	Expect(partNum).To(Equal(errPart))
-
-	// Fails persistent partition
-	partNum, errPart, printOut = 0, 5, printOutput
+	errPart, partNum, devNum, errFormat, printOut = 1, 0, 0, "COS_GRUB", printOutput
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(partNum).To(Equal(errPart))
 
@@ -360,23 +339,43 @@ func TestPartitionAndFormatDeviceErrors(t *testing.T) {
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(devNum).To(Equal(1))
 
+	// Fails oem partition
+	errPart, partNum, devNum, errFormat, printOut = 2, 0, 0, "", printOutput
+	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
+	Expect(partNum).To(Equal(errPart))
+
+	// Fails state partition
+	errPart, partNum, devNum, errFormat, printOut = 3, 0, 0, "", printOutput
+	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
+	Expect(partNum).To(Equal(errPart))
+
+	// Fails recovery partition
+	errPart, partNum, devNum, errFormat, printOut = 4, 0, 0, "", printOutput
+	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
+	Expect(partNum).To(Equal(errPart))
+
+	// Fails persistent partition
+	errPart, partNum, devNum, errFormat, printOut = 5, 0, 0, "", printOutput
+	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
+	Expect(partNum).To(Equal(errPart))
+
 	// Fails oem format
-	partNum, devNum, errFormat, printOut = 0, 0, "COS_OEM", printOutput
+	errPart, partNum, devNum, errFormat, printOut = 0, 0, 0, "COS_OEM", printOutput
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(devNum).To(Equal(2))
 
 	// Fails state format
-	partNum, devNum, errFormat, printOut = 0, 0, "COS_STATE", printOutput
+	errPart, partNum, devNum, errFormat, printOut = 0, 0, 0, "COS_STATE", printOutput
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(devNum).To(Equal(3))
 
 	// Fails recovery format
-	partNum, devNum, errFormat, printOut = 0, 0, "COS_RECOVERY", printOutput
+	errPart, partNum, devNum, errFormat, printOut = 0, 0, 0, "COS_RECOVERY", printOutput
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(devNum).To(Equal(4))
 
 	// Fails persistent format
-	partNum, devNum, errFormat, printOut = 0, 0, "COS_PERSISTENT", printOutput
+	errPart, partNum, devNum, errFormat, printOut = 0, 0, 0, "COS_PERSISTENT", printOutput
 	Expect(el.PartitionAndFormatDevice(dev)).NotTo(BeNil())
 	Expect(devNum).To(Equal(5))
 }
