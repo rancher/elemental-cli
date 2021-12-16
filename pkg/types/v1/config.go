@@ -69,6 +69,13 @@ func WithRunner(runner Runner) func(r *RunConfig) error {
 	}
 }
 
+func WithCIRunner(ci CloudInitRunner) func(r *RunConfig) error {
+	return func(r *RunConfig) error {
+		r.CIRunner = ci
+		return nil
+	}
+}
+
 func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	r := &RunConfig{
 		Fs:      afero.NewOsFs(),
@@ -85,6 +92,10 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 
 	if r.Mounter == nil {
 		r.Mounter = mount.New(constants.MountBinary)
+	}
+
+	if r.CIRunner == nil {
+		r.CIRunner = NewYipCloudInitRunner(r.Logger)
 	}
 
 	// Set defaults if empty
@@ -172,6 +183,7 @@ type RunConfig struct {
 	SystemLabel  string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
 	Force        bool   `yaml:"force,omitempty" mapstructure:"force"`
 
+	CIRunner       CloudInitRunner
 	PartTable      string
 	BootFlag       string
 	StateDir       string
