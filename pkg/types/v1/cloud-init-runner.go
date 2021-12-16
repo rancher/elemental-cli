@@ -76,7 +76,7 @@ func (ci YipCloudInitRunner) Run(stage string, args ...string) error {
 	return ci.exec.Run(stage, ci.fs, ci.console, args...)
 }
 
-func (ci YipCloudInitRunner) SetModifier(m schema.Modifier) {
+func (ci *YipCloudInitRunner) SetModifier(m schema.Modifier) {
 	ci.exec.Modifier(m)
 }
 
