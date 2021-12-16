@@ -18,7 +18,6 @@ package v1
 
 import (
 	"github.com/rancher-sandbox/elemental-cli/pkg/constants"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 )
@@ -77,11 +76,13 @@ func WithCIRunner(ci CloudInitRunner) func(r *RunConfig) error {
 }
 
 func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
+	log := NewLogger()
 	r := &RunConfig{
-		Fs:      afero.NewOsFs(),
-		Logger:  logrus.New(),
-		Runner:  &RealRunner{},
-		Syscall: &RealSyscall{},
+		Fs:       afero.NewOsFs(),
+		Logger:   log,
+		Runner:   &RealRunner{},
+		Syscall:  &RealSyscall{},
+		CIRunner: NewYipCloudInitRunner(log),
 	}
 	for _, o := range opts {
 		err := o(r)
