@@ -66,6 +66,11 @@ func (i InstallAction) Run() error {
 		return err
 	}
 	// partition device
+	// TODO handle non partitioning case
+	err = newElemental.PartitionAndFormatDevice(disk)
+	if err != nil {
+		return err
+	}
 	// install Active
 	err = newElemental.CopyCos()
 	if err != nil {

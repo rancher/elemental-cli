@@ -45,4 +45,5 @@ const (
 	RecoverySize     = uint(8192)
 	PersistentSize   = uint(0)
 	BiosSize         = uint(1)
+	PartStage        = "partitioning"
 )

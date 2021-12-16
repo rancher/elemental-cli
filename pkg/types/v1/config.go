@@ -164,6 +164,7 @@ type RunConfig struct {
 	CloudInit    string `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
 	ForceEfi     bool   `yaml:"force-efi,omitempty" mapstructure:"force-efi"`
 	ForceGpt     bool   `yaml:"force-gpt,omitempty" mapstructure:"force-gpt"`
+	PartLayout   string `yaml:"partition-layout,omitempty" mapstructure:"partition-layout"`
 	Tty          string `yaml:"tty,omitempty" mapstructure:"tty"`
 	NoFormat     bool   `yaml:"no-format,omitempty" mapstructure:"no-format"`
 	ActiveLabel  string `yaml:"ACTIVE_LABEL,omitempty" mapstructure:"ACTIVE_LABEL"`
