@@ -68,9 +68,9 @@ func WithRunner(runner Runner) func(r *RunConfig) error {
 	}
 }
 
-func WithCIRunner(ci CloudInitRunner) func(r *RunConfig) error {
+func WithCloudInitRunner(ci CloudInitRunner) func(r *RunConfig) error {
 	return func(r *RunConfig) error {
-		r.CIRunner = ci
+		r.CloudInitRunner = ci
 		return nil
 	}
 }
@@ -78,11 +78,11 @@ func WithCIRunner(ci CloudInitRunner) func(r *RunConfig) error {
 func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	log := NewLogger()
 	r := &RunConfig{
-		Fs:       afero.NewOsFs(),
-		Logger:   log,
-		Runner:   &RealRunner{},
-		Syscall:  &RealSyscall{},
-		CIRunner: NewYipCloudInitRunner(log),
+		Fs:              afero.NewOsFs(),
+		Logger:          log,
+		Runner:          &RealRunner{},
+		Syscall:         &RealSyscall{},
+		CloudInitRunner: NewYipCloudInitRunner(log),
 	}
 	for _, o := range opts {
 		err := o(r)
@@ -95,8 +95,8 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		r.Mounter = mount.New(constants.MountBinary)
 	}
 
-	if r.CIRunner == nil {
-		r.CIRunner = NewYipCloudInitRunner(r.Logger)
+	if r.CloudInitRunner == nil {
+		r.CloudInitRunner = NewYipCloudInitRunner(r.Logger)
 	}
 
 	// Set defaults if empty
@@ -184,20 +184,20 @@ type RunConfig struct {
 	SystemLabel  string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
 	Force        bool   `yaml:"force,omitempty" mapstructure:"force"`
 
-	CIRunner       CloudInitRunner
-	PartTable      string
-	BootFlag       string
-	StateDir       string
-	GrubConf       string
-	Logger         Logger
-	Fs             afero.Fs
-	Mounter        mount.Interface
-	Runner         Runner
-	Syscall        SyscallInterface
-	RecoveryPart   Partition
-	PersistentPart Partition
-	StatePart      Partition
-	OEMPart        Partition
+	CloudInitRunner CloudInitRunner
+	PartTable       string
+	BootFlag        string
+	StateDir        string
+	GrubConf        string
+	Logger          Logger
+	Fs              afero.Fs
+	Mounter         mount.Interface
+	Runner          Runner
+	Syscall         SyscallInterface
+	RecoveryPart    Partition
+	PersistentPart  Partition
+	StatePart       Partition
+	OEMPart         Partition
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB

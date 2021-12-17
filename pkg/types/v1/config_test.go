@@ -69,14 +69,14 @@ func TestRunConfigOptions(t *testing.T) {
 		v1.WithRunner(runner),
 		v1.WithSyscall(sysc),
 		v1.WithLogger(logger),
-		v1.WithCIRunner(ci),
+		v1.WithCloudInitRunner(ci),
 	)
 	Expect(c.Fs).To(Equal(fs))
 	Expect(c.Mounter).To(Equal(mounter))
 	Expect(c.Runner).To(Equal(runner))
 	Expect(c.Syscall).To(Equal(sysc))
 	Expect(c.Logger).To(Equal(logger))
-	Expect(c.CIRunner).To(Equal(ci))
+	Expect(c.CloudInitRunner).To(Equal(ci))
 }
 
 func TestRunConfigNoMounter(t *testing.T) {

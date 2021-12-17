@@ -52,7 +52,7 @@ func (c *Elemental) PartitionAndFormatDevice(disk *part.Disk) error {
 	}
 
 	if c.config.PartTable == v1.GPT && c.config.PartLayout != "" {
-		return c.config.CIRunner.Run(cnst.PartStage, c.config.PartLayout)
+		return c.config.CloudInitRunner.Run(cnst.PartStage, c.config.PartLayout)
 	}
 
 	return c.createDataPartitions(disk)

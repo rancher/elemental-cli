@@ -214,7 +214,7 @@ func TestPartitionAndFormatDevice(t *testing.T) {
 	fs.Create(cnst.EfiDevice)
 	conf.SetupStyle()
 	cIRunner := &v1mock.FakeCloudInitRunner{ExecStages: []string{}, Error: false}
-	conf.CIRunner = cIRunner
+	conf.CloudInitRunner = cIRunner
 	dev := part.NewDisk(
 		"/some/device",
 		part.WithRunner(runner),
