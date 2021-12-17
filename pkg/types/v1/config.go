@@ -226,6 +226,10 @@ type Partition struct {
 	FS     string
 }
 
+func (r RunConfig) GetRecoveryLabel() string {
+	return r.recoveryLabel
+}
+
 // SetupStyle will gather what partition table and bootflag we need for the current system
 func (r *RunConfig) SetupStyle() {
 	var part, boot string
