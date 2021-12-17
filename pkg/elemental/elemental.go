@@ -343,7 +343,7 @@ func (c *Elemental) GetUrl(url string, destination string) error {
 // RECOVERYDIR is GetRecoveryDir
 // ISOMNT is /run/initramfs/live by default, can be set to a different dir if COS_INSTALL_ISO_URL is set
 // RECOVERYSQUASHFS is $ISOMNT/recovery.squashfs
-// RECOVERY is set by the device partition method,
+// RECOVERY is GetDeviceByLabel(cnst.RecoveryLabel)
 // either is get from the system if NoFormat is enabled (searching for label COS_RECOVERY) or is a newly generated partition
 func (c *Elemental) CopyRecovery() error {
 	var err error
@@ -362,8 +362,13 @@ func (c *Elemental) CopyRecovery() error {
 		return err
 	}
 	var mountOptions []string
-	// TODO: c.config.Recovery is empty here!!! It should be set by the partitioner after formatting the disk, or with no format, getting the recovery partiton!!!!
-	err = c.config.Mounter.Mount(recoveryDir, c.config.Recovery, "auto", mountOptions)
+	// Get CURRENT recovery device
+	// This can be an existing one (--no-format flag) or a new one done by the partitioner
+	recovery, err := c.GetDeviceByLabel(cnst.RecoveryLabel)
+	if err != nil {
+		return err
+	}
+	err = c.config.Mounter.Mount(recoveryDir, recovery, "auto", mountOptions)
 	if err != nil {
 		return err
 	}
@@ -410,4 +415,16 @@ func (c *Elemental) CopyRecovery() error {
 	}
 	c.config.Logger.Infof("Recovery copied")
 	return nil
+}
+
+// GetDeviceByLabel will try to return the device that matches the given label
+func (c *Elemental) GetDeviceByLabel(label string) (string, error) {
+	out, err := c.config.Runner.Run("blkid", "-t", fmt.Sprintf("LABEL=%s", label), "-o", "device")
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(string(out)) == "" {
+		return "", errors.New("no device found")
+	}
+	return strings.TrimSpace(string(out)), nil
 }

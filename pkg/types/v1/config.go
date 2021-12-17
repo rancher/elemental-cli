@@ -178,43 +178,43 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 // RunConfig is the struct that represents the full configuration needed for install, upgrade, reset, rebrand.
 // Basically everything needed to know for all operations in a running system, not related to builds
 type RunConfig struct {
-	//Interanlly used to compute RunConfig state
+	// Internally used to compute RunConfig state
+	// Can come from config, env var or flags
 	recoveryLabel   string `yaml:"RECOVERY_LABEL,omitempty" mapstructure:"RECOVERY_LABEL"`
 	persistentLabel string `yaml:"PERSISTENT_LABEL,omitempty" mapstructure:"PERSISTENT_LABEL"`
 	stateLabel      string `yaml:"STATE_LABEL,omitempty" mapstructure:"STATE_LABEL"`
 	oEMLabel        string `yaml:"OEM_LABEL,omitempty" mapstructure:"OEM_LABEL"`
-
-	Device       string `yaml:"device,omitempty" mapstructure:"device"`
-	Target       string `yaml:"target,omitempty" mapstructure:"target"`
-	Source       string `yaml:"source,omitempty" mapstructure:"source"`
-	CloudInit    string `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
-	ForceEfi     bool   `yaml:"force-efi,omitempty" mapstructure:"force-efi"`
-	ForceGpt     bool   `yaml:"force-gpt,omitempty" mapstructure:"force-gpt"`
-	PartLayout   string `yaml:"partition-layout,omitempty" mapstructure:"partition-layout"`
-	Tty          string `yaml:"tty,omitempty" mapstructure:"tty"`
-	NoFormat     bool   `yaml:"no-format,omitempty" mapstructure:"no-format"`
-	ActiveLabel  string `yaml:"ACTIVE_LABEL,omitempty" mapstructure:"ACTIVE_LABEL"`
-	PassiveLabel string `yaml:"PASSIVE_LABEL,omitempty" mapstructure:"PASSIVE_LABEL"`
-	SystemLabel  string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
-	Force        bool   `yaml:"force,omitempty" mapstructure:"force"`
-
-	CloudInitRunner CloudInitRunner
-	PartTable       string
-	BootFlag        string
-	StateDir        string
-	GrubConf        string
+	Device          string `yaml:"device,omitempty" mapstructure:"device"`
+	Target          string `yaml:"target,omitempty" mapstructure:"target"`
+	Source          string `yaml:"source,omitempty" mapstructure:"source"`
+	CloudInit       string `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
+	ForceEfi        bool   `yaml:"force-efi,omitempty" mapstructure:"force-efi"`
+	ForceGpt        bool   `yaml:"force-gpt,omitempty" mapstructure:"force-gpt"`
+	PartLayout      string `yaml:"partition-layout,omitempty" mapstructure:"partition-layout"`
+	Tty             string `yaml:"tty,omitempty" mapstructure:"tty"`
+	NoFormat        bool   `yaml:"no-format,omitempty" mapstructure:"no-format"`
+	ActiveLabel     string `yaml:"ACTIVE_LABEL,omitempty" mapstructure:"ACTIVE_LABEL"`
+	PassiveLabel    string `yaml:"PASSIVE_LABEL,omitempty" mapstructure:"PASSIVE_LABEL"`
+	SystemLabel     string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
+	Force           bool   `yaml:"force,omitempty" mapstructure:"force"`
+	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
+	// Internally used to track stuff around
+	PartTable string
+	BootFlag  string
+	StateDir  string
+	GrubConf  string
+	IsoMnt    string // /run/initramfs/live by default, can be set to a different dir if --iso flag is set
+	// Interfaces used around by methods
 	Logger          Logger
 	Fs              afero.Fs
 	Mounter         mount.Interface
 	Runner          Runner
 	Syscall         SyscallInterface
+	CloudInitRunner CloudInitRunner
 	RecoveryPart    Partition
 	PersistentPart  Partition
 	StatePart       Partition
 	OEMPart         Partition
-	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
-	IsoMnt          string
-	Recovery        string // Temporary, this should be set by the partitioner workflow
 	Client          HTTPClient
 }
 
