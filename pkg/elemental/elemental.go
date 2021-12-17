@@ -25,6 +25,7 @@ import (
 	"github.com/rancher-sandbox/elemental-cli/pkg/utils"
 	"github.com/spf13/afero"
 	"github.com/zloylos/grsync"
+	"io"
 	"os"
 	"strings"
 )
@@ -378,29 +379,33 @@ func (c *Elemental) CopyRecovery() error {
 	}
 	if exists, _ := afero.Exists(c.config.Fs, isoMntCosSquashSource); exists {
 		c.config.Logger.Infof("Copying squashfs..")
-		sourceSquash, err := afero.ReadFile(c.config.Fs, isoMntCosSquashSource)
+		sourceSquash, err := c.config.Fs.Open(isoMntCosSquashSource)
 		if err != nil {
 			return err
 		}
-		sourceSquashStat, err := c.config.Fs.Stat(isoMntCosSquashSource)
+		defer sourceSquash.Close()
+		targetSquash, err := c.config.Fs.Create(recoveryDirCosSquashTarget)
 		if err != nil {
 			return err
 		}
-		err = afero.WriteFile(c.config.Fs, recoveryDirCosSquashTarget, sourceSquash, sourceSquashStat.Mode())
+		defer targetSquash.Close()
+		_, err = io.Copy(targetSquash, sourceSquash)
 		if err != nil {
 			return err
 		}
 	} else {
 		c.config.Logger.Infof("Copying image file..")
-		sourceImg, err := afero.ReadFile(c.config.Fs, imgCosSource)
+		sourceImg, err := c.config.Fs.Open(imgCosSource)
 		if err != nil {
 			return err
 		}
-		sourceImgStat, err := c.config.Fs.Stat(imgCosSource)
+		defer sourceImg.Close()
+		targetImg, err := c.config.Fs.Create(imgCosTarget)
 		if err != nil {
 			return err
 		}
-		err = afero.WriteFile(c.config.Fs, imgCosTarget, sourceImg, sourceImgStat.Mode())
+		defer targetImg.Close()
+		_, err = io.Copy(targetImg, sourceImg)
 		if err != nil {
 			return err
 		}
@@ -408,7 +413,7 @@ func (c *Elemental) CopyRecovery() error {
 		if err != nil {
 			return err
 		}
-		_, err = c.config.Runner.Run("tune2fs", "-L", cnst.SystemLabel, imgCosSource)
+		_, err = c.config.Runner.Run("tune2fs", "-L", c.config.GetSystemLabel(), imgCosSource)
 		if err != nil {
 			return err
 		}

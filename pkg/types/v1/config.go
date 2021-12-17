@@ -124,8 +124,8 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		r.PassiveLabel = constants.PassiveLabel
 	}
 
-	if r.SystemLabel == "" {
-		r.SystemLabel = constants.SystemLabel
+	if r.systemLabel == "" {
+		r.systemLabel = constants.SystemLabel
 	}
 
 	r.RecoveryPart = Partition{
@@ -184,6 +184,7 @@ type RunConfig struct {
 	persistentLabel string `yaml:"PERSISTENT_LABEL,omitempty" mapstructure:"PERSISTENT_LABEL"`
 	stateLabel      string `yaml:"STATE_LABEL,omitempty" mapstructure:"STATE_LABEL"`
 	oEMLabel        string `yaml:"OEM_LABEL,omitempty" mapstructure:"OEM_LABEL"`
+	systemLabel     string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
 	Device          string `yaml:"device,omitempty" mapstructure:"device"`
 	Target          string `yaml:"target,omitempty" mapstructure:"target"`
 	Source          string `yaml:"source,omitempty" mapstructure:"source"`
@@ -195,7 +196,6 @@ type RunConfig struct {
 	NoFormat        bool   `yaml:"no-format,omitempty" mapstructure:"no-format"`
 	ActiveLabel     string `yaml:"ACTIVE_LABEL,omitempty" mapstructure:"ACTIVE_LABEL"`
 	PassiveLabel    string `yaml:"PASSIVE_LABEL,omitempty" mapstructure:"PASSIVE_LABEL"`
-	SystemLabel     string `yaml:"SYSTEM_LABEL,omitempty" mapstructure:"SYSTEM_LABEL"`
 	Force           bool   `yaml:"force,omitempty" mapstructure:"force"`
 	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
 	// Internally used to track stuff around
@@ -228,6 +228,10 @@ type Partition struct {
 
 func (r RunConfig) GetRecoveryLabel() string {
 	return r.recoveryLabel
+}
+
+func (r RunConfig) GetSystemLabel() string {
+	return r.systemLabel
 }
 
 // SetupStyle will gather what partition table and bootflag we need for the current system
