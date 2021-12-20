@@ -17,6 +17,7 @@ limitations under the License.
 package utils
 
 import (
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "github.com/rancher-sandbox/elemental-cli/pkg/types/v1"
 	v1mock "github.com/rancher-sandbox/elemental-cli/tests/mocks"
@@ -25,85 +26,91 @@ import (
 	"testing"
 )
 
-func TestChroot(t *testing.T) {
-	RegisterTestingT(t)
-	syscallInterface := &v1mock.FakeSyscall{}
-	mounter := &mount.FakeMounter{}
-	runner := &v1mock.FakeRunner{}
-	c := v1.NewRunConfig(
-		v1.WithSyscall(syscallInterface),
-		v1.WithFs(afero.NewMemMapFs()),
-		v1.WithMounter(mounter),
-		v1.WithRunner(runner),
-	)
-	chroot := NewChroot(
-		"/whatever",
-		c,
-	)
-	defer chroot.Close()
-	_, err := chroot.Run("chroot-command")
-	Expect(err).To(BeNil())
-	Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
+func TestChrootSuite(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Elemental chroot suite")
 }
 
-func TestChrootFailure(t *testing.T) {
-	RegisterTestingT(t)
-	syscallInterface := &v1mock.FakeSyscall{ErrorOnChroot: true}
-	mounter := &mount.FakeMounter{}
-	runner := &v1mock.FakeRunner{}
-	c := v1.NewRunConfig(
-		v1.WithSyscall(syscallInterface),
-		v1.WithFs(afero.NewMemMapFs()),
-		v1.WithMounter(mounter),
-		v1.WithRunner(runner),
-	)
-	chroot := NewChroot(
-		"/whatever",
-		c,
-	)
-	defer chroot.Close()
-	_, err := chroot.Run("chroot-command")
-	Expect(err).ToNot(BeNil())
-	Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
-	Expect(err.Error()).To(ContainSubstring("chroot error"))
-}
+var _ = Describe("Chroot", func() {
+	var config *v1.RunConfig
+	var runner v1.Runner
+	var logger v1.Logger
+	var syscall v1.SyscallInterface
+	var client v1.HTTPClient
+	var mounter mount.Interface
+	var fs afero.Fs
 
-func TestChrootPrepareFailure(t *testing.T) {
-	RegisterTestingT(t)
-	syscallInterface := &v1mock.FakeSyscall{}
-	mounter := &v1mock.ErrorMounter{ErrorOnMount: true}
-	runner := &v1mock.FakeRunner{}
-	c := v1.NewRunConfig(
-		v1.WithSyscall(syscallInterface),
-		v1.WithFs(afero.NewMemMapFs()),
-		v1.WithMounter(mounter),
-		v1.WithRunner(runner),
-	)
-	chroot := NewChroot(
-		"/whatever",
-		c,
-	)
-	_, err := chroot.Run("chroot-command")
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(ContainSubstring("mount error"))
-}
+	BeforeEach(func() {
+		runner = &v1mock.FakeRunner{}
+		syscall = &v1mock.FakeSyscall{}
+		mounter = v1mock.NewErrorMounter()
+		client = &v1mock.FakeHttpClient{}
+		logger = v1.NewNullLogger()
+		fs = afero.NewMemMapFs()
+		config = v1.NewRunConfig(
+			v1.WithFs(fs),
+			v1.WithRunner(runner),
+			v1.WithLogger(logger),
+			v1.WithMounter(mounter),
+			v1.WithSyscall(syscall),
+			v1.WithClient(client),
+		)
+	})
+	Context("on success", func() {
+		It("command should be called in the chroot", func() {
+			syscallInterface := &v1mock.FakeSyscall{}
+			config.Syscall = syscallInterface
+			chroot := NewChroot(
+				"/whatever",
+				config,
+			)
+			defer chroot.Close()
+			_, err := chroot.Run("chroot-command")
+			Expect(err).To(BeNil())
+			Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
+		})
 
-func TestChrootCloseFailure(t *testing.T) {
-	RegisterTestingT(t)
-	syscallInterface := &v1mock.FakeSyscall{}
-	mounter := &v1mock.ErrorMounter{ErrorOnUnmount: true}
-	runner := &v1mock.FakeRunner{}
-	c := v1.NewRunConfig(
-		v1.WithSyscall(syscallInterface),
-		v1.WithFs(afero.NewMemMapFs()),
-		v1.WithMounter(mounter),
-		v1.WithRunner(runner),
-	)
-	chroot := NewChroot(
-		"/whatever",
-		c,
-	)
-	err := chroot.Close()
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(ContainSubstring("unmount error"))
-}
+	})
+	Context("on failure", func() {
+		It("should return error if failed to chroot", func() {
+			syscallInterface := &v1mock.FakeSyscall{ErrorOnChroot: true}
+			config.Syscall = syscallInterface
+			chroot := NewChroot(
+				"/whatever",
+				config,
+			)
+			defer chroot.Close()
+			_, err := chroot.Run("chroot-command")
+			Expect(err).ToNot(BeNil())
+			Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("chroot error"))
+		})
+		It("should return error if failed to mount on prepare", func() {
+			mounter := v1mock.NewErrorMounter()
+			mounter.ErrorOnMount = true
+			config.Mounter = mounter
+
+			chroot := NewChroot(
+				"/whatever",
+				config,
+			)
+			_, err := chroot.Run("chroot-command")
+			Expect(err).ToNot(BeNil())
+			Expect(err.Error()).To(ContainSubstring("mount error"))
+		})
+		It("should return error if failed to unmount on close", func() {
+			mounter := v1mock.NewErrorMounter()
+			mounter.ErrorOnUnmount = true
+			config.Mounter = mounter
+			
+			chroot := NewChroot(
+				"/whatever",
+				config,
+			)
+			err := chroot.Close()
+			Expect(err).ToNot(BeNil())
+			Expect(err.Error()).To(ContainSubstring("unmount error"))
+
+		})
+	})
+})
