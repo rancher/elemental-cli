@@ -365,7 +365,7 @@ func (c *Elemental) CopyRecovery() error {
 	var mountOptions []string
 	// Get CURRENT recovery device
 	// This can be an existing one (--no-format flag) or a new one done by the partitioner
-	recovery, err := c.GetDeviceByLabel(c.config.GetRecoveryLabel())
+	recovery, err := c.GetDeviceByLabel(c.config.RecoveryPart.Label)
 	if err != nil {
 		return err
 	}

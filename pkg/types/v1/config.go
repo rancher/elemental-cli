@@ -226,10 +226,6 @@ type Partition struct {
 	FS     string
 }
 
-func (r RunConfig) GetRecoveryLabel() string {
-	return r.recoveryLabel
-}
-
 func (r RunConfig) GetSystemLabel() string {
 	return r.systemLabel
 }
