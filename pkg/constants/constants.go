@@ -18,7 +18,6 @@ package constants
 
 const (
 	GrubConf           = "/etc/cos/grub.cfg"
-	StateDir           = "/run/initramfs/cos-state"
 	BiosPLabel         = "p.bios"
 	EfiLabel           = "COS_GRUB"
 	EfiPLabel          = "p.grub"
@@ -47,7 +46,9 @@ const (
 	BiosSize           = uint(1)
 	PartStage          = "partitioning"
 	RecoveryDirSquash  = "/run/initramfs/live"
-	RecoveryDir        = "/run/initramfs/cos-state"
+	RecoveryDir        = "/run/initramfs/cos-recovery"
+	StateDir           = "/run/initramfs/cos-state"
+	OEMDir             = "/run/initramfs/cos-oem"
 	IsoMnt             = "/run/initramfs/live"
 	RecoverySquashFile = "recovery.squashfs"
 	ActiveImgFile      = "active.img"

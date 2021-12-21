@@ -74,26 +74,54 @@ func (i InstallAction) Run() error {
 	if err != nil {
 		return err
 	}
+
+	err = newElemental.MountPartitions()
+	if err != nil {
+	}
+	defer func() {
+		if tmpErr := newElemental.UnmountPartitions(); tmpErr != nil && err == nil {
+			err = tmpErr
+		}
+	}()
+
+	// create active file system image
+	err = newElemental.CreateFileSystemImage(i.Config.ActiveImage)
+	if err != nil {
+		return err
+	}
+
+	//mount file system image
+	loop, err := newElemental.MountImage(i.Config.ActiveImage, i.Config.Target)
+	if err != nil {
+		return err
+	}
+
 	// install Active
 	err = newElemental.CopyCos()
 	if err != nil {
+		newElemental.UnmountImage(i.Config.Target, loop)
 		return err
 	}
 	// Copy cloud-init if any
 	err = newElemental.CopyCloudConfig()
 	if err != nil {
+		newElemental.UnmountImage(i.Config.Target, loop)
 		return err
 	}
 	// install grub
 	grub := utils.NewGrub(i.Config)
 	err = grub.Install()
 	if err != nil {
+		newElemental.UnmountImage(i.Config.Target, loop)
 		return err
 	}
 	// Relabel SELinux
 	_ = newElemental.SelinuxRelabel(false)
 	// Unmount everything
-	// cos.CleanupMounts()
+	err = newElemental.UnmountImage(i.Config.Target, loop)
+	if err != nil {
+		return err
+	}
 	// install Recovery
 	// cos.CopyRecovery()
 	err = newElemental.CopyRecovery()

@@ -216,6 +216,7 @@ type RunConfig struct {
 	StatePart       Partition
 	OEMPart         Partition
 	Client          HTTPClient
+	ActiveImage     Image
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB
@@ -224,6 +225,14 @@ type Partition struct {
 	Size   uint
 	PLabel string
 	FS     string
+}
+
+// Image struct represents a file system image with its commonly configurable values, size in MiB
+type Image struct {
+	File  string
+	Label string
+	Size  uint
+	FS    string
 }
 
 func (r RunConfig) GetSystemLabel() string {

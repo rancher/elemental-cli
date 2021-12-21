@@ -411,21 +411,6 @@ var _ = Describe("Elemental", func() {
 			Expect(e.BootedFromSquash()).To(BeFalse())
 		})
 	})
-	Context("GetRecoveryDir", func() {
-		It("Returns proper dir if booted from squashfs", func() {
-			runner := v1mock.NewTestRunnerV2()
-			runner.ReturnValue = []byte(cnst.RecoveryLabel)
-			config.Runner = runner
-			e := elemental.NewElemental(config)
-			Expect(e.GetRecoveryDir()).To(Equal(cnst.RecoveryDirSquash))
-			Expect(e.GetRecoveryDir()).ToNot(Equal(cnst.RecoveryDir))
-		})
-		It("Returns proper dir if not booted from squashfs", func() {
-			e := elemental.NewElemental(config)
-			Expect(e.GetRecoveryDir()).ToNot(Equal(cnst.RecoveryDirSquash))
-			Expect(e.GetRecoveryDir()).To(Equal(cnst.RecoveryDir))
-		})
-	})
 	Context("GetIso", func() {
 		It("Does nothing if iso is not set", func() {
 			e := elemental.NewElemental(config)
@@ -519,7 +504,7 @@ var _ = Describe("Elemental", func() {
 					e := elemental.NewElemental(config)
 					Expect(e.CopyRecovery()).To(BeNil())
 					// Target should be there
-					exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", e.GetRecoveryDir(), cnst.RecoverySquashFile))
+					exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", cnst.RecoveryDir, cnst.RecoverySquashFile))
 					Expect(exists).To(BeTrue())
 					Expect(err).To(BeNil())
 				})
@@ -535,7 +520,7 @@ var _ = Describe("Elemental", func() {
 					e := elemental.NewElemental(config)
 					Expect(e.CopyRecovery()).To(BeNil())
 					// Target should be there
-					exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", e.GetRecoveryDir(), cnst.RecoveryImgFile))
+					exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", cnst.RecoveryDir, cnst.RecoveryImgFile))
 					Expect(exists).To(BeTrue())
 					Expect(err).To(BeNil())
 				})
@@ -550,7 +535,7 @@ var _ = Describe("Elemental", func() {
 				e := elemental.NewElemental(config)
 				Expect(e.CopyRecovery()).To(BeNil())
 				// Target file should not be there
-				exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", e.GetRecoveryDir(), cnst.RecoverySquashFile))
+				exists, err := afero.Exists(fs, fmt.Sprintf("%s/cOS/%s", cnst.RecoveryDir, cnst.RecoverySquashFile))
 				Expect(exists).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
