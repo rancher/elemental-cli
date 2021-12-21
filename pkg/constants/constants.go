@@ -44,12 +44,14 @@ const (
 	RecoverySize       = uint(8192)
 	PersistentSize     = uint(0)
 	BiosSize           = uint(1)
+	ImgSize            = uint(3072)
 	PartStage          = "partitioning"
 	RecoveryDirSquash  = "/run/initramfs/live"
-	RecoveryDir        = "/run/initramfs/cos-recovery"
-	StateDir           = "/run/initramfs/cos-state"
-	OEMDir             = "/run/initramfs/cos-oem"
 	IsoMnt             = "/run/initramfs/live"
+	RecoveryDir        = "/run/cos/recovery"
+	StateDir           = "/run/cos/state"
+	OEMDir             = "/run/cos/oem"
+	ActiveDir          = "/run/cos/active"
 	RecoverySquashFile = "recovery.squashfs"
 	ActiveImgFile      = "active.img"
 	PassiveImgFile     = "passive.img"

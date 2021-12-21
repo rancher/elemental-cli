@@ -169,27 +169,19 @@ func (c Elemental) MountPartitions() error {
 // UnmountPartitions unmounts recovery, state and oem partitions.
 func (c Elemental) UnmountPartitions() error {
 	var err error
-	errMsg := "Failed to unmount %s"
+	errMsg := ""
 	failure := false
 
 	// If there is an early error we still try to unmount other partitions
-	err = c.config.Mounter.Unmount(cnst.RecoveryDir)
-	if err != nil {
-		c.config.Logger.Errorf(errMsg, cnst.RecoveryDir)
-		failure = true
-	}
-	err = c.config.Mounter.Unmount(cnst.StateDir)
-	if err != nil {
-		c.config.Logger.Errorf(errMsg, cnst.StateDir)
-		failure = true
-	}
-	err = c.config.Mounter.Unmount(cnst.OEMDir)
-	if err != nil {
-		c.config.Logger.Errorf(errMsg, cnst.OEMDir)
-		failure = true
+	for _, mnt := range []string{cnst.OEMDir, cnst.RecoveryDir, cnst.StateDir} {
+		err = c.config.Mounter.Unmount(mnt)
+		if err != nil {
+			errMsg += fmt.Sprintf("Failed to unmount %s\n", mnt)
+			failure = true
+		}
 	}
 	if failure {
-		return errors.New("Failed unmounting some partition, see error log")
+		return errors.New(errMsg)
 	}
 	return nil
 }
@@ -234,13 +226,6 @@ func (c Elemental) UnmountImage(mountpoint string, device string) error {
 
 // CreateFileSystemImage creates the image file for config.target
 func (c Elemental) CreateFileSystemImage(img v1.Image) error {
-	if exists, _ := afero.Exists(c.config.Fs, img.File); exists {
-		err := c.config.Fs.Remove(img.File)
-		if err != nil {
-			return err
-		}
-	}
-
 	actImg, err := c.config.Fs.Create(img.File)
 	if err != nil {
 		return err
@@ -262,20 +247,18 @@ func (c Elemental) CreateFileSystemImage(img v1.Image) error {
 }
 
 // CopyCos will rsync from config.source to config.target
-func (c *Elemental) CopyCos() error {
+func (c *Elemental) CopyCos(target string) error {
 	c.config.Logger.Infof("Copying cOS..")
 	// Make sure the values have a / at the end.
-	var source, target string
+	var source string
 	if strings.HasSuffix(c.config.Source, "/") == false {
 		source = fmt.Sprintf("%s/", c.config.Source)
 	} else {
 		source = c.config.Source
 	}
 
-	if strings.HasSuffix(c.config.Target, "/") == false {
-		target = fmt.Sprintf("%s/", c.config.Target)
-	} else {
-		target = c.config.Target
+	if strings.HasSuffix(target, "/") == false {
+		target = fmt.Sprintf("%s/", target)
 	}
 	// 1 - rsync all the system from source to target
 	task := grsync.NewTask(
@@ -300,7 +283,7 @@ func (c *Elemental) CopyCos() error {
 // CopyCloudConfig will check if there is a cloud init in the config and store it on the target
 func (c *Elemental) CopyCloudConfig() error {
 	if c.config.CloudInit != "" {
-		customConfig := fmt.Sprintf("%s/oem/99_custom.yaml", c.config.Target)
+		customConfig := fmt.Sprintf("%s/99_custom.yaml", cnst.OEMDir)
 		c.config.Logger.Infof("Trying to copy cloud config file %s to %s", c.config.CloudInit, customConfig)
 
 		if err :=
@@ -320,13 +303,13 @@ func (c *Elemental) CopyCloudConfig() error {
 func (c *Elemental) SelinuxRelabel(raiseError bool) error {
 	var err error
 
-	contextFile := fmt.Sprintf("%s/etc/selinux/targeted/contexts/files/file_contexts", c.config.Target)
+	contextFile := fmt.Sprintf("%s/etc/selinux/targeted/contexts/files/file_contexts", cnst.ActiveDir)
 
 	_, err = c.config.Fs.Stat(contextFile)
 	contextExists := err == nil
 
 	if utils.CommandExists("setfiles") && contextExists {
-		_, err = c.config.Runner.Run("setfiles", "-r", c.config.Target, contextFile, c.config.Target)
+		_, err = c.config.Runner.Run("setfiles", "-r", cnst.ActiveDir, contextFile, cnst.ActiveDir)
 	}
 
 	// In the original code this can error out and we dont really care

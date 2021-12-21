@@ -19,6 +19,7 @@ package action
 import (
 	"errors"
 	"fmt"
+	cnst "github.com/rancher-sandbox/elemental-cli/pkg/constants"
 	"github.com/rancher-sandbox/elemental-cli/pkg/elemental"
 	part "github.com/rancher-sandbox/elemental-cli/pkg/partitioner"
 	"github.com/rancher-sandbox/elemental-cli/pkg/types/v1"
@@ -77,6 +78,7 @@ func (i InstallAction) Run() error {
 
 	err = newElemental.MountPartitions()
 	if err != nil {
+		return err
 	}
 	defer func() {
 		if tmpErr := newElemental.UnmountPartitions(); tmpErr != nil && err == nil {
@@ -91,34 +93,34 @@ func (i InstallAction) Run() error {
 	}
 
 	//mount file system image
-	loop, err := newElemental.MountImage(i.Config.ActiveImage, i.Config.Target)
+	loop, err := newElemental.MountImage(i.Config.ActiveImage, cnst.ActiveDir)
 	if err != nil {
 		return err
 	}
 
 	// install Active
-	err = newElemental.CopyCos()
+	err = newElemental.CopyCos(cnst.ActiveDir)
 	if err != nil {
-		newElemental.UnmountImage(i.Config.Target, loop)
+		newElemental.UnmountImage(cnst.ActiveDir, loop)
 		return err
 	}
 	// Copy cloud-init if any
 	err = newElemental.CopyCloudConfig()
 	if err != nil {
-		newElemental.UnmountImage(i.Config.Target, loop)
+		newElemental.UnmountImage(cnst.ActiveDir, loop)
 		return err
 	}
 	// install grub
 	grub := utils.NewGrub(i.Config)
 	err = grub.Install()
 	if err != nil {
-		newElemental.UnmountImage(i.Config.Target, loop)
+		newElemental.UnmountImage(cnst.ActiveDir, loop)
 		return err
 	}
 	// Relabel SELinux
 	_ = newElemental.SelinuxRelabel(false)
 	// Unmount everything
-	err = newElemental.UnmountImage(i.Config.Target, loop)
+	err = newElemental.UnmountImage(cnst.ActiveDir, loop)
 	if err != nil {
 		return err
 	}
@@ -134,5 +136,5 @@ func (i InstallAction) Run() error {
 	// cos.Rebrand()
 	// ????
 	// profit!
-	return nil
+	return err
 }

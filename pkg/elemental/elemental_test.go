@@ -288,10 +288,9 @@ var _ = Describe("Elemental", func() {
 			}
 
 			config.Source = sourceDir
-			config.Target = destDir
 
 			c := elemental.NewElemental(config)
-			err = c.CopyCos()
+			err = c.CopyCos(destDir)
 			Expect(err).To(BeNil())
 
 			filesDest, err := ioutil.ReadDir(destDir)
@@ -311,10 +310,9 @@ var _ = Describe("Elemental", func() {
 			defer os.RemoveAll(destDir)
 
 			config.Source = sourceDir
-			config.Target = destDir
 
 			c := elemental.NewElemental(config)
-			err = c.CopyCos()
+			err = c.CopyCos(destDir)
 			Expect(err).To(BeNil())
 		})
 		It("should fail if destination does not exist", func() {
@@ -323,19 +321,17 @@ var _ = Describe("Elemental", func() {
 			defer os.RemoveAll(sourceDir)
 
 			config.Source = sourceDir
-			config.Target = "/welp"
 
 			c := elemental.NewElemental(config)
-			err = c.CopyCos()
+			err = c.CopyCos("/welp")
 			Expect(err).ToNot(BeNil())
 
 		})
 		It("should fail if source does not exist", func() {
 			config.Source = "/welp"
-			config.Target = "/welp"
 
 			c := elemental.NewElemental(config)
-			err := c.CopyCos()
+			err := c.CopyCos("/welp")
 			Expect(err).ToNot(BeNil())
 
 		})
@@ -457,14 +453,14 @@ var _ = Describe("Elemental", func() {
 			testString := "In a galaxy far far away..."
 			err := afero.WriteFile(fs, "config.yaml", []byte(testString), os.ModePerm)
 			Expect(err).To(BeNil())
-			dest, err := afero.TempDir(fs, "", "elemental")
+			//dest, err := afero.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
-			config.Target = dest
+			//config.Target = dest
 			config.CloudInit = "config.yaml"
 			e := elemental.NewElemental(config)
 			err = e.CopyCloudConfig()
 			Expect(err).To(BeNil())
-			copiedFile, err := afero.ReadFile(fs, fmt.Sprintf("%s/oem/99_custom.yaml", dest))
+			copiedFile, err := afero.ReadFile(fs, fmt.Sprintf("%s/99_custom.yaml", cnst.OEMDir))
 			Expect(err).To(BeNil())
 			Expect(copiedFile).To(ContainSubstring(testString))
 		})
