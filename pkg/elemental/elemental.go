@@ -234,16 +234,22 @@ func (c Elemental) CreateFileSystemImage(img v1.Image) error {
 	err = actImg.Truncate(int64(img.Size * 1024 * 1024))
 	if err != nil {
 		actImg.Close()
+		c.config.Fs.RemoveAll(img.File)
 		return err
 	}
 	err = actImg.Close()
 	if err != nil {
+		c.config.Fs.RemoveAll(img.File)
 		return err
 	}
 
 	mkfs := part.NewMkfsCall(img.File, img.FS, img.Label, c.config.Runner)
 	_, err = mkfs.Apply()
-	return err
+	if err != nil {
+		c.config.Fs.RemoveAll(img.File)
+		return err
+	}
+	return nil
 }
 
 // CopyCos will rsync from config.source to config.target
