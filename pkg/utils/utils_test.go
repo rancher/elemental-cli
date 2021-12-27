@@ -198,15 +198,13 @@ var _ = Describe("Utils", func() {
 			fs.Create("/some/file")
 			_, err := fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
-			err = utils.CopyFile(fs, "/some/file", "/some/otherfile")
-			Expect(err).To(BeNil())
+			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).To(BeNil())
 			_, err = fs.Stat("/some/otherfile")
 			Expect(err).To(BeNil())
 		})
 		It("Fails to open non existing file", func() {
-			err := utils.CopyFile(fs, "/some/file", "/some/otherfile")
-			Expect(err).NotTo(BeNil())
-			_, err = fs.Stat("/some/otherfile")
+			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).NotTo(BeNil())
+			_, err := fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
 		})
 		It("Fails to copy on non writable target", func() {
@@ -214,10 +212,22 @@ var _ = Describe("Utils", func() {
 			_, err := fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
 			fs = afero.NewReadOnlyFs(fs)
-			err = utils.CopyFile(fs, "/some/file", "/some/otherfile")
-			Expect(err).NotTo(BeNil())
+			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).NotTo(BeNil())
 			_, err = fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
+		})
+	})
+	Context("CreateDirStructure", func() {
+		It("Creates essential directories", func() {
+			Expect(utils.CreateDirStructure(fs, "/my/root")).To(BeNil())
+			for _, dir := range []string{"sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"} {
+				_, err := fs.Stat(fmt.Sprintf("/my/root/%s", dir))
+				Expect(err).To(BeNil())
+			}
+		})
+		It("Fails on non writable target", func() {
+			fs = afero.NewReadOnlyFs(fs)
+			Expect(utils.CreateDirStructure(fs, "/my/root")).NotTo(BeNil())
 		})
 	})
 	Context("SyncData", func() {

@@ -30,7 +30,6 @@ const (
 	BIOS  = "bios_grub"
 	MSDOS = "msdos"
 	BOOT  = "boot"
-	VFAT  = "vfat"
 )
 
 type RunConfigOptions func(a *RunConfig) error
@@ -135,6 +134,13 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		r.systemLabel = cnst.SystemLabel
 	}
 
+	r.EfiPart = Partition{
+		Label:  cnst.EfiLabel,
+		Size:   cnst.EfiSize,
+		PLabel: cnst.EfiPLabel,
+		FS:     cnst.EfiFs,
+	}
+
 	r.RecoveryPart = Partition{
 		Label:  cnst.RecoveryLabel,
 		Size:   cnst.RecoverySize,
@@ -151,7 +157,6 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		PLabel: cnst.PersistentPLabel,
 		FS:     cnst.LinuxFs,
 	}
-
 	if r.persistentLabel != "" {
 		r.PersistentPart.Label = r.persistentLabel
 	}
@@ -162,7 +167,6 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		PLabel: cnst.OEMPLabel,
 		FS:     cnst.LinuxFs,
 	}
-
 	if r.oEMLabel != "" {
 		r.OEMPart.Label = r.oEMLabel
 	}
@@ -176,6 +180,7 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	if r.stateLabel != "" {
 		r.StatePart.Label = r.stateLabel
 	}
+
 	if r.IsoMnt == "" {
 		r.IsoMnt = cnst.IsoMnt
 	}
@@ -221,6 +226,7 @@ type RunConfig struct {
 	PersistentPart  Partition
 	StatePart       Partition
 	OEMPart         Partition
+	EfiPart         Partition
 	Client          HTTPClient
 	ActiveImage     Image
 }

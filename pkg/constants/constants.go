@@ -52,6 +52,7 @@ const (
 	StateDir           = "/run/cos/state"
 	OEMDir             = "/run/cos/oem"
 	ActiveDir          = "/run/cos/active"
+	EfiDir             = "/run/cos/efi"
 	RecoverySquashFile = "recovery.squashfs"
 	ActiveImgFile      = "active.img"
 	PassiveImgFile     = "passive.img"

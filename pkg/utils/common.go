@@ -85,6 +85,17 @@ func CopyFile(fs afero.Fs, source string, target string) error {
 	return err
 }
 
+// Copies source file to target file using afero.Fs interface
+func CreateDirStructure(fs afero.Fs, target string) error {
+	for _, dir := range []string{"sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"} {
+		err := fs.MkdirAll(fmt.Sprintf("%s/%s", target, dir), 0755)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // SyncData rsync's source folder contents to a target folder content,
 // both are expected to exist before hand.
 func SyncData(source string, target string, excludes ...string) error {

@@ -60,7 +60,6 @@ func (c *Elemental) PartitionAndFormatDevice(disk *part.Disk) error {
 
 func (c *Elemental) createPTableAndFirmwarePartitions(disk *part.Disk) error {
 	errCMsg := "Failed creating %s partition"
-	errFMsg := "Failed formatting partition: %s"
 
 	c.config.Logger.Debugf("Creating partition table...")
 	out, err := disk.NewPartitionTable(c.config.PartTable)
@@ -78,14 +77,21 @@ func (c *Elemental) createPTableAndFirmwarePartitions(disk *part.Disk) error {
 		}
 		out, err = disk.FormatPartition(efiNum, cnst.EfiFs, cnst.EfiLabel)
 		if err != nil {
-			c.config.Logger.Errorf(errFMsg, out)
+			c.config.Logger.Errorf("Failed formatting partition: %s", out)
 			return err
 		}
 	} else if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.BIOS {
 		c.config.Logger.Debugf("Creating Bios partition...")
-		_, err = disk.AddPartition(cnst.BiosSize, cnst.BiosFs, cnst.BiosPLabel, v1.BIOS)
+		biosNum, err := disk.AddPartition(cnst.BiosSize, cnst.BiosFs, cnst.BiosPLabel, v1.BIOS)
 		if err != nil {
 			c.config.Logger.Errorf(errCMsg, cnst.BiosPLabel)
+			return err
+		}
+		// make sure to remove any kind of FS, it could be there from previous data in disk,
+		// this partition is not formated
+		err = disk.WipeFsOnPartition(biosNum)
+		if err != nil {
+			c.config.Logger.Errorf("Failed to wipe filesystem for bios partition")
 			return err
 		}
 	}
@@ -158,9 +164,19 @@ func (c Elemental) MountPartitions() error {
 	}
 	err = c.mountDeviceByLabel(c.config.OEMPart.Label, cnst.OEMDir, "rw")
 	if err != nil {
-		c.config.Mounter.Unmount(cnst.StateDir)
 		c.config.Mounter.Unmount(cnst.RecoveryDir)
+		c.config.Mounter.Unmount(cnst.StateDir)
 		return err
+	}
+
+	if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.ESP {
+		err = c.mountDeviceByLabel(c.config.EfiPart.Label, cnst.EfiDir, "rw")
+		if err != nil {
+			c.config.Mounter.Unmount(cnst.OEMDir)
+			c.config.Mounter.Unmount(cnst.RecoveryDir)
+			c.config.Mounter.Unmount(cnst.StateDir)
+			return err
+		}
 	}
 	return nil
 }
@@ -170,9 +186,14 @@ func (c Elemental) UnmountPartitions() error {
 	var err error
 	errMsg := ""
 	failure := false
+	mountPoints := []string{cnst.OEMDir, cnst.RecoveryDir, cnst.StateDir}
+
+	if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.ESP {
+		mountPoints = append([]string{cnst.EfiDir}, mountPoints...)
+	}
 
 	// If there is an early error we still try to unmount other partitions
-	for _, mnt := range []string{cnst.OEMDir, cnst.RecoveryDir, cnst.StateDir} {
+	for _, mnt := range mountPoints {
 		err = c.config.Mounter.Unmount(mnt)
 		if err != nil {
 			errMsg += fmt.Sprintf("Failed to unmount %s\n", mnt)
@@ -267,7 +288,11 @@ func (c Elemental) CreateFileSystemImage(img v1.Image) error {
 func (c *Elemental) CopyCos() error {
 	c.config.Logger.Infof("Copying cOS..")
 	excludes := []string{"mnt", "proc", "sys", "dev", "tmp"}
-	err := utils.SyncData(c.config.ActiveImage.RootTree, c.config.ActiveImage.MountPoint, excludes...)
+	err := utils.CreateDirStructure(c.config.Fs, c.config.ActiveImage.MountPoint)
+	if err != nil {
+		return err
+	}
+	err = utils.SyncData(c.config.ActiveImage.RootTree, c.config.ActiveImage.MountPoint, excludes...)
 	if err != nil {
 		return err
 	}
