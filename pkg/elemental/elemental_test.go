@@ -119,6 +119,17 @@ var _ = Describe("Elemental", func() {
 			Expect(err).NotTo(BeNil())
 		})
 
+		It("Fails if persistent partition is not found ", func() {
+			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
+				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.PersistentPart.Label) {
+					return []byte{}, nil
+				}
+				return []byte("/some/device"), nil
+			}
+			err := el.MountPartitions()
+			Expect(err).NotTo(BeNil())
+		})
+
 		It("Fails if efi partition is not found ", func() {
 			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
 				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.EfiPart.Label) {

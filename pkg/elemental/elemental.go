@@ -168,10 +168,18 @@ func (c Elemental) MountPartitions() error {
 		c.config.Mounter.Unmount(cnst.StateDir)
 		return err
 	}
+	err = c.mountDeviceByLabel(c.config.PersistentPart.Label, cnst.PersistentDir, "rw")
+	if err != nil {
+		c.config.Mounter.Unmount(cnst.OEMDir)
+		c.config.Mounter.Unmount(cnst.RecoveryDir)
+		c.config.Mounter.Unmount(cnst.StateDir)
+		return err
+	}
 
 	if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.ESP {
 		err = c.mountDeviceByLabel(c.config.EfiPart.Label, cnst.EfiDir, "rw")
 		if err != nil {
+			c.config.Mounter.Unmount(cnst.PersistentDir)
 			c.config.Mounter.Unmount(cnst.OEMDir)
 			c.config.Mounter.Unmount(cnst.RecoveryDir)
 			c.config.Mounter.Unmount(cnst.StateDir)

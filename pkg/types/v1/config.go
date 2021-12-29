@@ -209,6 +209,7 @@ type RunConfig struct {
 	ActiveLabel     string `yaml:"ACTIVE_LABEL,omitempty" mapstructure:"ACTIVE_LABEL"`
 	PassiveLabel    string `yaml:"PASSIVE_LABEL,omitempty" mapstructure:"PASSIVE_LABEL"`
 	Force           bool   `yaml:"force,omitempty" mapstructure:"force"`
+	Strict          bool   `yaml:"strict,omitempty" mapstructure:"strict"`
 	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
 	// Internally used to track stuff around
 	PartTable string

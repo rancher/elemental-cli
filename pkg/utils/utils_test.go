@@ -29,7 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"io/ioutil"
-	"k8s.io/mount-utils"
 	"os"
 	"testing"
 )
@@ -51,9 +50,9 @@ var _ = Describe("Utils", func() {
 	var config *v1.RunConfig
 	var runner v1.Runner
 	var logger v1.Logger
-	var syscall v1.SyscallInterface
+	var syscall *v1mock.FakeSyscall
 	var client v1.HTTPClient
-	var mounter mount.Interface
+	var mounter *v1mock.ErrorMounter
 	var fs afero.Fs
 
 	BeforeEach(func() {
@@ -73,59 +72,63 @@ var _ = Describe("Utils", func() {
 		)
 	})
 	Context("Chroot", func() {
+		var chroot *utils.Chroot
+		BeforeEach(func() {
+			chroot = utils.NewChroot(
+				"/whatever",
+				config,
+			)
+		})
 		Context("on success", func() {
 			It("command should be called in the chroot", func() {
-				syscallInterface := &v1mock.FakeSyscall{}
-				config.Syscall = syscallInterface
-				chroot := utils.NewChroot(
-					"/whatever",
-					config,
-				)
+				_, err := chroot.Run("chroot-command")
+				Expect(err).To(BeNil())
+				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
+			})
+			It("commands should be called with a customized chroot", func() {
+				chroot.SetExtraMounts(map[string]string{"/real/path": "/in/chroot/path"})
+				Expect(chroot.Prepare()).To(BeNil())
 				defer chroot.Close()
 				_, err := chroot.Run("chroot-command")
 				Expect(err).To(BeNil())
-				Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
+				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
+				_, err = chroot.Run("chroot-another-command")
+				Expect(err).To(BeNil())
 			})
 		})
 		Context("on failure", func() {
-			It("should return error if failed to chroot", func() {
-				syscallInterface := &v1mock.FakeSyscall{ErrorOnChroot: true}
-				config.Syscall = syscallInterface
-				chroot := utils.NewChroot(
-					"/whatever",
-					config,
-				)
+			It("should return error if chroot-command fails", func() {
+				runner := runner.(*v1mock.FakeRunner)
+				runner.ErrorOnCommand = true
+				_, err := chroot.Run("chroot-command")
+				Expect(err).NotTo(BeNil())
+				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
+			})
+			It("should return error if preparing twice before closing", func() {
+				Expect(chroot.Prepare()).To(BeNil())
 				defer chroot.Close()
+				Expect(chroot.Prepare()).NotTo(BeNil())
+				Expect(chroot.Close()).To(BeNil())
+				Expect(chroot.Prepare()).To(BeNil())
+			})
+			It("should return error if failed to chroot", func() {
+				syscall.ErrorOnChroot = true
 				_, err := chroot.Run("chroot-command")
 				Expect(err).ToNot(BeNil())
-				Expect(syscallInterface.WasChrootCalledWith("/whatever")).To(BeTrue())
+				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
 				Expect(err.Error()).To(ContainSubstring("chroot error"))
 			})
 			It("should return error if failed to mount on prepare", func() {
-				mounter := v1mock.NewErrorMounter()
 				mounter.ErrorOnMount = true
-				config.Mounter = mounter
-
-				chroot := utils.NewChroot(
-					"/whatever",
-					config,
-				)
 				_, err := chroot.Run("chroot-command")
 				Expect(err).ToNot(BeNil())
 				Expect(err.Error()).To(ContainSubstring("mount error"))
 			})
 			It("should return error if failed to unmount on close", func() {
-				mounter := v1mock.NewErrorMounter()
 				mounter.ErrorOnUnmount = true
-				config.Mounter = mounter
-
-				chroot := utils.NewChroot(
-					"/whatever",
-					config,
-				)
-				err := chroot.Close()
+				_, err := chroot.Run("chroot-command")
 				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("unmount error"))
+				Expect(err.Error()).To(ContainSubstring("Failed closing chroot"))
 			})
 		})
 	})

@@ -60,7 +60,7 @@ func GetDeviceByLabel(runner v1.Runner, label string) (string, error) {
 }
 
 // Copies source file to target file using afero.Fs interface
-func CopyFile(fs afero.Fs, source string, target string) error {
+func CopyFile(fs afero.Fs, source string, target string) (err error) {
 	sourceFile, err := fs.Open(source)
 	if err != nil {
 		return err
