@@ -135,47 +135,52 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	}
 
 	r.EfiPart = Partition{
-		Label:  cnst.EfiLabel,
-		Size:   cnst.EfiSize,
-		PLabel: cnst.EfiPLabel,
-		FS:     cnst.EfiFs,
+		Label:      cnst.EfiLabel,
+		Size:       cnst.EfiSize,
+		PLabel:     cnst.EfiPLabel,
+		FS:         cnst.EfiFs,
+		MountPoint: cnst.EfiDir,
 	}
 
 	r.RecoveryPart = Partition{
-		Label:  cnst.RecoveryLabel,
-		Size:   cnst.RecoverySize,
-		PLabel: cnst.RecoveryPLabel,
-		FS:     cnst.LinuxFs,
+		Label:      cnst.RecoveryLabel,
+		Size:       cnst.RecoverySize,
+		PLabel:     cnst.RecoveryPLabel,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.RecoveryDir,
 	}
 	if r.recoveryLabel != "" {
 		r.RecoveryPart.Label = r.recoveryLabel
 	}
 
 	r.PersistentPart = Partition{
-		Label:  cnst.PersistentLabel,
-		Size:   cnst.PersistentSize,
-		PLabel: cnst.PersistentPLabel,
-		FS:     cnst.LinuxFs,
+		Label:      cnst.PersistentLabel,
+		Size:       cnst.PersistentSize,
+		PLabel:     cnst.PersistentPLabel,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.PersistentDir,
 	}
 	if r.persistentLabel != "" {
 		r.PersistentPart.Label = r.persistentLabel
 	}
 
 	r.OEMPart = Partition{
-		Label:  cnst.OEMLabel,
-		Size:   cnst.OEMSize,
-		PLabel: cnst.OEMPLabel,
-		FS:     cnst.LinuxFs,
+		Label:      cnst.OEMLabel,
+		Size:       cnst.OEMSize,
+		PLabel:     cnst.OEMPLabel,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.OEMDir,
 	}
 	if r.oEMLabel != "" {
 		r.OEMPart.Label = r.oEMLabel
 	}
 
 	r.StatePart = Partition{
-		Label:  cnst.StateLabel,
-		Size:   cnst.StateSize,
-		PLabel: cnst.StatePLabel,
-		FS:     cnst.LinuxFs,
+		Label:      cnst.StateLabel,
+		Size:       cnst.StateSize,
+		PLabel:     cnst.StatePLabel,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.StateDir,
 	}
 	if r.stateLabel != "" {
 		r.StatePart.Label = r.stateLabel
@@ -234,10 +239,11 @@ type RunConfig struct {
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB
 type Partition struct {
-	Label  string
-	Size   uint
-	PLabel string
-	FS     string
+	Label      string
+	Size       uint
+	PLabel     string
+	FS         string
+	MountPoint string
 }
 
 // Image struct represents a file system image with its commonly configurable values, size in MiB

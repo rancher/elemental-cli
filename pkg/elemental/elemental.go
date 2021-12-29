@@ -150,43 +150,31 @@ func (c *Elemental) createDataPartitions(disk *part.Disk) error {
 	return nil
 }
 
-// MountPartitions mounts recovery, state and oem partitions. Note this method does
-// not umount any partition on exit or on error, umounts must be handled by caller logic.
+// MountPartitions mounts state, recovery, oem, persistent and efi partitions.
+// Note umounts must be handled by caller logic.
 func (c Elemental) MountPartitions() error {
-	err := c.mountDeviceByLabel(c.config.StatePart.Label, cnst.StateDir, "rw")
-	if err != nil {
-		return err
-	}
-	err = c.mountDeviceByLabel(c.config.RecoveryPart.Label, cnst.RecoveryDir, "rw")
-	if err != nil {
-		c.config.Mounter.Unmount(cnst.StateDir)
-		return err
-	}
-	err = c.mountDeviceByLabel(c.config.OEMPart.Label, cnst.OEMDir, "rw")
-	if err != nil {
-		c.config.Mounter.Unmount(cnst.RecoveryDir)
-		c.config.Mounter.Unmount(cnst.StateDir)
-		return err
-	}
-	err = c.mountDeviceByLabel(c.config.PersistentPart.Label, cnst.PersistentDir, "rw")
-	if err != nil {
-		c.config.Mounter.Unmount(cnst.OEMDir)
-		c.config.Mounter.Unmount(cnst.RecoveryDir)
-		c.config.Mounter.Unmount(cnst.StateDir)
-		return err
+	c.config.Logger.Infof("Mounting disk partitions")
+	var err error
+	parts := []v1.Partition{
+		c.config.StatePart,
+		c.config.RecoveryPart,
+		c.config.OEMPart,
+		c.config.PersistentPart,
 	}
 
 	if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.ESP {
-		err = c.mountDeviceByLabel(c.config.EfiPart.Label, cnst.EfiDir, "rw")
+		parts = append(parts, c.config.EfiPart)
+	}
+
+	for _, part := range parts {
+		err = c.MountPartition(part, "rw")
 		if err != nil {
-			c.config.Mounter.Unmount(cnst.PersistentDir)
-			c.config.Mounter.Unmount(cnst.OEMDir)
-			c.config.Mounter.Unmount(cnst.RecoveryDir)
-			c.config.Mounter.Unmount(cnst.StateDir)
+			c.UnmountPartitions()
 			return err
 		}
 	}
-	return nil
+
+	return err
 }
 
 // UnmountPartitions unmounts recovery, state and oem partitions.
@@ -194,17 +182,22 @@ func (c Elemental) UnmountPartitions() error {
 	var err error
 	errMsg := ""
 	failure := false
-	mountPoints := []string{cnst.OEMDir, cnst.RecoveryDir, cnst.StateDir}
+	parts := []v1.Partition{
+		c.config.PersistentPart,
+		c.config.OEMPart,
+		c.config.RecoveryPart,
+		c.config.StatePart,
+	}
 
 	if c.config.PartTable == v1.GPT && c.config.BootFlag == v1.ESP {
-		mountPoints = append([]string{cnst.EfiDir}, mountPoints...)
+		parts = append([]v1.Partition{c.config.EfiPart}, parts...)
 	}
 
 	// If there is an early error we still try to unmount other partitions
-	for _, mnt := range mountPoints {
-		err = c.config.Mounter.Unmount(mnt)
+	for _, part := range parts {
+		err = c.UnmountPartition(part)
 		if err != nil {
-			errMsg += fmt.Sprintf("Failed to unmount %s\n", mnt)
+			errMsg += fmt.Sprintf("Failed to unmount %s\n", part.MountPoint)
 			failure = true
 		}
 	}
@@ -214,20 +207,30 @@ func (c Elemental) UnmountPartitions() error {
 	return nil
 }
 
-func (c Elemental) mountDeviceByLabel(label string, mountpoint string, opts ...string) error {
-	err := c.config.Fs.MkdirAll(mountpoint, 0755)
+func (c Elemental) MountPartition(part v1.Partition, opts ...string) error {
+	err := c.config.Fs.MkdirAll(part.MountPoint, 0755)
 	if err != nil {
 		return err
 	}
-	device, err := utils.GetDeviceByLabel(c.config.Runner, label)
+	device, err := utils.GetDeviceByLabel(c.config.Runner, part.Label)
 	if err != nil {
 		return err
 	}
-	err = c.config.Mounter.Mount(device, mountpoint, "auto", opts)
+	err = c.config.Mounter.Mount(device, part.MountPoint, "auto", opts)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c Elemental) UnmountPartition(part v1.Partition) error {
+	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
+	// for bind mounts here
+	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(part.MountPoint); notMnt == true {
+		c.config.Logger.Debugf("Not unmounting partition, %s doesn't look like mountpoint", part.MountPoint)
+		return nil
+	}
+	return c.config.Mounter.Unmount(part.MountPoint)
 }
 
 func (c Elemental) MountImage(img *v1.Image) error {
@@ -250,6 +253,13 @@ func (c Elemental) MountImage(img *v1.Image) error {
 }
 
 func (c Elemental) UnmountImage(img *v1.Image) error {
+	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
+	// for bind mounts here
+	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(img.MountPoint); notMnt == true {
+		c.config.Logger.Debugf("Not unmounting image, %s doesn't look like mountpoint", img.MountPoint)
+		return nil
+	}
+
 	err := c.config.Mounter.Unmount(img.MountPoint)
 	if err != nil {
 		return err
@@ -353,23 +363,19 @@ func (c *Elemental) SelinuxRelabel(raiseError bool) error {
 // by checking the active/passive labels. If they are set then we check if we have the force flag, which means that we
 // don't care and proceed to overwrite
 func (c *Elemental) CheckNoFormat() error {
-	if c.config.NoFormat {
-		// User asked for no format, lets check if there is already those labeled partitions in the disk
-		for _, label := range []string{c.config.ActiveLabel, c.config.PassiveLabel} {
-			found, err := utils.FindLabel(c.config.Runner, label)
-			if err != nil {
-				return err
-			}
-			if found != "" {
-				if c.config.Force {
-					msg := fmt.Sprintf("Forcing overwrite of existing partitions due to `force` flag")
-					c.config.Logger.Infof(msg)
-					return nil
-				} else {
-					msg := fmt.Sprintf("There is already an active deployment in the system, use '--force' flag to overwrite it")
-					c.config.Logger.Error(msg)
-					return errors.New(msg)
-				}
+	c.config.Logger.Infof("Checking no-format condition")
+	// User asked for no format, lets check if there are already those labeled file systems in the disk
+	for _, label := range []string{c.config.ActiveImage.Label, c.config.PassiveLabel} {
+		found, _ := utils.FindLabel(c.config.Runner, label)
+		if found != "" {
+			if c.config.Force {
+				msg := fmt.Sprintf("Forcing overwrite of existing OS image due to `force` flag")
+				c.config.Logger.Infof(msg)
+				return nil
+			} else {
+				msg := fmt.Sprintf("There is already an active deployment in the system, use '--force' flag to overwrite it")
+				c.config.Logger.Error(msg)
+				return errors.New(msg)
 			}
 		}
 	}

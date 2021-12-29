@@ -89,7 +89,7 @@ var _ = Describe("Elemental", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("Fails if state partition resists to mount ", func() {
+		It("Fails if some partition resists to mount ", func() {
 			runner.ReturnValue = []byte("/some/device")
 			mounter := mounter.(*v1mock.ErrorMounter)
 			mounter.ErrorOnMount = true
@@ -100,39 +100,6 @@ var _ = Describe("Elemental", func() {
 		It("Fails if oem partition is not found ", func() {
 			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
 				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.OEMPart.Label) {
-					return []byte{}, nil
-				}
-				return []byte("/some/device"), nil
-			}
-			err := el.MountPartitions()
-			Expect(err).NotTo(BeNil())
-		})
-
-		It("Fails if recovery partition is not found ", func() {
-			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
-				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.RecoveryPart.Label) {
-					return []byte{}, nil
-				}
-				return []byte("/some/device"), nil
-			}
-			err := el.MountPartitions()
-			Expect(err).NotTo(BeNil())
-		})
-
-		It("Fails if persistent partition is not found ", func() {
-			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
-				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.PersistentPart.Label) {
-					return []byte{}, nil
-				}
-				return []byte("/some/device"), nil
-			}
-			err := el.MountPartitions()
-			Expect(err).NotTo(BeNil())
-		})
-
-		It("Fails if efi partition is not found ", func() {
-			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
-				if len(args) >= 2 && args[1] == fmt.Sprintf("LABEL=%s", config.EfiPart.Label) {
 					return []byte{}, nil
 				}
 				return []byte("/some/device"), nil
@@ -519,50 +486,41 @@ var _ = Describe("Elemental", func() {
 		})
 	})
 	Context("NoFormat", func() {
-		Context("is disabled", func() {
-			It("Should not error out", func() {
-				c := elemental.NewElemental(config)
-				err := c.CheckNoFormat()
-				Expect(err).To(BeNil())
-			})
-		})
-		Context("is enabled", func() {
-			Context("Labels exist", func() {
-				Context("Force is disabled", func() {
-					It("Should error out", func() {
-						config.NoFormat = true
-						runner := v1mock.NewTestRunnerV2()
-						runner.ReturnValue = []byte("/dev/fake")
-						config.Runner = runner
-						e := elemental.NewElemental(config)
-						err := e.CheckNoFormat()
-						Expect(err).ToNot(BeNil())
-						Expect(err.Error()).To(ContainSubstring("There is already an active deployment"))
-					})
-				})
-				Context("Force is enabled", func() {
-					It("Should not error out", func() {
-						config.NoFormat = true
-						config.Force = true
-						runner := v1mock.NewTestRunnerV2()
-						runner.ReturnValue = []byte("/dev/fake")
-						config.Runner = runner
-						e := elemental.NewElemental(config)
-						err := e.CheckNoFormat()
-						Expect(err).To(BeNil())
-					})
-				})
-			})
-			Context("Labels dont exist", func() {
-				It("Should not error out", func() {
+		Context("Labels exist", func() {
+			Context("Force is disabled", func() {
+				It("Should error out", func() {
 					config.NoFormat = true
 					runner := v1mock.NewTestRunnerV2()
-					runner.ReturnValue = []byte("")
+					runner.ReturnValue = []byte("/dev/fake")
+					config.Runner = runner
+					e := elemental.NewElemental(config)
+					err := e.CheckNoFormat()
+					Expect(err).ToNot(BeNil())
+					Expect(err.Error()).To(ContainSubstring("There is already an active deployment"))
+				})
+			})
+			Context("Force is enabled", func() {
+				It("Should not error out", func() {
+					config.NoFormat = true
+					config.Force = true
+					runner := v1mock.NewTestRunnerV2()
+					runner.ReturnValue = []byte("/dev/fake")
 					config.Runner = runner
 					e := elemental.NewElemental(config)
 					err := e.CheckNoFormat()
 					Expect(err).To(BeNil())
 				})
+			})
+		})
+		Context("Labels dont exist", func() {
+			It("Should not error out", func() {
+				config.NoFormat = true
+				runner := v1mock.NewTestRunnerV2()
+				runner.ReturnValue = []byte("")
+				config.Runner = runner
+				e := elemental.NewElemental(config)
+				err := e.CheckNoFormat()
+				Expect(err).To(BeNil())
 			})
 		})
 	})

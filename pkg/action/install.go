@@ -89,16 +89,19 @@ func (i InstallAction) Run() (err error) {
 		return errors.New(fmt.Sprintf("Disk %s does not exist", i.Config.Target))
 	}
 
-	// Check no-format flag and force flag against current device
-	err = newElemental.CheckNoFormat()
-	if err != nil {
-		return err
-	}
-	// partition device
-	// TODO handle non partitioning case
-	err = newElemental.PartitionAndFormatDevice(disk)
-	if err != nil {
-		return err
+	// Check no-format flag
+	if i.Config.NoFormat {
+		// Check force flag against current device
+		err = newElemental.CheckNoFormat()
+		if err != nil {
+			return err
+		}
+	} else {
+		// Partition device
+		err = newElemental.PartitionAndFormatDevice(disk)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = newElemental.MountPartitions()
@@ -122,24 +125,26 @@ func (i InstallAction) Run() (err error) {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if tmpErr := newElemental.UnmountImage(&i.Config.ActiveImage); tmpErr != nil && err == nil {
+			err = tmpErr
+		}
+	}()
 
 	// install Active
 	err = newElemental.CopyCos()
 	if err != nil {
-		newElemental.UnmountImage(&i.Config.ActiveImage)
 		return err
 	}
 	// Copy cloud-init if any
 	err = newElemental.CopyCloudConfig()
 	if err != nil {
-		newElemental.UnmountImage(&i.Config.ActiveImage)
 		return err
 	}
 	// install grub
 	grub := utils.NewGrub(i.Config)
 	err = grub.Install()
 	if err != nil {
-		newElemental.UnmountImage(&i.Config.ActiveImage)
 		return err
 	}
 	// Relabel SELinux
