@@ -129,7 +129,7 @@ func (i InstallAction) Run() (err error) {
 	}()
 
 	// install Active
-	err = newElemental.CopyCos()
+	err = newElemental.CopyActive()
 	if err != nil {
 		return err
 	}

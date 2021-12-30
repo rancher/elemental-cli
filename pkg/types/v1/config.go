@@ -83,6 +83,13 @@ func WithCloudInitRunner(ci CloudInitRunner) func(r *RunConfig) error {
 	}
 }
 
+func WithLuet(luet LuetInterface) func(r *RunConfig) error {
+	return func(r *RunConfig) error {
+		r.Luet = luet
+		return nil
+	}
+}
+
 func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	log := NewLogger()
 	r := &RunConfig{
@@ -167,6 +174,7 @@ type RunConfig struct {
 	Strict          bool   `yaml:"strict,omitempty" mapstructure:"strict"`
 	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
 	Debug           bool
+	DockerImg       string `yaml:"docker-image,omitempty" mapstructure:"docker-image"`
 	// Internally used to track stuff around
 	PartTable string
 	BootFlag  string
@@ -179,6 +187,7 @@ type RunConfig struct {
 	Runner          Runner
 	Syscall         SyscallInterface
 	CloudInitRunner CloudInitRunner
+	Luet            LuetInterface
 	Partitions      []*Partition
 	Client          HTTPClient
 	ActiveImage     Image
@@ -300,9 +309,17 @@ func (r *RunConfig) setupStyle() {
 	r.Partitions = append(r.Partitions, part)
 }
 
+// setupLuet will initialize Luet interface if required
+func (r *RunConfig) setupLuet() {
+	if r.DockerImg != "" {
+		r.Luet = NewLuet(r.Logger, []string{}...)
+	}
+}
+
 // DigestSetup will gather what partition table and bootflag we need for the current system
 func (r *RunConfig) DigestSetup() {
 	r.setupStyle()
+	r.setupLuet()
 }
 
 // BuildConfig represents the config we need for building isos, raw images, artifacts
