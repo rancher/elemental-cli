@@ -177,6 +177,7 @@ type RunConfig struct {
 	DockerImg       string `yaml:"docker-image,omitempty" mapstructure:"docker-image"`
 	NoCosign        bool   `yaml:"no-cosign,omitempty" mapstructure:"no-cosign"`
 	NoVerify        bool   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	CloudInitPaths  string `yaml:"CLOUD_INIT_PATHS,omitempty" mapstructure:"CLOUD_INIT_PATHS"`
 	// Internally used to track stuff around
 	PartTable string
 	BootFlag  string
