@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/mudler/yip/pkg/schema"
 	"github.com/rancher-sandbox/elemental-cli/cmd/config"
+	"github.com/rancher-sandbox/elemental-cli/pkg/constants"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"k8s.io/mount-utils"
@@ -40,7 +41,7 @@ var runStage = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var cmdLineYipUri string
 		var FinalCloudInitPaths []string
-		CloudInitPaths := []string{"/system/oem", "/oem/", "/usr/local/cloud-config/"}
+		CloudInitPaths := constants.GetCloudInitPaths()
 
 		logger := logrus.New()
 		logger.SetOutput(os.Stdout)
@@ -52,6 +53,7 @@ var runStage = &cobra.Command{
 		}
 
 		// Check if we have extra cloud init
+		// This requires fixing the env vars, otherwise it wont work
 		if cfg.CloudInitPaths != "" {
 			cfg.Logger.Debugf("Adding extra paths: %s", cfg.CloudInitPaths)
 			extraCloudInitPathsSplit := strings.Split(cfg.CloudInitPaths, " ")
