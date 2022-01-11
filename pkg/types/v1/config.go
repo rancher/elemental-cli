@@ -175,6 +175,8 @@ type RunConfig struct {
 	Iso             string `yaml:"iso,omitempty" mapstructure:"iso"`
 	Debug           bool
 	DockerImg       string `yaml:"docker-image,omitempty" mapstructure:"docker-image"`
+	NoCosign        bool   `yaml:"no-cosign,omitempty" mapstructure:"no-cosign"`
+	NoVerify        bool   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
 	// Internally used to track stuff around
 	PartTable string
 	BootFlag  string
@@ -312,7 +314,14 @@ func (r *RunConfig) setupStyle() {
 // setupLuet will initialize Luet interface if required
 func (r *RunConfig) setupLuet() {
 	if r.DockerImg != "" {
-		r.Luet = NewLuet(r.Logger, []string{}...)
+		plugins := []string{}
+		if !r.NoCosign {
+			plugins = append(plugins, cnst.LuetCosignPlugin)
+		}
+		if !r.NoVerify {
+			plugins = append(plugins, cnst.LuetMtreePlugin)
+		}
+		r.Luet = NewLuet(r.Logger, plugins...)
 	}
 }
 
