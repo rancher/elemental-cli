@@ -54,6 +54,7 @@ var _ = Describe("Utils", func() {
 	var client v1.HTTPClient
 	var mounter *v1mock.ErrorMounter
 	var fs afero.Fs
+	var memLog *bytes.Buffer
 
 	BeforeEach(func() {
 		runner = &v1mock.FakeRunner{}
@@ -370,6 +371,41 @@ var _ = Describe("Utils", func() {
 				Expect(targetGrub).To(ContainSubstring("console=tty1 console=serial"))
 
 			})
+		})
+	})
+	Context("RunStage", func() {
+		BeforeEach(func() {
+			// Use a different config with a buffer for logger, so we can check the output
+			// We also use the real fs
+			memLog = &bytes.Buffer{}
+			logger = v1.NewBufferLogger(memLog)
+			config = v1.NewRunConfig(
+				v1.WithFs(afero.NewOsFs()),
+				v1.WithRunner(runner),
+				v1.WithLogger(logger),
+				v1.WithMounter(mounter),
+				v1.WithSyscall(syscall),
+				v1.WithClient(client),
+			)
+		})
+		It("Goes over extra paths", func() {
+			d, _ := os.CreateTemp("", "elemental")
+			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d.Name()), []byte{}, os.ModePerm)
+			defer os.RemoveAll(d.Name())
+			config.CloudInitPaths = d.Name()
+			Expect(utils.RunStage("luke", config)).To(BeNil())
+			Expect(memLog).To(ContainSubstring(fmt.Sprintf("Executing %s", d.Name())))
+			Expect(memLog).To(ContainSubstring("luke"))
+			Expect(memLog).To(ContainSubstring("luke.before"))
+			Expect(memLog).To(ContainSubstring("luke.after"))
+			Expect(memLog).To(ContainSubstring("/proc/cmdline"))
+		})
+		It("Skips non existant paths", func() {
+			config.CloudInitPaths = "/fake"
+			Expect(utils.RunStage("luke", config)).To(BeNil())
+			Expect(memLog).To(ContainSubstring("luke"))
+			Expect(memLog).ToNot(ContainSubstring("/fake"))
+
 		})
 	})
 })
