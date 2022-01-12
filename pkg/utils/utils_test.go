@@ -379,8 +379,9 @@ var _ = Describe("Utils", func() {
 			// We also use the real fs
 			memLog = &bytes.Buffer{}
 			logger = v1.NewBufferLogger(memLog)
+			fs = afero.NewOsFs()
 			config = v1.NewRunConfig(
-				v1.WithFs(afero.NewOsFs()),
+				v1.WithFs(fs),
 				v1.WithRunner(runner),
 				v1.WithLogger(logger),
 				v1.WithMounter(mounter),
@@ -389,12 +390,12 @@ var _ = Describe("Utils", func() {
 			)
 		})
 		It("Goes over extra paths", func() {
-			d, _ := os.CreateTemp("", "elemental")
-			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d.Name()), []byte{}, os.ModePerm)
-			defer os.RemoveAll(d.Name())
-			config.CloudInitPaths = d.Name()
+			d, _ := afero.TempDir(fs, "", "elemental")
+			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d), []byte{}, os.ModePerm)
+			defer os.RemoveAll(d)
+			config.CloudInitPaths = d
 			Expect(utils.RunStage("luke", config)).To(BeNil())
-			Expect(memLog).To(ContainSubstring(fmt.Sprintf("Executing %s", d.Name())))
+			Expect(memLog).To(ContainSubstring(fmt.Sprintf("Executing %s", d)))
 			Expect(memLog).To(ContainSubstring("luke"))
 			Expect(memLog).To(ContainSubstring("luke.before"))
 			Expect(memLog).To(ContainSubstring("luke.after"))
@@ -405,7 +406,19 @@ var _ = Describe("Utils", func() {
 			Expect(utils.RunStage("luke", config)).To(BeNil())
 			Expect(memLog).To(ContainSubstring("luke"))
 			Expect(memLog).ToNot(ContainSubstring("/fake"))
-
 		})
+		It("parses cmdline uri", func() {
+			d, _ := afero.TempDir(fs, "", "elemental")
+			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d), []byte{}, os.ModePerm)
+			defer os.RemoveAll(d)
+
+			r := v1mock.NewTestRunnerV2()
+			r.ReturnValue = []byte(fmt.Sprintf("cos.setup=%s/test.yaml", d))
+			config.Runner = r
+			Expect(utils.RunStage("luke", config)).To(BeNil())
+			Expect(memLog).To(ContainSubstring("luke"))
+			Expect(memLog).To(ContainSubstring(fmt.Sprintf("%s/test.yaml", d)))
+		})
+
 	})
 })

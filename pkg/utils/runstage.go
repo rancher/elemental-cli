@@ -80,7 +80,6 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 	// Run all stages for each of the default cloud config paths + extra cloud config paths
 	err = cfg.CloudInitRunner.Run(stageBefore, FinalCloudInitPaths...)
 	if err != nil {
-		fmt.Printf("EEORRORORO: %s\n", err)
 		return err
 	}
 	err = cfg.CloudInitRunner.Run(stage, FinalCloudInitPaths...)
