@@ -355,34 +355,31 @@ func (c Elemental) BootedFromSquash() bool {
 // and mount the iso file as loop,
 // and modify the IsoMnt var to point to the newly mounted dir
 func (c *Elemental) GetIso() error {
-	if c.config.Iso != "" {
-		tmpDir, err := afero.TempDir(c.config.Fs, "", "elemental")
-		if err != nil {
-			return err
-		}
-		tmpFile := filepath.Join(tmpDir, "cOs.iso")
-		err = c.GetUrl(c.config.Iso, tmpFile)
-		if err != nil {
-			defer c.config.Fs.RemoveAll(tmpDir)
-			return err
-		}
-		tmpIsoMount, err := afero.TempDir(c.config.Fs, "", "elemental-iso-mounted-")
-		if err != nil {
-			defer c.config.Fs.RemoveAll(tmpDir)
-			return err
-		}
-		var mountOptions []string
-		c.config.Logger.Infof("Mounting iso %s into %s", tmpFile, tmpIsoMount)
-		err = c.config.Mounter.Mount(tmpFile, tmpIsoMount, "loop", mountOptions)
-		if err != nil {
-			defer c.config.Fs.RemoveAll(tmpDir)
-			defer c.config.Fs.RemoveAll(tmpIsoMount)
-			return err
-		}
-		// Store the new mounted dir into IsoMnt, so we can use it down the line
-		c.config.IsoMnt = tmpIsoMount
-		return nil
+	tmpDir, err := afero.TempDir(c.config.Fs, "", "elemental")
+	if err != nil {
+		return err
 	}
+	tmpFile := filepath.Join(tmpDir, "cOs.iso")
+	err = c.GetUrl(c.config.Iso, tmpFile)
+	if err != nil {
+		defer c.config.Fs.RemoveAll(tmpDir)
+		return err
+	}
+	tmpIsoMount, err := afero.TempDir(c.config.Fs, "", "elemental-iso-mounted-")
+	if err != nil {
+		defer c.config.Fs.RemoveAll(tmpDir)
+		return err
+	}
+	var mountOptions []string
+	c.config.Logger.Infof("Mounting iso %s into %s", tmpFile, tmpIsoMount)
+	err = c.config.Mounter.Mount(tmpFile, tmpIsoMount, "loop", mountOptions)
+	if err != nil {
+		defer c.config.Fs.RemoveAll(tmpDir)
+		defer c.config.Fs.RemoveAll(tmpIsoMount)
+		return err
+	}
+	// Store the new mounted dir into IsoMnt, so we can use it down the line
+	c.config.IsoMnt = tmpIsoMount
 	return nil
 }
 

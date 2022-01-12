@@ -528,10 +528,6 @@ var _ = Describe("Elemental", func() {
 		})
 	})
 	Context("GetIso", func() {
-		It("Does nothing if iso is not set", func() {
-			e := elemental.NewElemental(config)
-			Expect(e.GetIso()).To(BeNil())
-		})
 		It("Modifies the IsoMnt var to point to the mounted iso", func() {
 			Expect(config.IsoMnt).To(Equal(cnst.IsoMnt))
 			tmpDir, err := afero.TempDir(fs, "", "elemental-test")
