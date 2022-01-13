@@ -43,7 +43,6 @@ var _ = Describe("run-stage", func() {
 			Expect(out).To(ContainSubstring("test"))
 			Expect(out).To(ContainSubstring("test.before"))
 			Expect(out).To(ContainSubstring("test.after"))
-			Expect(out).To(ContainSubstring("/proc/cmdline"))
 		})
 
 		// This requires fixing the env vars, otherwise it wont work

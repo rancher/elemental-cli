@@ -53,11 +53,11 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 	stageAfter := fmt.Sprintf("%s.after", stage)
 
 	// Check if the cmdline has the cos.setup key and extract its value to run yip on that given uri
-	out, err := cfg.Runner.Run("cat", "/proc/cmdline")
+	cmdLineOut, err := cfg.Runner.Run("cat", "/proc/cmdline")
 	if err != nil {
 		return err
 	}
-	cmdLine := strings.Split(string(out), " ")
+	cmdLine := strings.Split(string(cmdLineOut), " ")
 	for _, line := range cmdLine {
 		if strings.Contains(line, "=") {
 			lineSplit := strings.Split(line, "=")
@@ -100,17 +100,16 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 		}
 	}
 
-	// Finally, run all stages with dot notation using /proc/cmdline (why? how? is this used?)
 	cfg.CloudInitRunner.SetModifier(schema.DotNotationModifier)
-	err = cfg.CloudInitRunner.Run(stageBefore, "/proc/cmdline")
+	err = cfg.CloudInitRunner.Run(stageBefore, string(cmdLineOut))
 	if err != nil {
 		return err
 	}
-	err = cfg.CloudInitRunner.Run(stage, "/proc/cmdline")
+	err = cfg.CloudInitRunner.Run(stage, string(cmdLineOut))
 	if err != nil {
 		return err
 	}
-	err = cfg.CloudInitRunner.Run(stageAfter, "/proc/cmdline")
+	err = cfg.CloudInitRunner.Run(stageAfter, string(cmdLineOut))
 	if err != nil {
 		return err
 	}
