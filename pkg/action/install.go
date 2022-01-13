@@ -73,7 +73,7 @@ func (i InstallAction) Run() (err error) {
 	}
 
 	if i.Config.Iso != "" {
-		err = newElemental.GetIso()
+		tmpDir, err := newElemental.GetIso()
 		if err != nil {
 			return err
 		}
@@ -82,6 +82,7 @@ func (i InstallAction) Run() (err error) {
 			if tmpErr := i.Config.Mounter.Unmount(i.Config.IsoMnt); tmpErr != nil && err == nil {
 				err = tmpErr
 			}
+			i.Config.Fs.RemoveAll(tmpDir)
 		}()
 	}
 
