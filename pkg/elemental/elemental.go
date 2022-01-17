@@ -485,8 +485,14 @@ func (c Elemental) SetDefaultGrubEntry() error {
 		return errors.New("State partition not found. Cannot set grub env file")
 	}
 	grub := utils.NewGrub(c.config)
-	return grub.SetEnvFile(
+	return grub.SetPersistentVariables(
 		filepath.Join(part.MountPoint, cnst.GrubOEMEnv),
 		map[string]string{"default_menu_entry": c.config.GrubDefEntry},
 	)
+}
+
+// Runs rebranding procedure. Note this assumes all required partitions and
+// images to be mounted in advance.
+func (c Elemental) Rebrand() error {
+	return c.SetDefaultGrubEntry()
 }

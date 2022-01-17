@@ -188,7 +188,7 @@ func (i InstallAction) Run() (err error) {
 	}
 
 	// installation rebrand (only grub for now)
-	err = newElemental.SetDefaultGrubEntry()
+	err = newElemental.Rebrand()
 	if err != nil {
 		return err
 	}

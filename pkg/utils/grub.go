@@ -128,7 +128,7 @@ func (g Grub) Install() error {
 }
 
 // Sets the given key value pairs into as grub variables into the given file
-func (g Grub) SetEnvFile(grubEnvFile string, vars map[string]string) error {
+func (g Grub) SetPersistentVariables(grubEnvFile string, vars map[string]string) error {
 	for key, value := range vars {
 		out, err := g.config.Runner.Run("grub2-editenv", grubEnvFile, "set", fmt.Sprintf("%s=%s", key, value))
 		if err != nil {

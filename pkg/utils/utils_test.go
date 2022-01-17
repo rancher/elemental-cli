@@ -373,12 +373,12 @@ var _ = Describe("Utils", func() {
 			})
 
 		})
-		Context("SetEnvFile", func() {
+		Context("SetPersistentVariables", func() {
 			It("Sets the grub envrionment file", func() {
 				runner := v1mock.NewTestRunnerV2()
 				config.Runner = runner
 				grub := utils.NewGrub(config)
-				Expect(grub.SetEnvFile(
+				Expect(grub.SetPersistentVariables(
 					"somefile", map[string]string{"key1": "value1", "key2": "value2"},
 				)).To(BeNil())
 				Expect(runner.CmdsMatch([][]string{
@@ -391,7 +391,7 @@ var _ = Describe("Utils", func() {
 				runner.ReturnError = errors.New("grub error")
 				config.Runner = runner
 				grub := utils.NewGrub(config)
-				Expect(grub.SetEnvFile(
+				Expect(grub.SetPersistentVariables(
 					"somefile", map[string]string{"key1": "value1", "key2": "value2"},
 				)).NotTo(BeNil())
 				Expect(runner.CmdsMatch([][]string{
