@@ -51,8 +51,13 @@ func (c *Elemental) PartitionAndFormatDevice(disk *part.Disk) error {
 		return err
 	}
 
-	if c.config.PartTable == v1.GPT && c.config.PartLayout != "" {
-		return c.config.CloudInitRunner.Run(cnst.PartStage, c.config.PartLayout)
+	if c.config.PartLayout != "" {
+		if c.config.PartTable == v1.GPT {
+			c.config.Logger.Infof("Setting custom partitions from %s...", c.config.PartLayout)
+			return c.config.CloudInitRunner.Run(cnst.PartStage, c.config.PartLayout)
+		} else {
+			return errors.New("Custom partitioning is only supported for GPT disks")
+		}
 	}
 
 	return c.createDataPartitions(disk)
