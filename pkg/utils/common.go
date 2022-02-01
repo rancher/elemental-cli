@@ -126,6 +126,9 @@ func CosignVerify(fs afero.Fs, runner v1.Runner, image string, publicKey string,
 	}
 	if publicKey != "" {
 		args = append(args, "-key", publicKey)
+	} else {
+		os.Setenv("COSIGN_EXPERIMENTAL", "1")
+		defer os.Unsetenv("COSIGN_EXPERIMENTAL")
 	}
 	args = append(args, image)
 
