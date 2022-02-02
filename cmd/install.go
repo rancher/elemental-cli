@@ -69,7 +69,6 @@ var installCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().StringP("config-dir", "e", "/etc/elemental/", "dir where the elemental config resides")
 	installCmd.Flags().StringP("docker-image", "d", "", "Install a specified container image")
 	installCmd.Flags().StringP("cloud-init", "c", "", "Cloud-init config file")
 	installCmd.Flags().StringP("iso", "i", "", "Performs an installation from the ISO url")

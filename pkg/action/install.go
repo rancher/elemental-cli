@@ -159,10 +159,8 @@ func (i InstallAction) Run() (err error) {
 
 	err = i.installHook(cnst.AfterInstallChrootHook, true)
 	if err != nil {
-		newElemental.UnmountImage(&i.Config.ActiveImage)
 		return err
 	}
-	//TODO rebrand here is really needed? see cos-installer script
 
 	// Unmount active image
 	err = newElemental.UnmountImage(&i.Config.ActiveImage)

@@ -18,13 +18,13 @@ package v1
 
 import (
 	"errors"
-	"fmt"
 	dockTypes "github.com/docker/docker/api/types"
 	"github.com/mudler/luet/pkg/api/core/context"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 	"net/http"
+	"path/filepath"
 )
 
 const (
@@ -132,7 +132,7 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	r.ActiveImage = Image{
 		Label:      cnst.ActiveLabel,
 		Size:       cnst.ImgSize,
-		File:       fmt.Sprintf("%s/cOS/%s", cnst.StateDir, cnst.ActiveImgFile),
+		File:       filepath.Join(cnst.StateDir, "cOS", cnst.ActiveImgFile),
 		FS:         cnst.LinuxImgFs,
 		RootTree:   cnst.IsoBaseTree,
 		MountPoint: cnst.ActiveDir,
