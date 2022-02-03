@@ -40,6 +40,12 @@ func NewElemental(config *v1.RunConfig) *Elemental {
 	}
 }
 
+// FormatPartition will format an already existing partition
+func (c *Elemental) FormatPartition(part *v1.Partition, opts ...string) error {
+	c.config.Logger.Infof("Formatting '%s' partition", part.Name)
+	return partitioner.FormatDevice(c.config.Runner, part.Path, part.FS, part.Label, opts...)
+}
+
 // PartitionAndFormatDevice creates a new empty partition table on target disk
 // and applies the configured disk layout by creating and formatting all
 // required partitions
@@ -190,7 +196,7 @@ func (c Elemental) MountPartition(part *v1.Partition, opts ...string) error {
 func (c Elemental) UnmountPartition(part *v1.Partition) error {
 	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
 	// for bind mounts here
-	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(part.MountPoint); notMnt == true {
+	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(part.MountPoint); notMnt {
 		c.config.Logger.Debugf("Not unmounting partition, %s doesn't look like mountpoint", part.MountPoint)
 		return nil
 	}
