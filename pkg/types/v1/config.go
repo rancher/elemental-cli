@@ -137,7 +137,21 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		r.SystemLabel = cnst.SystemLabel
 	}
 
-	//TODO add partition labels...
+	if r.RecoveryLabel == "" {
+		r.RecoveryLabel = cnst.RecoveryLabel
+	}
+
+	if r.PersistentLabel == "" {
+		r.PersistentLabel = cnst.PersistentLabel
+	}
+
+	if r.OEMLabel == "" {
+		r.OEMLabel = cnst.OEMLabel
+	}
+
+	if r.StateLabel == "" {
+		r.StateLabel = cnst.StateLabel
+	}
 
 	r.Partitions = PartitionList{}
 

@@ -93,68 +93,52 @@ func InstallSetup(config *v1.RunConfig) error {
 	}
 
 	part = &v1.Partition{
-		Label:      cnst.OEMLabel,
+		Label:      config.OEMLabel,
 		Size:       cnst.OEMSize,
 		Name:       cnst.OEMPartName,
 		FS:         cnst.LinuxFs,
 		MountPoint: cnst.OEMDir,
 		Flags:      []string{},
 	}
-	if config.OEMLabel != "" {
-		part.Label = config.OEMLabel
-	}
 	config.Partitions = append(config.Partitions, part)
 
 	part = &v1.Partition{
-		Label:      cnst.StateLabel,
+		Label:      config.StateLabel,
 		Size:       cnst.StateSize,
 		Name:       cnst.StatePartName,
 		FS:         cnst.LinuxFs,
 		MountPoint: cnst.StateDir,
 		Flags:      statePartFlags,
 	}
-	if config.StateLabel != "" {
-		part.Label = config.StateLabel
-	}
 	config.Partitions = append(config.Partitions, part)
 
 	part = &v1.Partition{
-		Label:      cnst.RecoveryLabel,
+		Label:      config.RecoveryLabel,
 		Size:       cnst.RecoverySize,
 		Name:       cnst.RecoveryPartName,
 		FS:         cnst.LinuxFs,
 		MountPoint: cnst.RecoveryDir,
 		Flags:      []string{},
 	}
-	if config.RecoveryLabel != "" {
-		part.Label = config.RecoveryLabel
-	}
 	config.Partitions = append(config.Partitions, part)
 
 	part = &v1.Partition{
-		Label:      cnst.PersistentLabel,
+		Label:      config.PersistentLabel,
 		Size:       cnst.PersistentSize,
 		Name:       cnst.PersistentPartName,
 		FS:         cnst.LinuxFs,
 		MountPoint: cnst.PersistentDir,
 		Flags:      []string{},
 	}
-	if config.PersistentLabel != "" {
-		part.Label = config.PersistentLabel
-	}
 	config.Partitions = append(config.Partitions, part)
 
 	config.ActiveImage = v1.Image{
-		Label:      cnst.ActiveLabel,
+		Label:      config.ActiveLabel,
 		Size:       cnst.ImgSize,
 		File:       filepath.Join(cnst.StateDir, "cOS", cnst.ActiveImgFile),
 		FS:         cnst.LinuxImgFs,
 		RootTree:   cnst.IsoBaseTree,
 		MountPoint: cnst.ActiveDir,
-	}
-
-	if config.ActiveLabel != "" {
-		config.ActiveImage.Label = config.ActiveLabel
 	}
 
 	if config.DockerImg != "" {
