@@ -54,7 +54,7 @@ var upgradeCmd = &cobra.Command{
 		}
 
 		// Init setup
-		err = cfg.DigestSetup()
+		err = action.InstallSetup(cfg)
 		if err != nil {
 			cfg.Logger.Errorf("Error digesting setup: %s\n", err)
 		}

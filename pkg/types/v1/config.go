@@ -17,14 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	"errors"
-	dockTypes "github.com/docker/docker/api/types"
-	"github.com/mudler/luet/pkg/api/core/context"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 	"net/http"
-	"path/filepath"
 )
 
 const (
@@ -129,17 +125,8 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 		r.GrubConf = cnst.GrubConf
 	}
 
-	r.ActiveImage = Image{
-		Label:      cnst.ActiveLabel,
-		Size:       cnst.ImgSize,
-		File:       filepath.Join(cnst.StateDir, "cOS", cnst.ActiveImgFile),
-		FS:         cnst.LinuxImgFs,
-		RootTree:   cnst.IsoBaseTree,
-		MountPoint: cnst.ActiveDir,
-	}
-
-	if r.ActiveLabel != "" {
-		r.ActiveImage.Label = r.ActiveLabel
+	if r.ActiveLabel == "" {
+		r.ActiveLabel = cnst.ActiveLabel
 	}
 
 	if r.PassiveLabel == "" {
@@ -149,6 +136,8 @@ func NewRunConfig(opts ...RunConfigOptions) *RunConfig {
 	if r.SystemLabel == "" {
 		r.SystemLabel = cnst.SystemLabel
 	}
+
+	//TODO add partition labels...
 
 	r.Partitions = PartitionList{}
 
@@ -251,138 +240,6 @@ func (pl PartitionList) GetByName(name string) *Partition {
 			return p
 		}
 	}
-	return nil
-}
-
-// setupStyle will gather what partition table and bootflag we need for the current system
-func (r *RunConfig) setupStyle() {
-	_, err := r.Fs.Stat(cnst.EfiDevice)
-	efiExists := err == nil
-	statePartFlags := []string{}
-	var part *Partition
-
-	if r.ForceEfi || efiExists {
-		r.PartTable = GPT
-		r.BootFlag = ESP
-		part = &Partition{
-			Label:      cnst.EfiLabel,
-			Size:       cnst.EfiSize,
-			Name:       cnst.EfiPartName,
-			FS:         cnst.EfiFs,
-			MountPoint: cnst.EfiDir,
-			Flags:      []string{ESP},
-		}
-		r.Partitions = append(r.Partitions, part)
-	} else if r.ForceGpt {
-		r.PartTable = GPT
-		r.BootFlag = BIOS
-		part = &Partition{
-			Label:      "",
-			Size:       cnst.BiosSize,
-			Name:       cnst.BiosPartName,
-			FS:         "",
-			MountPoint: "",
-			Flags:      []string{BIOS},
-		}
-		r.Partitions = append(r.Partitions, part)
-	} else {
-		r.PartTable = MSDOS
-		r.BootFlag = BOOT
-		statePartFlags = []string{BOOT}
-	}
-
-	part = &Partition{
-		Label:      cnst.OEMLabel,
-		Size:       cnst.OEMSize,
-		Name:       cnst.OEMPartName,
-		FS:         cnst.LinuxFs,
-		MountPoint: cnst.OEMDir,
-		Flags:      []string{},
-	}
-	if r.OEMLabel != "" {
-		part.Label = r.OEMLabel
-	}
-	r.Partitions = append(r.Partitions, part)
-
-	part = &Partition{
-		Label:      cnst.StateLabel,
-		Size:       cnst.StateSize,
-		Name:       cnst.StatePartName,
-		FS:         cnst.LinuxFs,
-		MountPoint: cnst.StateDir,
-		Flags:      statePartFlags,
-	}
-	if r.StateLabel != "" {
-		part.Label = r.StateLabel
-	}
-	r.Partitions = append(r.Partitions, part)
-
-	part = &Partition{
-		Label:      cnst.RecoveryLabel,
-		Size:       cnst.RecoverySize,
-		Name:       cnst.RecoveryPartName,
-		FS:         cnst.LinuxFs,
-		MountPoint: cnst.RecoveryDir,
-		Flags:      []string{},
-	}
-	if r.RecoveryLabel != "" {
-		part.Label = r.RecoveryLabel
-	}
-	r.Partitions = append(r.Partitions, part)
-
-	part = &Partition{
-		Label:      cnst.PersistentLabel,
-		Size:       cnst.PersistentSize,
-		Name:       cnst.PersistentPartName,
-		FS:         cnst.LinuxFs,
-		MountPoint: cnst.PersistentDir,
-		Flags:      []string{},
-	}
-	if r.PersistentLabel != "" {
-		part.Label = r.PersistentLabel
-	}
-	r.Partitions = append(r.Partitions, part)
-}
-
-// sanityChecks just verifies some potential inconsistencies on configuration
-func (r RunConfig) sanityChecks() error {
-	err := errors.New("Invalid options")
-	if r.Reboot && r.PowerOff {
-		r.Logger.Errorf("'reboot' and 'poweroff' are mutually exclusive options")
-		return err
-	}
-
-	if r.CosignPubKey != "" && !r.Cosign {
-		r.Logger.Errorf("'cosign-key' requires 'cosing' option to be enabled")
-		return err
-	}
-
-	if r.Cosign && r.CosignPubKey == "" {
-		r.Logger.Warnf("No 'cosign-key' option set, keyless cosign verification is experimental")
-	}
-
-	return nil
-}
-
-// setupLuet will initialize Luet interface if required
-func (r *RunConfig) setupLuet() {
-	if r.DockerImg != "" {
-		plugins := []string{}
-		if !r.NoVerify {
-			plugins = append(plugins, cnst.LuetMtreePlugin)
-		}
-		r.Luet = NewLuet(r.Logger, context.NewContext(), &dockTypes.AuthConfig{}, plugins...)
-	}
-}
-
-// DigestSetup will gather what partition table and bootflag we need for the current system
-func (r *RunConfig) DigestSetup() error {
-	err := r.sanityChecks()
-	if err != nil {
-		return err
-	}
-	r.setupStyle()
-	r.setupLuet()
 	return nil
 }
 

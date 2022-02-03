@@ -19,25 +19,19 @@ package action
 import (
 	"errors"
 	"fmt"
+	dockTypes "github.com/docker/docker/api/types"
+	"github.com/mudler/luet/pkg/api/core/context"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
-	part "github.com/rancher-sandbox/elemental/pkg/partitioner"
+	"github.com/rancher-sandbox/elemental/pkg/partitioner"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
+	"path/filepath"
 )
 
-// InstallAction represents the struct that will run the full install from start to finish
-type InstallAction struct {
-	Config *v1.RunConfig
-}
-
-func NewInstallAction(config *v1.RunConfig) *InstallAction {
-	return &InstallAction{Config: config}
-}
-
-func (i InstallAction) installHook(hook string, chroot bool) (err error) {
+func installHook(config *v1.RunConfig, hook string, chroot bool) (err error) {
 	if chroot {
-		chroot := utils.NewChroot(i.Config.ActiveImage.MountPoint, i.Config)
+		chroot := utils.NewChroot(config.ActiveImage.MountPoint, config)
 		chroot.SetExtraMounts(map[string]string{
 			cnst.PersistentDir: "/usr/local",
 			cnst.OEMDir:        "/oem",
@@ -52,52 +46,166 @@ func (i InstallAction) installHook(hook string, chroot bool) (err error) {
 			}
 		}()
 	}
-	i.Config.Logger.Infof("Running %s hook", hook)
-	err = utils.RunStage(hook, i.Config)
-	if !i.Config.Strict {
+	config.Logger.Infof("Running %s hook", hook)
+	err = utils.RunStage(hook, config)
+	if !config.Strict {
 		err = nil
 	}
 	return err
 }
 
-// Run will install the cos system to a device by following several steps
-func (i InstallAction) Run() (err error) {
-	newElemental := elemental.NewElemental(i.Config)
+// InstallSetup will set installation parameters according to
+// the given configuration flags
+func InstallSetup(config *v1.RunConfig) error {
+	_, err := config.Fs.Stat(cnst.EfiDevice)
+	efiExists := err == nil
+	statePartFlags := []string{}
+	var part *v1.Partition
 
-	disk := part.NewDisk(
-		i.Config.Target,
-		part.WithRunner(i.Config.Runner),
-		part.WithFS(i.Config.Fs),
-		part.WithLogger(i.Config.Logger),
+	if config.ForceEfi || efiExists {
+		config.PartTable = v1.GPT
+		config.BootFlag = v1.ESP
+		part = &v1.Partition{
+			Label:      cnst.EfiLabel,
+			Size:       cnst.EfiSize,
+			Name:       cnst.EfiPartName,
+			FS:         cnst.EfiFs,
+			MountPoint: cnst.EfiDir,
+			Flags:      []string{v1.ESP},
+		}
+		config.Partitions = append(config.Partitions, part)
+	} else if config.ForceGpt {
+		config.PartTable = v1.GPT
+		config.BootFlag = v1.BIOS
+		part = &v1.Partition{
+			Label:      "",
+			Size:       cnst.BiosSize,
+			Name:       cnst.BiosPartName,
+			FS:         "",
+			MountPoint: "",
+			Flags:      []string{v1.BIOS},
+		}
+		config.Partitions = append(config.Partitions, part)
+	} else {
+		config.PartTable = v1.MSDOS
+		config.BootFlag = v1.BOOT
+		statePartFlags = []string{v1.BOOT}
+	}
+
+	part = &v1.Partition{
+		Label:      cnst.OEMLabel,
+		Size:       cnst.OEMSize,
+		Name:       cnst.OEMPartName,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.OEMDir,
+		Flags:      []string{},
+	}
+	if config.OEMLabel != "" {
+		part.Label = config.OEMLabel
+	}
+	config.Partitions = append(config.Partitions, part)
+
+	part = &v1.Partition{
+		Label:      cnst.StateLabel,
+		Size:       cnst.StateSize,
+		Name:       cnst.StatePartName,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.StateDir,
+		Flags:      statePartFlags,
+	}
+	if config.StateLabel != "" {
+		part.Label = config.StateLabel
+	}
+	config.Partitions = append(config.Partitions, part)
+
+	part = &v1.Partition{
+		Label:      cnst.RecoveryLabel,
+		Size:       cnst.RecoverySize,
+		Name:       cnst.RecoveryPartName,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.RecoveryDir,
+		Flags:      []string{},
+	}
+	if config.RecoveryLabel != "" {
+		part.Label = config.RecoveryLabel
+	}
+	config.Partitions = append(config.Partitions, part)
+
+	part = &v1.Partition{
+		Label:      cnst.PersistentLabel,
+		Size:       cnst.PersistentSize,
+		Name:       cnst.PersistentPartName,
+		FS:         cnst.LinuxFs,
+		MountPoint: cnst.PersistentDir,
+		Flags:      []string{},
+	}
+	if config.PersistentLabel != "" {
+		part.Label = config.PersistentLabel
+	}
+	config.Partitions = append(config.Partitions, part)
+
+	config.ActiveImage = v1.Image{
+		Label:      cnst.ActiveLabel,
+		Size:       cnst.ImgSize,
+		File:       filepath.Join(cnst.StateDir, "cOS", cnst.ActiveImgFile),
+		FS:         cnst.LinuxImgFs,
+		RootTree:   cnst.IsoBaseTree,
+		MountPoint: cnst.ActiveDir,
+	}
+
+	if config.ActiveLabel != "" {
+		config.ActiveImage.Label = config.ActiveLabel
+	}
+
+	if config.DockerImg != "" {
+		plugins := []string{}
+		if !config.NoVerify {
+			plugins = append(plugins, cnst.LuetMtreePlugin)
+		}
+		config.Luet = v1.NewLuet(config.Logger, context.NewContext(), &dockTypes.AuthConfig{}, plugins...)
+	}
+
+	return nil
+}
+
+// Run will install the system from a given configuration
+func InstallRun(config *v1.RunConfig) (err error) {
+	newElemental := elemental.NewElemental(config)
+
+	disk := partitioner.NewDisk(
+		config.Target,
+		partitioner.WithRunner(config.Runner),
+		partitioner.WithFS(config.Fs),
+		partitioner.WithLogger(config.Logger),
 	)
 
-	err = i.installHook(cnst.BeforeInstallHook, false)
+	err = installHook(config, cnst.BeforeInstallHook, false)
 	if err != nil {
 		return err
 	}
 
-	if i.Config.Iso != "" {
+	if config.Iso != "" {
 		tmpDir, err := newElemental.GetIso()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			i.Config.Logger.Infof("Unmounting downloaded ISO")
-			if tmpErr := i.Config.Mounter.Unmount(i.Config.IsoMnt); tmpErr != nil && err == nil {
+			config.Logger.Infof("Unmounting downloaded ISO")
+			if tmpErr := config.Mounter.Unmount(config.IsoMnt); tmpErr != nil && err == nil {
 				err = tmpErr
 			}
-			i.Config.Fs.RemoveAll(tmpDir)
+			config.Fs.RemoveAll(tmpDir)
 		}()
 	}
 
 	// Check device valid
 	if !disk.Exists() {
-		i.Config.Logger.Errorf("Disk %s does not exist", i.Config.Target)
-		return errors.New(fmt.Sprintf("Disk %s does not exist", i.Config.Target))
+		config.Logger.Errorf("Disk %s does not exist", config.Target)
+		return errors.New(fmt.Sprintf("Disk %s does not exist", config.Target))
 	}
 
 	// Check no-format flag
-	if i.Config.NoFormat {
+	if config.NoFormat {
 		// Check force flag against current device
 		err = newElemental.CheckNoFormat()
 		if err != nil {
@@ -122,18 +230,18 @@ func (i InstallAction) Run() (err error) {
 	}()
 
 	// create active file system image
-	err = newElemental.CreateFileSystemImage(i.Config.ActiveImage)
+	err = newElemental.CreateFileSystemImage(config.ActiveImage)
 	if err != nil {
 		return err
 	}
 
 	//mount file system image
-	err = newElemental.MountImage(&i.Config.ActiveImage, "rw")
+	err = newElemental.MountImage(&config.ActiveImage, "rw")
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if tmpErr := newElemental.UnmountImage(&i.Config.ActiveImage); tmpErr != nil && err == nil {
+		if tmpErr := newElemental.UnmountImage(&config.ActiveImage); tmpErr != nil && err == nil {
 			err = tmpErr
 		}
 	}()
@@ -149,7 +257,7 @@ func (i InstallAction) Run() (err error) {
 		return err
 	}
 	// install grub
-	grub := utils.NewGrub(i.Config)
+	grub := utils.NewGrub(config)
 	err = grub.Install()
 	if err != nil {
 		return err
@@ -157,13 +265,13 @@ func (i InstallAction) Run() (err error) {
 	// Relabel SELinux
 	_ = newElemental.SelinuxRelabel(cnst.ActiveDir, false)
 
-	err = i.installHook(cnst.AfterInstallChrootHook, true)
+	err = installHook(config, cnst.AfterInstallChrootHook, true)
 	if err != nil {
 		return err
 	}
 
 	// Unmount active image
-	err = newElemental.UnmountImage(&i.Config.ActiveImage)
+	err = newElemental.UnmountImage(&config.ActiveImage)
 	if err != nil {
 		return err
 	}
@@ -178,7 +286,7 @@ func (i InstallAction) Run() (err error) {
 		return err
 	}
 
-	err = i.installHook(cnst.AfterInstallHook, false)
+	err = installHook(config, cnst.AfterInstallHook, false)
 	if err != nil {
 		return err
 	}
@@ -190,12 +298,12 @@ func (i InstallAction) Run() (err error) {
 	}
 
 	// Reboot, poweroff or nothing
-	if i.Config.Reboot {
-		i.Config.Logger.Infof("Rebooting in 5 seconds")
-		return utils.Reboot(i.Config.Runner, 5)
-	} else if i.Config.PowerOff {
-		i.Config.Logger.Infof("Shutting down in 5 seconds")
-		return utils.Shutdown(i.Config.Runner, 5)
+	if config.Reboot {
+		config.Logger.Infof("Rebooting in 5 seconds")
+		return utils.Reboot(config.Runner, 5)
+	} else if config.PowerOff {
+		config.Logger.Infof("Shutting down in 5 seconds")
+		return utils.Shutdown(config.Runner, 5)
 	}
 	return err
 }
