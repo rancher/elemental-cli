@@ -19,8 +19,6 @@ package action
 import (
 	"errors"
 	"fmt"
-	dockTypes "github.com/docker/docker/api/types"
-	"github.com/mudler/luet/pkg/api/core/context"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	"github.com/rancher-sandbox/elemental/pkg/partitioner"
@@ -29,29 +27,17 @@ import (
 	"path/filepath"
 )
 
-func installHook(config *v1.RunConfig, hook string, chroot bool) (err error) {
+func installHook(config *v1.RunConfig, hook string, chroot bool) error {
 	if chroot {
-		chroot := utils.NewChroot(config.ActiveImage.MountPoint, config)
-		chroot.SetExtraMounts(map[string]string{
-			cnst.PersistentDir: "/usr/local",
-			cnst.OEMDir:        "/oem",
-		})
-		err = chroot.Prepare()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if tmpErr := chroot.Close(); tmpErr != nil && err == nil {
-				err = tmpErr
-			}
-		}()
+		return actionChrootHook(
+			config, hook, config.ActiveImage.MountPoint,
+			map[string]string{
+				cnst.PersistentDir: "/usr/local",
+				cnst.OEMDir:        "/oem",
+			},
+		)
 	}
-	config.Logger.Infof("Running %s hook", hook)
-	err = utils.RunStage(hook, config)
-	if !config.Strict {
-		err = nil
-	}
-	return err
+	return actionHook(config, hook)
 }
 
 // InstallSetup will set installation parameters according to
@@ -141,13 +127,7 @@ func InstallSetup(config *v1.RunConfig) error {
 		MountPoint: cnst.ActiveDir,
 	}
 
-	if config.DockerImg != "" {
-		plugins := []string{}
-		if !config.NoVerify {
-			plugins = append(plugins, cnst.LuetMtreePlugin)
-		}
-		config.Luet = v1.NewLuet(config.Logger, context.NewContext(), &dockTypes.AuthConfig{}, plugins...)
-	}
+	setupLuet(config)
 
 	return nil
 }
