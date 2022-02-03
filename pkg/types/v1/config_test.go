@@ -18,7 +18,7 @@ package v1_test
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"

@@ -17,7 +17,7 @@
 package tests
 
 import "os"
-import . "github.com/onsi/ginkgo"
+import . "github.com/onsi/ginkgo/v2"
 
 func RunTestOnlyWithRoot(description string, f interface{}) {
 	if os.Geteuid() == 0 {

@@ -19,8 +19,7 @@ package elemental_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
@@ -40,7 +39,6 @@ const partTmpl = `
 
 func TestElementalSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	config.DefaultReporterConfig.SlowSpecThreshold = 11
 	RunSpecs(t, "Elemental test suite")
 }
 

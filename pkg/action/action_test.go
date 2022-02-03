@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/mudler/luet/pkg/api/core/context"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/rancher-sandbox/elemental/pkg/constants"

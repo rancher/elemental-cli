@@ -19,7 +19,7 @@ package v1_test
 import (
 	dockTypes "github.com/docker/docker/api/types"
 	context2 "github.com/mudler/luet/pkg/api/core/context"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"os"

@@ -18,8 +18,7 @@ package partitioner_test
 
 import (
 	"errors"
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	part "github.com/rancher-sandbox/elemental/pkg/partitioner"
 	mocks "github.com/rancher-sandbox/elemental/tests/mocks"
@@ -36,7 +35,6 @@ const printOutput = `BYT;
 
 func TestElementalSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	config.DefaultReporterConfig.SlowSpecThreshold = 10
 	RunSpecs(t, "Partitioner test suite")
 }
 
