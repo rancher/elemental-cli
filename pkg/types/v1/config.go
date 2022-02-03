@@ -192,7 +192,7 @@ type RunConfig struct {
 	Strict           bool   `yaml:"strict,omitempty" mapstructure:"strict"`
 	Iso              string `yaml:"iso,omitempty" mapstructure:"iso"`
 	DockerImg        string `yaml:"docker-image,omitempty" mapstructure:"docker-image"`
-	Cosign           bool   `yaml:"no-cosign,omitempty" mapstructure:"no-cosign"`
+	Cosign           bool   `yaml:"cosign,omitempty" mapstructure:"cosign"`
 	CosignPubKey     string `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
 	NoVerify         bool   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
 	CloudInitPaths   string `yaml:"CLOUD_INIT_PATHS,omitempty" mapstructure:"CLOUD_INIT_PATHS"`
