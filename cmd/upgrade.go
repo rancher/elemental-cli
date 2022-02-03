@@ -31,6 +31,14 @@ var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "upgrade the system",
 	Args:  cobra.ExactArgs(0),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// We bind the --directory into the DirectoryUpgrade value directly to have a more explicit var in the config
+		viper.BindPFlag("DirectoryUpgrade", cmd.Flags().Lookup("directory"))
+		// We bind the --recovery flag into RecoveryUpgrade value to have a more explicit var in the config
+		viper.BindPFlag("RecoveryUpgrade", cmd.Flags().Lookup("recovery"))
+		// bind the rest of the flags into their direct values as they are mapped 1to1
+		viper.BindPFlags(cmd.Flags())
+	},
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := exec.LookPath("mount")
@@ -85,10 +93,4 @@ func init() {
 	upgradeCmd.Flags().Bool("strict", false, "Fail on any errors")
 	upgradeCmd.Flags().BoolP("reboot", "", false, "Reboot the system after install")
 	upgradeCmd.Flags().BoolP("poweroff", "", false, "Shutdown the system after install")
-	// We bind the --directory into the DirectoryUpgrade value directly to have a more explicit var in the config
-	viper.BindPFlag("DirectoryUpgrade", upgradeCmd.Flags().Lookup("directory"))
-	// We bind the --recovery flag into RecoveryUpgrade value to have a more explicit var in the config
-	viper.BindPFlag("RecoveryUpgrade", upgradeCmd.Flags().Lookup("recovery"))
-	// bind the rest of the flags into their direct values as they are mapped 1to1
-	viper.BindPFlags(upgradeCmd.Flags())
 }
