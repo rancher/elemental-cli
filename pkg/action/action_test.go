@@ -412,7 +412,6 @@ var _ = Describe("Actions", func() {
 				// Image size should be the config.ImgSize as its truncated from the upgrade
 				Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
 				Expect(info.IsDir()).To(BeFalse())
-				fmt.Print(info.Sys())
 
 				// Should have backed up active to passive
 				info, err = fs.Stat(passiveImg)
@@ -430,15 +429,15 @@ var _ = Describe("Actions", func() {
 				Expect(err).To(HaveOccurred())
 			})
 			It("Successfully upgrades from directory", Label("directory", "root"), func() {
-				config.DirectoryUpgrade = "/tmp/upgradesource"
+				config.DirectoryUpgrade, _ = os.MkdirTemp("", "elemental")
 				// Create the dir on real os as rsync works on the real os
-				_ = os.MkdirAll(config.DirectoryUpgrade, os.ModeDir)
 				defer os.RemoveAll(config.DirectoryUpgrade)
 				// create a random file on it
-				_ = os.WriteFile(fmt.Sprintf("%s/file.file", config.DirectoryUpgrade), []byte("something"), os.ModePerm)
+				err := os.WriteFile(fmt.Sprintf("%s/file.file", config.DirectoryUpgrade), []byte("something"), os.ModePerm)
+				Expect(err).ToNot(HaveOccurred())
 
 				upgrade = action.NewUpgradeAction(config)
-				err := upgrade.Run()
+				err = upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
