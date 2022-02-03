@@ -7,6 +7,14 @@ LDFLAGS += -X "github.com/rancher-sandbox/elemental/internal/version.version=${G
 LDFLAGS += -X "github.com/rancher-sandbox/elemental/internal/version.gitCommit=${GIT_COMMIT}"
 
 
+GINKGO?=$(shell which ginkgo 2> /dev/null)
+ifeq ("$(GINKGO)","")
+GINKGO="/usr/bin/ginkgo"
+endif
+
+$(GINKGO):
+	@echo "'ginkgo' not found."
+	@exit 1
 
 build:
 	go build -ldflags '$(LDFLAGS)' -o bin/
@@ -17,17 +25,18 @@ vet:
 fmt:
 	go fmt ${PKG}
 
-test:
+test_deps:
 	go install github.com/onsi/ginkgo/v2/ginkgo
-	ginkgo --label-filter !root --fail-fast --slow-spec-threshold 30s --race --covermode=atomic --coverprofile=coverage.txt -p -r ${PKG}
 
-test_root:
+test: $(GINKGO)
+	ginkgo run --label-filter !root --fail-fast --slow-spec-threshold 30s --race --covermode=atomic --coverprofile=coverage.txt -p -r ${PKG}
+
+test_root: $(GINKGO)
 ifneq ($(shell id -u), 0)
 	@echo "This tests require root/sudo to run."
 	@exit 1
 else
-	go install github.com/onsi/ginkgo/v2/ginkgo
-	ginkgo --label-filter root --fail-fast --slow-spec-threshold 30s --race --covermode=atomic --coverprofile=coverage_root.txt -p -r ${PKG}
+	ginkgo run --label-filter root --fail-fast --slow-spec-threshold 30s --race --covermode=atomic --coverprofile=coverage_root.txt -p -r ${PKG}
 endif
 
 license-check:
