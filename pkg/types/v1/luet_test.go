@@ -25,7 +25,7 @@ import (
 	"os"
 )
 
-var _ = Describe("Types", func() {
+var _ = Describe("Types", Label("luet", "types"), func() {
 	var luet *v1.Luet
 	var target string
 	BeforeEach(func() {
@@ -39,8 +39,8 @@ var _ = Describe("Types", func() {
 	AfterEach(func() {
 		Expect(os.RemoveAll(target)).To(BeNil())
 	})
-	Context("Luet", func() {
-		It("Fails to unpack without root privileges", func() {
+	Describe("Luet", func() {
+		It("Fails to unpack without root privileges", Label("unpack"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
 			Expect(luet.Unpack(target, image)).NotTo(BeNil())
 		})

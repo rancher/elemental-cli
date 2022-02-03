@@ -31,8 +31,8 @@ import (
 )
 
 // unit test stolen from yip
-var _ = Describe("CloudRunner", func() {
-	Context("loading yaml files", func() {
+var _ = Describe("CloudRunner", Label("CloudRunner", "types", "cloud-init"), func() {
+	Describe("loading yaml files", func() {
 		logger := logrus.New()
 		logger.SetOutput(ioutil.Discard)
 

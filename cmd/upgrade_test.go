@@ -22,8 +22,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Upgrade", func() {
-	It("Returns error if both --docker-image and --directory flags are used", func() {
+var _ = Describe("Upgrade", Label("upgrade", "cmd"), func() {
+	It("Returns error if both --docker-image and --directory flags are used", Label("flags"), func() {
 		buf := new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)

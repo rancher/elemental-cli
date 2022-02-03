@@ -24,7 +24,7 @@ import (
 )
 
 // unit test stolen from yip
-var _ = Describe("Syscall", func() {
+var _ = Describe("Syscall", Label("types", "syscall", "chroot"), func() {
 	It("Calling chroot on the real syscall should fail", func() {
 		r := v1.RealSyscall{}
 		err := r.Chroot("/tmp/")

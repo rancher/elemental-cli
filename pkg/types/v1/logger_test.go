@@ -25,7 +25,7 @@ import (
 	"reflect"
 )
 
-var _ = Describe("logger", func() {
+var _ = Describe("logger", Label("log", "logger", "types"), func() {
 	It("TestNewLogger returns a logger interface", func() {
 		l1 := v1.NewLogger()
 		l2 := logrus.New()

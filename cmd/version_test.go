@@ -22,14 +22,14 @@ import (
 	"github.com/rancher-sandbox/elemental/internal/version"
 )
 
-var _ = Describe("Version", func() {
+var _ = Describe("Version", Label("version", "cmd"), func() {
 	It("Reports the version", func() {
 		_, output, err := executeCommandC(rootCmd, "version")
 		Expect(err).To(BeNil())
 		v := version.Get().Version
 		Expect(output).To(ContainSubstring(v))
 	})
-	It("Reports the version in long format", func() {
+	It("Reports the version in long format", Label("flags"), func() {
 		_, output, err := executeCommandC(rootCmd, "version", "--long")
 		Expect(err).To(BeNil())
 		v := version.Get().Version

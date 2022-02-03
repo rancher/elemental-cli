@@ -27,10 +27,10 @@ import (
 	"k8s.io/mount-utils"
 )
 
-var _ = Describe("Types", func() {
-	Context("Config", func() {
-		Context("DigestSetup", func() {
-			Context("On efi system", func() {
+var _ = Describe("Types", Label("types", "config"), func() {
+	Describe("Config", func() {
+		Describe("DigestSetup", Label("parttable", "bootflag"), func() {
+			Describe("On efi system", Label("efi"), func() {
 				It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.ESP), func() {
 					fs := afero.NewMemMapFs()
 					_, _ = fs.Create(constants.EfiDevice)
@@ -45,7 +45,7 @@ var _ = Describe("Types", func() {
 					Expect(c.BootFlag).To(Equal(v1.ESP))
 				})
 			})
-			Context("On --force-efi flag", func() {
+			Describe("On --force-efi flag", func() {
 				It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.ESP), func() {
 					c := v1.NewRunConfig(
 						v1.WithFs(afero.NewMemMapFs()),
@@ -58,7 +58,7 @@ var _ = Describe("Types", func() {
 					Expect(c.BootFlag).To(Equal(v1.ESP))
 				})
 			})
-			Context("On --force-gpt flag", func() {
+			Describe("On --force-gpt flag", func() {
 				It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.BIOS), func() {
 					c := v1.NewRunConfig(
 						v1.WithFs(afero.NewMemMapFs()),
@@ -71,7 +71,7 @@ var _ = Describe("Types", func() {
 					Expect(c.BootFlag).To(Equal(v1.BIOS))
 				})
 			})
-			Context("On default values", func() {
+			Describe("On default values", func() {
 				It(fmt.Sprintf("sets part to %s and boot to %s", v1.MSDOS, v1.BOOT), func() {
 					c := v1.NewRunConfig(
 						v1.WithFs(afero.NewMemMapFs()),
@@ -84,7 +84,7 @@ var _ = Describe("Types", func() {
 				})
 			})
 		})
-		Context("ConfigOptions", func() {
+		Describe("ConfigOptions", func() {
 			It("Sets the proper interfaces in the config struct", func() {
 				fs := afero.NewMemMapFs()
 				mounter := mount.NewFakeMounter([]mount.MountPoint{})
@@ -108,7 +108,7 @@ var _ = Describe("Types", func() {
 				Expect(c.CloudInitRunner).To(Equal(ci))
 			})
 		})
-		Context("ConfigOptions no mounter specified", func() {
+		Describe("ConfigOptions no mounter specified", Label("mount", "mounter"), func() {
 			It("should use the default mounter", func() {
 				fs := afero.NewMemMapFs()
 				runner := &v1mock.FakeRunner{}
@@ -123,7 +123,7 @@ var _ = Describe("Types", func() {
 				Expect(c.Mounter).To(Equal(mount.New(constants.MountBinary)))
 			})
 		})
-		Context("PartitionList.GetByPLabel", func() {
+		Describe("PartitionList.GetByPLabel", Label("partition"), func() {
 			var c *v1.RunConfig
 
 			BeforeEach(func() {
