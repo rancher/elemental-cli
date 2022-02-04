@@ -66,6 +66,6 @@ func (l Luet) Unpack(target string, image string, local bool) error {
              if err != nil { 
                   return err
              } 
-             l.log.Infof("Size: %s", units.BytesSize(float64(info.Target.Size))
+             l.log.Infof("Size: %s", units.BytesSize(float64(info.Target.Size))) 
         } 
 }
