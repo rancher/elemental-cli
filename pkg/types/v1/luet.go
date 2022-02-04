@@ -25,7 +25,7 @@ import (
 )
 
 type LuetInterface interface {
-	Unpack(string, string) error
+	Unpack(string, string, bool) error
 }
 
 type Luet struct {
