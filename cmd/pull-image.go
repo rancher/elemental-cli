@@ -70,11 +70,8 @@ var pullImage = &cobra.Command{
 
 		luet := v1.NewLuet(cfg.Logger, context, auth, plugins...)
 		luet.VerifyImageUnpack = verify
-                if !local {
-		        err = luet.Unpack(destination, image)
-                } else {
-                        err = luet.Unpack(destination, image, local)
-                }
+                
+		err = luet.Unpack(destination, image, local)
                 
 		if err != nil {
 			cfg.Logger.Error(err.Error())
