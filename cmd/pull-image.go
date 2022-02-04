@@ -91,6 +91,6 @@ func init() {
 	pullImage.Flags().String("auth-identity-token", "", "Authentication identity token")
 	pullImage.Flags().String("auth-registry-token", "", "Authentication registry token")
 	pullImage.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
-        pullImage.Flags().Bool("local", false, "Use local imagz")
+        pullImage.Flags().Bool("local", false, "Use local image")
 	pullImage.Flags().StringArray("plugin", []string{}, "A list of runtime plugins to load. Can be repeated to add more than one plugin")
 }
