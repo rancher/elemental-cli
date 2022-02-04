@@ -62,7 +62,7 @@ func (l Luet) Unpack(target string, image string, local bool) error {
 	     l.log.Infof("Size: %s", units.BytesSize(float64(info.Target.Size)))
 	     return nil
         } else {
-             info, err := docker.ExtractDockerImage(util.DefaultContext, image, destination)
+             info, err := docker.ExtractDockerImage(l.context, image, target) 
              if err != nil { 
                   return err
              } 
