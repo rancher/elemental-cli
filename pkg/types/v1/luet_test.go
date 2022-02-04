@@ -42,7 +42,7 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 	Describe("Luet", func() {
 		It("Fails to unpack without root privileges", Label("unpack"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
-			Expect(luet.Unpack(target, image)).NotTo(BeNil())
+			Expect(luet.Unpack(target, image, false)).NotTo(BeNil())
 		})
 	})
 })
