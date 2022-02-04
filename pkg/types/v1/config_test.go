@@ -109,7 +109,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 			})
 		})
 		Describe("ConfigOptions no mounter specified", Label("mount", "mounter"), func() {
-			It("should use the default mounter", func() {
+			It("should use the default mounter", Label("systemctl"), func() {
 				fs := afero.NewMemMapFs()
 				runner := &v1mock.FakeRunner{}
 				sysc := &v1mock.FakeSyscall{}
