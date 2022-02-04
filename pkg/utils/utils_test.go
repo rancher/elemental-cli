@@ -109,6 +109,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			It("should return error if preparing twice before closing", func() {
 				Expect(chroot.Prepare()).To(BeNil())
 				defer chroot.Close()
+				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
 				Expect(chroot.Prepare()).NotTo(BeNil())
 				Expect(chroot.Close()).To(BeNil())
 				Expect(chroot.Prepare()).To(BeNil())

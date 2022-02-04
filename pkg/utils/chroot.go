@@ -32,6 +32,7 @@ type Chroot struct {
 	extraMounts   map[string]string
 	activeMounts  []string
 	config        *v1.RunConfig
+	oldRootF      *os.File
 }
 
 func NewChroot(path string, config *v1.RunConfig) *Chroot {
@@ -51,9 +52,8 @@ func (c *Chroot) SetExtraMounts(extraMounts map[string]string) {
 	c.extraMounts = extraMounts
 }
 
-// Prepare will mount the defaultMounts as bind mounts, to be ready when we run chroot
-func (c *Chroot) Prepare() error {
-	var err error
+// Prepare will mount all required bind mounts and chroot in to the new path
+func (c *Chroot) Prepare() (err error) {
 	keys := []string{}
 	mountOptions := []string{"bind"}
 
@@ -63,9 +63,17 @@ func (c *Chroot) Prepare() error {
 
 	defer func() {
 		if err != nil {
-			c.Close()
+			//Undo if fails while preparing chroot env
+			c.unmount()
 		}
 	}()
+
+	// Store current root
+	c.oldRootF, err = os.Open("/") // Can't use afero here because doesn't support chdir done below
+	if err != nil {
+		c.config.Logger.Errorf("Cant open /")
+		return err
+	}
 
 	for _, mnt := range c.defaultMounts {
 		mountPoint := fmt.Sprintf("%s%s", strings.TrimSuffix(c.path, "/"), mnt)
@@ -96,11 +104,52 @@ func (c *Chroot) Prepare() error {
 		}
 		c.activeMounts = append(c.activeMounts, mountPoint)
 	}
+
+	// Change to new dir before running chroot!
+	err = c.config.Syscall.Chdir(c.path)
+	if err != nil {
+		c.config.Logger.Errorf("Cant chdir %s: %s", c.path, err)
+		return err
+	}
+	defer func() {
+		if err != nil {
+			c.oldRootF.Chdir()
+		}
+	}()
+
+	err = c.config.Syscall.Chroot(c.path)
+	if err != nil {
+		c.config.Logger.Errorf("Cant chroot %s: %s", c.path, err)
+		return err
+	}
 	return nil
 }
 
-// Close will unmount all active mounts created in Prepare on reverse order
-func (c *Chroot) Close() error {
+// Close will undo chroot and unmount all active mounts created in Prepare on reverse order
+func (c *Chroot) Close() (err error) {
+	// Try to unmount in any case
+	defer func() {
+		if tmpErr := c.unmount(); tmpErr != nil && err == nil {
+			err = tmpErr
+		}
+	}()
+
+	err = c.oldRootF.Chdir()
+	if err != nil {
+		c.config.Logger.Errorf("Cant change to old root dir")
+		return err
+	} else {
+		err = c.config.Syscall.Chroot(".")
+		if err != nil {
+			c.config.Logger.Errorf("Cant chroot back to old root")
+			return err
+		}
+	}
+
+	return err
+}
+
+func (c *Chroot) unmount() error {
 	failures := []string{}
 	for len(c.activeMounts) > 0 {
 		curr := c.activeMounts[len(c.activeMounts)-1]
@@ -115,22 +164,19 @@ func (c *Chroot) Close() error {
 		c.activeMounts = failures
 		return errors.New(fmt.Sprintf("Failed closing chroot environment. Unmount failures: %v", failures))
 	}
+	if c.oldRootF != nil {
+		c.oldRootF.Close()
+		c.oldRootF = nil
+	}
 	return nil
 }
 
 // Run executes a command inside a chroot
 func (c *Chroot) Run(command string, args ...string) (out []byte, err error) {
-	// Store current root
-	oldRootF, err := os.Open("/") // Can't use afero here because doesn't support chdir done below
-	defer oldRootF.Close()
-	if err != nil {
-		c.config.Logger.Errorf("Cant open /")
-		return nil, err
-	}
 	if len(c.activeMounts) == 0 {
 		err = c.Prepare()
 		if err != nil {
-			c.config.Logger.Errorf("Cant mount default mounts")
+			c.config.Logger.Errorf("Failed preparing chroot environment")
 			return nil, err
 		}
 		defer func() {
@@ -140,37 +186,6 @@ func (c *Chroot) Run(command string, args ...string) (out []byte, err error) {
 			}
 		}()
 	}
-	// Change to new dir before running chroot!
-	err = c.config.Syscall.Chdir(c.path)
-	if err != nil {
-		c.config.Logger.Errorf("Cant chdir %s: %s", c.path, err)
-		return nil, err
-	}
-
-	err = c.config.Syscall.Chroot(c.path)
-	if err != nil {
-		c.config.Logger.Errorf("Cant chroot %s: %s", c.path, err)
-		return nil, err
-	}
-
-	// Restore to old root
-	defer func() {
-		tmpErr := oldRootF.Chdir()
-		if tmpErr != nil {
-			c.config.Logger.Errorf("Cant change to old root dir")
-			if err == nil {
-				err = tmpErr
-			}
-		} else {
-			tmpErr = c.config.Syscall.Chroot(".")
-			if tmpErr != nil {
-				c.config.Logger.Errorf("Cant chroot back to old root")
-				if err == nil {
-					err = tmpErr
-				}
-			}
-		}
-	}()
 
 	// run command in the chroot
 	out, err = c.config.Runner.Run(command, args...)
