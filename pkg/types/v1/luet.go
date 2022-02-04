@@ -60,7 +60,6 @@ func (l Luet) Unpack(target string, image string, local bool) error {
 	     }
 	     l.log.Infof("Pulled: %s %s", info.Target.Digest, info.Name)
 	     l.log.Infof("Size: %s", units.BytesSize(float64(info.Target.Size)))
-	     return nil
         } else {
              info, err := docker.ExtractDockerImage(l.context, image, target) 
              if err != nil { 
@@ -68,4 +67,5 @@ func (l Luet) Unpack(target string, image string, local bool) error {
              } 
              l.log.Infof("Size: %s", units.BytesSize(float64(info.Target.Size))) 
         } 
+        return nil 
 }
