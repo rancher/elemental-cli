@@ -46,7 +46,7 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
 			Expect(luet.Unpack(target, image, false)).NotTo(BeNil())
 		})
-               		It("Unpack local images", Label("unpack", "root"), func() {
+               	It("Unpack local images", Label("unpack", "root"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
 			ctx := context.Background()
 			cli, err := dockClient.NewClientWithOpts(dockClient.FromEnv, dockClient.WithAPIVersionNegotiation())
