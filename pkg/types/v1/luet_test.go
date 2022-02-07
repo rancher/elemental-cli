@@ -49,15 +49,9 @@ var _ = Describe("Types", Label("luet", "types"), func() {
         Describe("Luet", func() {
 		It("Unpack local images", Label("unpack"), func() {      
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
-			ref, err := name.ParseReference(image)
-	                if err != nil {
-		              return nil, err
-	                } 
-                        img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}))
-	                if err != nil {
-		             return nil, err
-	                }
-                        Expect(luet.Unpack(target, img, true)).NotTo(BeNil())
+			ref, err := name.ParseReference(image) 
+                        img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth})) 
+                        Expect(luet.Unpack(target, img, true)).To(BeNil())
 		})
 	})
 })
