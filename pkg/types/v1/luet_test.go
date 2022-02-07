@@ -18,7 +18,7 @@ package v1_test
 
 import (
 	dockTypes "github.com/docker/docker/api/types"
-	context "github.com/mudler/luet/pkg/api/core/context"
+	context2 "github.com/mudler/luet/pkg/api/core/context"
 	dockClient "github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -47,7 +47,7 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 		})
                		It("Unpack local images", Label("unpack", "root"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
-			ctx := context.Background()
+			ctx := context2.Background()
 			cli, err := dockClient.NewClientWithOpts(dockClient.FromEnv, dockClient.WithAPIVersionNegotiation())
 			Expect(err).ToNot(HaveOccurred())
 			// Pull image
