@@ -124,10 +124,14 @@ var _ = Describe("Types", Label("types", "config"), func() {
 			})
 		})
 <<<<<<< HEAD
+<<<<<<< HEAD
 		Describe("PartitionList.GetByName", Label("partition"), func() {
 =======
 		Describe("PartitionList.GetByPLabel", Label("partition"), func() {
 >>>>>>> 1935b18 (Move to ginkgo v2 (#73))
+=======
+		Describe("PartitionList.GetByName", Label("partition"), func() {
+>>>>>>> a28f429 (Rename 'PLabel' form v1.Partition to 'Name' (#74))
 			var c *v1.RunConfig
 
 			BeforeEach(func() {
