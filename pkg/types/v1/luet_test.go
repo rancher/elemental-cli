@@ -18,7 +18,7 @@ package v1_test
 
 import (
 	dockTypes "github.com/docker/docker/api/types"
-	context2 "github.com/mudler/luet/pkg/api/core/context"
+	context "github.com/mudler/luet/pkg/api/core/context"
 	dockClient "github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
