@@ -18,6 +18,7 @@ package v1_test
 
 import (
 	dockTypes "github.com/docker/docker/api/types"
+        "github.com/google/go-containerregistry/pkg/v1/remote"
 	context2 "github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,6 +44,20 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 		It("Fails to unpack without root privileges", Label("unpack"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
 			Expect(luet.Unpack(target, image, false)).NotTo(BeNil())
+		})
+	})
+        Describe("Luet", func() {
+		It("Unpack local images", Label("unpack"), func() {      
+			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
+			ref, err := name.ParseReference(image)
+	                if err != nil {
+		              return nil, err
+	                } 
+                        img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth}))
+	                if err != nil {
+		             return nil, err
+	                }
+                        Expect(luet.Unpack(target, img, true)).NotTo(BeNil())
 		})
 	})
 })
