@@ -26,6 +26,9 @@ fmt:
 	go fmt ${PKG}
 
 test_deps:
+	go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.1
+	go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.1
+	go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.1
 	go install github.com/onsi/ginkgo/v2/ginkgo
 
 test: $(GINKGO)
