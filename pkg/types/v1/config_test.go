@@ -123,7 +123,11 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(c.Mounter).To(Equal(mount.New(constants.MountBinary)))
 			})
 		})
+<<<<<<< HEAD
 		Describe("PartitionList.GetByName", Label("partition"), func() {
+=======
+		Describe("PartitionList.GetByPLabel", Label("partition"), func() {
+>>>>>>> 1935b18 (Move to ginkgo v2 (#73))
 			var c *v1.RunConfig
 
 			BeforeEach(func() {
