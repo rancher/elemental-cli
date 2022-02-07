@@ -7,7 +7,6 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/go-units v0.4.0
-	github.com/google/go-containerregistry v0.7.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ishidawataru/sctp v0.0.0-20210707070123-9a39160e9062 // indirect
