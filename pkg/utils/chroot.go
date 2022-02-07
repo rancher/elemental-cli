@@ -96,6 +96,7 @@ func (c *Chroot) Prepare() error {
 		}
 		c.activeMounts = append(c.activeMounts, mountPoint)
 	}
+
 	return nil
 }
 
@@ -118,15 +119,72 @@ func (c *Chroot) Close() error {
 	return nil
 }
 
+// RunCallback runs the given callback in a chroot environment
+func (c *Chroot) RunCallback(callback func() error) (err error) {
+	// Store current root
+	oldRootF, err := os.Open(".") // Can't use afero here because doesn't support chdir done below
+	if err != nil {
+		c.config.Logger.Errorf("Cant open /")
+		return err
+	}
+	defer oldRootF.Close()
+	if len(c.activeMounts) == 0 {
+		err = c.Prepare()
+		if err != nil {
+			c.config.Logger.Errorf("Cant mount default mounts")
+			return err
+		}
+		defer func() {
+			tmpErr := c.Close()
+			if err == nil {
+				err = tmpErr
+			}
+		}()
+	}
+	// Change to new dir before running chroot!
+	err = c.config.Syscall.Chdir(c.path)
+	if err != nil {
+		c.config.Logger.Errorf("Cant chdir %s: %s", c.path, err)
+		return err
+	}
+
+	err = c.config.Syscall.Chroot(c.path)
+	if err != nil {
+		c.config.Logger.Errorf("Cant chroot %s: %s", c.path, err)
+		return err
+	}
+
+	// Restore to old root
+	defer func() {
+		tmpErr := oldRootF.Chdir()
+		if tmpErr != nil {
+			c.config.Logger.Errorf("Cant change to old root dir")
+			if err == nil {
+				err = tmpErr
+			}
+		} else {
+			tmpErr = c.config.Syscall.Chroot(".")
+			if tmpErr != nil {
+				c.config.Logger.Errorf("Cant chroot back to old root")
+				if err == nil {
+					err = tmpErr
+				}
+			}
+		}
+	}()
+
+	return callback()
+}
+
 // Run executes a command inside a chroot
 func (c *Chroot) Run(command string, args ...string) (out []byte, err error) {
 	// Store current root
-	oldRootF, err := os.Open("/") // Can't use afero here because doesn't support chdir done below
-	defer oldRootF.Close()
+	oldRootF, err := os.Open(".") // Can't use afero here because doesn't support chdir done below
 	if err != nil {
 		c.config.Logger.Errorf("Cant open /")
 		return nil, err
 	}
+	defer oldRootF.Close()
 	if len(c.activeMounts) == 0 {
 		err = c.Prepare()
 		if err != nil {
