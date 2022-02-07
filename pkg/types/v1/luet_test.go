@@ -18,9 +18,8 @@ package v1_test
 
 import (
 	dockTypes "github.com/docker/docker/api/types"
-        "github.com/google/go-containerregistry/pkg/v1/remote"
-        "github.com/google/go-containerregistry/pkg/name"
 	context2 "github.com/mudler/luet/pkg/api/core/context"
+	dockClient "github.com/docker/docker/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"
@@ -46,13 +45,17 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
 			Expect(luet.Unpack(target, image, false)).NotTo(BeNil())
 		})
-	})
-        Describe("Luet", func() {
-		It("Unpack local images", Label("unpack"), func() {      
-			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
-			ref, err := name.ParseReference(image) 
-                        img, err := remote.Image(ref, remote.WithAuth(staticAuth{auth})) 
-                        Expect(luet.Unpack(target, img, true)).To(BeNil())
-		})
+               		It("Unpack local images", Label("unpack", "root"), func() {
++			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
++			ctx := context.Background()
++			cli, err := dockClient.NewClientWithOpts(dockClient.FromEnv, dockClient.WithAPIVersionNegotiation())
++			Expect(err).ToNot(HaveOccurred())
++			// Pull image
++			reader, err := cli.ImagePull(ctx, image, dockTypes.ImagePullOptions{})
++			defer reader.Close()
++			// Check that luet can unpack the local image
++			Expect(luet.Unpack(target, image, true)).To(BeNil())
++		})
+ 	})
 	})
 })

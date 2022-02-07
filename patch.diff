@@ -1,14 +1,31 @@
-diff --git a/Makefile b/Makefile
-index 48273b0..a7ddaf5 100644
---- a/Makefile
-+++ b/Makefile
-@@ -26,6 +26,9 @@ fmt:
- 	go fmt ${PKG}
+diff --git a/pkg/types/v1/luet_test.go b/pkg/types/v1/luet_test.go
+index cfdabfe..38eb714 100644
+--- a/pkg/types/v1/luet_test.go
++++ b/pkg/types/v1/luet_test.go
+@@ -17,7 +17,9 @@ limitations under the License.
+ package v1_test
  
- test_deps:
-+	go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.1
-+	go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.1
-+	go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.1
- 	go install github.com/onsi/ginkgo/v2/ginkgo
- 
- test: $(GINKGO)
+ import (
++	"context"
+ 	dockTypes "github.com/docker/docker/api/types"
++	dockClient "github.com/docker/docker/client"
+ 	context2 "github.com/mudler/luet/pkg/api/core/context"
+ 	. "github.com/onsi/ginkgo/v2"
+ 	. "github.com/onsi/gomega"
+@@ -44,5 +46,16 @@ var _ = Describe("Types", Label("luet", "types"), func() {
+ 			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
+ 			Expect(luet.Unpack(target, image)).NotTo(BeNil())
+ 		})
++		It("Unpack local images", Label("unpack", "root"), func() {
++			image := "quay.io/costoolkit/releases-green:cloud-config-system-0.11-1"
++			ctx := context.Background()
++			cli, err := dockClient.NewClientWithOpts(dockClient.FromEnv, dockClient.WithAPIVersionNegotiation())
++			Expect(err).ToNot(HaveOccurred())
++			// Pull image
++			reader, err := cli.ImagePull(ctx, image, dockTypes.ImagePullOptions{})
++			defer reader.Close()
++			// Check that luet can unpack the local image
++			Expect(luet.Unpack(target, image, true)).To(BeNil())
++		})
+ 	})
+ })
