@@ -57,5 +57,4 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 			Expect(luet.Unpack(target, image, true)).To(BeNil())
 		})
  	})
-	})
 })
