@@ -19,6 +19,7 @@ package v1_test
 import (
 	dockTypes "github.com/docker/docker/api/types"
         "github.com/google/go-containerregistry/pkg/v1/remote"
+        "github.com/google/go-containerregistry/pkg/name"
 	context2 "github.com/mudler/luet/pkg/api/core/context"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
