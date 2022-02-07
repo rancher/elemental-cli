@@ -122,7 +122,7 @@ func (c *Chroot) Close() error {
 // RunCallback runs the given callback in a chroot environment
 func (c *Chroot) RunCallback(callback func() error) (err error) {
 	// Store current root
-	oldRootF, err := os.Open(".") // Can't use afero here because doesn't support chdir done below
+	oldRootF, err := os.Open("/") // Can't use afero here because doesn't support chdir done below
 	if err != nil {
 		c.config.Logger.Errorf("Cant open /")
 		return err
@@ -178,65 +178,14 @@ func (c *Chroot) RunCallback(callback func() error) (err error) {
 
 // Run executes a command inside a chroot
 func (c *Chroot) Run(command string, args ...string) (out []byte, err error) {
-	// Store current root
-	oldRootF, err := os.Open(".") // Can't use afero here because doesn't support chdir done below
-	if err != nil {
-		c.config.Logger.Errorf("Cant open /")
-		return nil, err
+	callback := func() error {
+		out, err = c.config.Runner.Run(command, args...)
+		return err
 	}
-	defer oldRootF.Close()
-	if len(c.activeMounts) == 0 {
-		err = c.Prepare()
-		if err != nil {
-			c.config.Logger.Errorf("Cant mount default mounts")
-			return nil, err
-		}
-		defer func() {
-			tmpErr := c.Close()
-			if err == nil {
-				err = tmpErr
-			}
-		}()
-	}
-	// Change to new dir before running chroot!
-	err = c.config.Syscall.Chdir(c.path)
-	if err != nil {
-		c.config.Logger.Errorf("Cant chdir %s: %s", c.path, err)
-		return nil, err
-	}
-
-	err = c.config.Syscall.Chroot(c.path)
-	if err != nil {
-		c.config.Logger.Errorf("Cant chroot %s: %s", c.path, err)
-		return nil, err
-	}
-
-	// Restore to old root
-	defer func() {
-		tmpErr := oldRootF.Chdir()
-		if tmpErr != nil {
-			c.config.Logger.Errorf("Cant change to old root dir")
-			if err == nil {
-				err = tmpErr
-			}
-		} else {
-			tmpErr = c.config.Syscall.Chroot(".")
-			if tmpErr != nil {
-				c.config.Logger.Errorf("Cant chroot back to old root")
-				if err == nil {
-					err = tmpErr
-				}
-			}
-		}
-	}()
-
-	// run command in the chroot
-	out, err = c.config.Runner.Run(command, args...)
+	err = c.RunCallback(callback)
 	if err != nil {
 		c.config.Logger.Errorf("Cant run command %s with args %v on chroot: %s", command, args, err)
 		c.config.Logger.Debugf("Output from command: %s", out)
-		return out, err
 	}
-
 	return out, err
 }
