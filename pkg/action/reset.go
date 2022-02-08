@@ -54,6 +54,7 @@ func ResetSetup(config *v1.RunConfig) error {
 
 	var rootTree string
 	// TODO Properly include docker image source, luet package source and image source
+	// TODO execute rootTree sanity checks
 	if config.Directory != "" {
 		rootTree = config.Directory
 	} else if config.DockerImg != "" {
@@ -133,13 +134,14 @@ func ResetRun(config *v1.RunConfig) (err error) {
 		return err
 	}
 
-	// Reformat state partition
-	state := config.Partitions.GetByName(cnst.StatePartName)
-	err = ele.UnmountPartition(state)
+	// Unmount partitions if any is already mounted before formatting
+	err = ele.UnmountPartitions()
 	if err != nil {
 		return err
 	}
-	err = ele.FormatPartition(state)
+
+	// Reformat state partition
+	err = ele.FormatPartition(config.Partitions.GetByName(cnst.StatePartName))
 	if err != nil {
 		return err
 	}
@@ -147,10 +149,6 @@ func ResetRun(config *v1.RunConfig) (err error) {
 	if config.ResetPersistent {
 		persistent := config.Partitions.GetByName(cnst.PersistentPartName)
 		if persistent != nil {
-			err = ele.UnmountPartition(persistent)
-			if err != nil {
-				return err
-			}
 			err = ele.FormatPartition(persistent)
 			if err != nil {
 				return err
@@ -158,10 +156,6 @@ func ResetRun(config *v1.RunConfig) (err error) {
 		}
 		oem := config.Partitions.GetByName(cnst.OEMPartName)
 		if oem != nil {
-			err = ele.UnmountPartition(oem)
-			if err != nil {
-				return err
-			}
 			err = ele.FormatPartition(oem)
 			if err != nil {
 				return err

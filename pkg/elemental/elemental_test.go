@@ -227,6 +227,18 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 	})
 
+	Describe("FormatPartition", Label("FormatPartition", "partition", "format"), func() {
+		It("Reformats an already existing partition", func() {
+			el := elemental.NewElemental(config)
+			part := &v1.Partition{
+				Path:  "/dev/device1",
+				FS:    "ext4",
+				Label: "MY_LABEL",
+			}
+			Expect(el.FormatPartition(part)).To(BeNil())
+		})
+
+	})
 	Describe("PartitionAndFormatDevice", Label("PartitionAndFormatDevice", "partition", "format"), func() {
 		var el *elemental.Elemental
 		var dev *part.Disk

@@ -32,6 +32,7 @@ import (
 	"k8s.io/mount-utils"
 	"os"
 	"runtime"
+        "path/filepath"
 	"testing"
 )
 
