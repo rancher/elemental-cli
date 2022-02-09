@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 )
@@ -361,7 +362,7 @@ var _ = Describe("Actions", func() {
 			config.UpgradeImage = "system/cos-setup"
 			config.ImgSize = 10
 			// Create fake /etc/os-release
-			_ = afero.WriteFile(fs, "/etc/os-release", []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
+			_ = afero.WriteFile(fs, filepath.Join(constants.UpgradeTempDir, "etc", "os-release"), []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
 		})
 		It("Fails if some hook fails and strict is set", func() {
 			runner = v1mock.NewTestRunnerV2()
@@ -429,6 +430,9 @@ var _ = Describe("Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{
 					Device: "/dev/fake1",
@@ -470,6 +474,9 @@ var _ = Describe("Actions", func() {
 				upgrade = action.NewUpgradeAction(config)
 				err = upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
+
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
@@ -534,6 +541,9 @@ var _ = Describe("Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
 				// Should probably do well in mounting the image and checking contents to make sure everything worked
@@ -597,6 +607,8 @@ var _ = Describe("Actions", func() {
 				upgrade = action.NewUpgradeAction(config)
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{
@@ -686,6 +698,9 @@ var _ = Describe("Actions", func() {
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// This should be the new image
 					info, err = fs.Stat(recoveryImgSquash)
 					Expect(err).ToNot(HaveOccurred())
@@ -710,6 +725,9 @@ var _ = Describe("Actions", func() {
 					upgrade = action.NewUpgradeAction(config)
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 					// This should be the new image
 					info, err := fs.Stat(recoveryImgSquash)
@@ -770,6 +788,9 @@ var _ = Describe("Actions", func() {
 					upgrade = action.NewUpgradeAction(config)
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 					// Check that the rebrand worked with our os-release value
 					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
@@ -839,6 +860,9 @@ var _ = Describe("Actions", func() {
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// Expect cos-state to have been remounted back on RO
 					fakeMounted := mount.MountPoint{
 						Device: "/dev/fake1",
@@ -870,6 +894,9 @@ var _ = Describe("Actions", func() {
 					upgrade = action.NewUpgradeAction(config)
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 					// This should be the new image
 					info, err := fs.Stat(recoveryImg)
