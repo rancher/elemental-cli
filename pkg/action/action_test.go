@@ -360,6 +360,8 @@ var _ = Describe("Actions", func() {
 			config.ActiveLabel = constants.ActiveLabel
 			config.UpgradeImage = "system/cos-setup"
 			config.ImgSize = 10
+			// Create fake /etc/os-release
+			_ = afero.WriteFile(fs, "/etc/os-release", []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
 		})
 		It("Fails if some hook fails and strict is set", func() {
 			runner = v1mock.NewTestRunnerV2()
@@ -531,7 +533,6 @@ var _ = Describe("Actions", func() {
 				upgrade = action.NewUpgradeAction(config)
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
-				fmt.Print(memLog)
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
@@ -655,6 +656,11 @@ var _ = Describe("Actions", func() {
 							_ = afero.WriteFile(fs, recoveryImgSquash, f, os.ModePerm)
 							_ = fs.RemoveAll(transitionImgSquash)
 						}
+						if command == "blkid" && args[0] == "--label" && args[1] == constants.StateLabel {
+							// rebrand looks for this
+							return []byte("/dev/state"), nil
+						}
+
 						return []byte{}, nil
 					}
 					config.Runner = runner
@@ -695,9 +701,8 @@ var _ = Describe("Actions", func() {
 
 				})
 				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
-					config.DirectoryUpgrade = "/tmp/upgradesource"
+					config.DirectoryUpgrade, _ = os.MkdirTemp("", "elemental")
 					// Create the dir on real os as rsync works on the real os
-					_ = os.MkdirAll(config.DirectoryUpgrade, os.ModeDir)
 					defer os.RemoveAll(config.DirectoryUpgrade)
 					// create a random file on it
 					_ = os.WriteFile(fmt.Sprintf("%s/file.file", config.DirectoryUpgrade), []byte("something"), os.ModePerm)
@@ -718,7 +723,70 @@ var _ = Describe("Actions", func() {
 					Expect(err).To(HaveOccurred())
 
 				})
-				It("Successfully upgrades recovery from channel upgrade", Pending, Label("channel", "root"), func() {})
+				It("Successfully upgrades recovery from channel upgrade", Label("channel", "root"), func() {
+					// This should be the old image
+					info, err := fs.Stat(recoveryImgSquash)
+					Expect(err).ToNot(HaveOccurred())
+					// Image size should be empty
+					Expect(info.Size()).To(BeNumerically(">", 0))
+					Expect(info.IsDir()).To(BeFalse())
+					f, _ := afero.ReadFile(fs, recoveryImgSquash)
+					Expect(f).To(ContainSubstring("recovery"))
+
+					config.ChannelUpgrades = true
+					// Required paths
+					tmpDirBase, _ := os.MkdirTemp("", "elemental")
+					pkgCache, _ := os.MkdirTemp("", "elemental")
+					dbPath, _ := os.MkdirTemp("", "elemental")
+					defer os.RemoveAll(tmpDirBase)
+					defer os.RemoveAll(pkgCache)
+					defer os.RemoveAll(dbPath)
+					// create new config here to add system repos
+					luetSystemConfig := luetTypes.LuetSystemConfig{
+						DatabasePath:   dbPath,
+						PkgsCachePath:  pkgCache,
+						DatabaseEngine: "memory",
+						TmpDirBase:     tmpDirBase,
+					}
+					luetGeneralConfig := luetTypes.LuetGeneralConfig{Debug: false, Quiet: true, Concurrency: runtime.NumCPU()}
+					luetSolver := luetTypes.LuetSolverOptions{}
+					repos := luetTypes.LuetRepositories{}
+					repo := luetTypes.LuetRepository{
+						Name:           "cos",
+						Description:    "cos official",
+						Urls:           []string{"quay.io/costoolkit/releases-green"},
+						Type:           "docker",
+						Priority:       1,
+						Enable:         true,
+						Cached:         true,
+						Authentication: make(map[string]string),
+					}
+					repos = append(repos, repo)
+
+					cfg := luetTypes.LuetConfig{System: luetSystemConfig, Solver: luetSolver, General: luetGeneralConfig, SystemRepositories: repos}
+					luet = v1.NewLuet(v1.WithLuetLogger(logger), v1.WithLuetConfig(&cfg))
+					config.Luet = luet
+
+					upgrade = action.NewUpgradeAction(config)
+					err = upgrade.Run()
+					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
+					// This should be the new image
+					info, err = fs.Stat(recoveryImgSquash)
+					Expect(err).ToNot(HaveOccurred())
+					// Image size should be empty
+					Expect(info.Size()).To(BeNumerically("==", 0))
+					Expect(info.IsDir()).To(BeFalse())
+					f, _ = afero.ReadFile(fs, recoveryImgSquash)
+					Expect(f).ToNot(ContainSubstring("recovery"))
+
+					// Transition squash should not exist
+					info, err = fs.Stat(transitionImgSquash)
+					Expect(err).To(HaveOccurred())
+				})
 			})
 			Describe("Not using squashfs", Label("non-squashfs"), func() {
 				BeforeEach(func() {
@@ -738,6 +806,10 @@ var _ = Describe("Actions", func() {
 							f, _ := afero.ReadFile(fs, transitionImgRecovery)
 							_ = afero.WriteFile(fs, recoveryImg, f, os.ModePerm)
 							_ = fs.RemoveAll(transitionImgRecovery)
+						}
+						if command == "blkid" && args[0] == "--label" && args[1] == constants.StateLabel {
+							// rebrand looks for this
+							return []byte("/dev/state"), nil
 						}
 						return []byte{}, nil
 					}
@@ -788,8 +860,100 @@ var _ = Describe("Actions", func() {
 					}
 
 				})
-				It("Successfully upgrades recovery from directory", Pending, Label("directory", "root"), func() {})
-				It("Successfully upgrades recovery from channel upgrade", Pending, Label("channel", "root"), func() {})
+				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
+					config.DirectoryUpgrade, _ = os.MkdirTemp("", "elemental")
+					// Create the dir on real os as rsync works on the real os
+					defer os.RemoveAll(config.DirectoryUpgrade)
+					// create a random file on it
+					_ = os.WriteFile(fmt.Sprintf("%s/file.file", config.DirectoryUpgrade), []byte("something"), os.ModePerm)
+
+					upgrade = action.NewUpgradeAction(config)
+					err := upgrade.Run()
+					Expect(err).ToNot(HaveOccurred())
+
+					// This should be the new image
+					info, err := fs.Stat(recoveryImg)
+					Expect(err).ToNot(HaveOccurred())
+					// Image size should be empty
+					Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
+					Expect(info.IsDir()).To(BeFalse())
+
+					// Transition squash should not exist
+					info, err = fs.Stat(transitionImgRecovery)
+					Expect(err).To(HaveOccurred())
+				})
+				It("Successfully upgrades recovery from channel upgrade", Label("channel", "root"), func() {
+					// This should be the old image
+					info, err := fs.Stat(recoveryImg)
+					Expect(err).ToNot(HaveOccurred())
+					// Image size should not be empty
+					Expect(info.Size()).To(BeNumerically(">", 0))
+					Expect(info.Size()).To(BeNumerically("<", int64(config.ImgSize*1024*1024)))
+					Expect(info.IsDir()).To(BeFalse())
+					f, _ := afero.ReadFile(fs, recoveryImg)
+					Expect(f).To(ContainSubstring("recovery"))
+
+					config.ChannelUpgrades = true
+					// Required paths
+					tmpDirBase, _ := os.MkdirTemp("", "elemental")
+					pkgCache, _ := os.MkdirTemp("", "elemental")
+					dbPath, _ := os.MkdirTemp("", "elemental")
+					defer os.RemoveAll(tmpDirBase)
+					defer os.RemoveAll(pkgCache)
+					defer os.RemoveAll(dbPath)
+					// create new config here to add system repos
+					luetSystemConfig := luetTypes.LuetSystemConfig{
+						DatabasePath:   dbPath,
+						PkgsCachePath:  pkgCache,
+						DatabaseEngine: "memory",
+						TmpDirBase:     tmpDirBase,
+					}
+					luetGeneralConfig := luetTypes.LuetGeneralConfig{Debug: false, Quiet: true, Concurrency: runtime.NumCPU()}
+					luetSolver := luetTypes.LuetSolverOptions{}
+					repos := luetTypes.LuetRepositories{}
+					repo := luetTypes.LuetRepository{
+						Name:           "cos",
+						Description:    "cos official",
+						Urls:           []string{"quay.io/costoolkit/releases-green"},
+						Type:           "docker",
+						Priority:       1,
+						Enable:         true,
+						Cached:         true,
+						Authentication: make(map[string]string),
+					}
+					repos = append(repos, repo)
+
+					cfg := luetTypes.LuetConfig{System: luetSystemConfig, Solver: luetSolver, General: luetGeneralConfig, SystemRepositories: repos}
+					luet = v1.NewLuet(v1.WithLuetLogger(logger), v1.WithLuetConfig(&cfg))
+					config.Luet = luet
+
+					upgrade = action.NewUpgradeAction(config)
+					err = upgrade.Run()
+					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
+					// Expect cos-state to have been remounted back on RO
+					fakeMounted := mount.MountPoint{
+						Device: "/dev/fake1",
+						Path:   "/run/initramfs/live",
+						Type:   "fakefs",
+					}
+					Expect(mounter.List()).To(ContainElement(fakeMounted))
+
+					// Should have created recovery image
+					info, err = fs.Stat(recoveryImg)
+					Expect(err).ToNot(HaveOccurred())
+					// Should have default image size
+					Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
+
+					// Expect the rest of the images to not be there
+					for _, img := range []string{activeImg, passiveImg, recoveryImgSquash} {
+						exists, _ := afero.Exists(fs, img)
+						Expect(exists).To(BeFalse())
+					}
+				})
 			})
 		})
 	})
