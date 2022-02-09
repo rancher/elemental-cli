@@ -59,13 +59,19 @@ func (u *UpgradeAction) Error(s string, args ...interface{}) {
 
 func upgradeHook(config *v1.RunConfig, hook string, chroot bool) error {
 	if chroot {
-		return ActionChrootHook(
-			config, hook, config.ActiveImage.MountPoint,
-			map[string]string{
-				"/usr/local": "/usr/local",
-				"/oem":       "/oem",
-			},
-		)
+		mountPoints := map[string]string{}
+
+		oemDevice, err := utils.GetFullDeviceByLabel(config.Runner, config.OEMLabel, 5)
+		if err == nil {
+			mountPoints[oemDevice.MountPoint] = "/oem"
+		}
+
+		persistentDevice, err := utils.GetFullDeviceByLabel(config.Runner, config.PersistentLabel, 5)
+		if err == nil {
+			mountPoints[persistentDevice.MountPoint] = "/usr/local"
+		}
+
+		return ActionChrootHook(config, hook, config.ActiveImage.MountPoint, mountPoints)
 	}
 	return ActionHook(config, hook)
 }
