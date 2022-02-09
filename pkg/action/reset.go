@@ -63,8 +63,7 @@ func ResetSetup(config *v1.RunConfig) error {
 		rootTree = cnst.IsoBaseTree
 	}
 
-	_, err := config.Fs.Stat(cnst.EfiDevice)
-	efiExists := err == nil
+	exists, _ := afero.Fs(config.Fs, cnst.EfiDevice)
 
 	if efiExists {
 		partEfi, err := utils.GetFullDeviceByLabel(config.Runner, cnst.EfiLabel, 1)

@@ -70,11 +70,7 @@ var resetCmd = &cobra.Command{
 
 		cfg.Logger.Infof("Reset called")
 
-		err = action.ResetRun(cfg)
-		if err != nil {
-			return err
-		}
-		return nil
+		return action.ResetRun(cfg)
 	},
 }
 
