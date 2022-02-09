@@ -127,7 +127,7 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 				log.SetLevel(logrus.DebugLevel)
 				v1.NewLuet(v1.WithLuetLogger(log))
 				// Check if the debug stuff was logged to the buffer
-				Expect(memLog.String()).To(ContainSubstring("Loading luet config from"))
+				Expect(memLog.String()).To(ContainSubstring("Creating empty luet config"))
 			})
 			It("Sets config", func() {
 				cfg := luetTypes.LuetConfig{}
