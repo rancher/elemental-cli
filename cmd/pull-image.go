@@ -66,7 +66,7 @@ var pullImage = &cobra.Command{
 			RegistryToken: registryToken,
 		}
 
-		luet := v1.NewLuet(v1.WithLuetLogger(cfg.Logger), v1.WithLuetAuth(auth), v1.WithLuetPlugins(plugins))
+		luet := v1.NewLuet(v1.WithLuetLogger(cfg.Logger), v1.WithLuetAuth(auth), v1.WithLuetPlugins(plugins...))
 		luet.VerifyImageUnpack = verify
 		err = luet.Unpack(destination, image, local)
 

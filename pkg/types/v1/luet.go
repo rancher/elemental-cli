@@ -45,7 +45,7 @@ type Luet struct {
 
 type LuetOptions func(l *Luet) error
 
-func WithLuetPlugins(plugins []string) func(r *Luet) error {
+func WithLuetPlugins(plugins ...string) func(r *Luet) error {
 	return func(l *Luet) error {
 		if len(plugins) != 0 {
 			bus.Manager.Initialize(l.context, plugins...)

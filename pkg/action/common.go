@@ -55,7 +55,7 @@ func SetupLuet(config *v1.RunConfig) {
 			plugins = append(plugins, constants.LuetMtreePlugin)
 		}
 	}
-	config.Luet = v1.NewLuet(v1.WithLuetLogger(config.Logger), v1.WithLuetPlugins(plugins))
+	config.Luet = v1.NewLuet(v1.WithLuetLogger(config.Logger), v1.WithLuetPlugins(plugins...))
 }
 
 // SetPartitionsFromScratch initiates all defaults partitions in order is they
