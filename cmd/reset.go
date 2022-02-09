@@ -55,6 +55,7 @@ var resetCmd = &cobra.Command{
 
 		if viper.GetString("cosign-key") != "" && !viper.GetBool("cosign") {
 			cfg.Logger.Errorf("'cosign-key' requires 'cosing' option to be enabled")
+			return err
 		}
 
 		if viper.GetBool("cosign") && viper.GetString("cosign-key") == "" {
