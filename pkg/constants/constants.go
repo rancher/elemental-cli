@@ -75,7 +75,6 @@ const (
 	UpgradeRecovery        = "recovery"
 	UpgradeSource          = "system/cos"
 	UpgradeTempDir         = "/tmp/upgrade"
-	UpgradeStateDir        = "/run/initramfs/cos-state"
 	UpgradeRecoveryDir     = "/run/initramfs/live"
 	TransitionImgFile      = "transition.img"
 	TransitionSquashFile   = "transition.squashfs"

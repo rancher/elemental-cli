@@ -22,7 +22,7 @@ import (
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
-	"os"
+	"github.com/spf13/afero"
 	"path/filepath"
 )
 
@@ -53,7 +53,7 @@ func ResetSetup(config *v1.RunConfig) error {
 	SetupLuet(config)
 
 	var rootTree string
-	// TODO Properly include docker image source, luet package source and image source
+	// TODO Properly set image souce here
 	// TODO execute rootTree sanity checks
 	if config.Directory != "" {
 		rootTree = config.Directory
@@ -61,9 +61,11 @@ func ResetSetup(config *v1.RunConfig) error {
 		rootTree = config.DockerImg
 	} else if utils.BootedFrom(config.Runner, cnst.RecoverySquashFile) {
 		rootTree = cnst.IsoBaseTree
+	} else {
+		rootTree = filepath.Join(cnst.RunningStateDir, "cOS", cnst.RecoveryImgFile)
 	}
 
-	exists, _ := afero.Fs(config.Fs, cnst.EfiDevice)
+	efiExists, _ := afero.Exists(config.Fs, cnst.EfiDevice)
 
 	if efiExists {
 		partEfi, err := utils.GetFullDeviceByLabel(config.Runner, cnst.EfiLabel, 1)
@@ -174,9 +176,21 @@ func ResetRun(config *v1.RunConfig) (err error) {
 	}()
 
 	// install Active
-	// TODO all this logic should be part of the CopyImage(img *v1.Image) refactor
-	if config.ActiveImage.RootTree != "" {
-		// create active file system image
+	// TODO all this logic should be part` of the CopyImage(img *v1.Image) refactor up to
+	// TODO setting source should be part of ResetSetup
+	source := v1.InstallUpgradeSource{Source: config.ActiveImage.RootTree}
+	if config.Directory != "" {
+		source.IsDir = true
+	} else if config.DockerImg != "" {
+		source.IsDocker = true
+	} else if config.ActiveImage.RootTree != "" {
+		source.IsDir = true
+	} else {
+		source.Source = filepath.Join(cnst.RunningStateDir, "cOS", cnst.RecoveryImgFile)
+		source.IsFile = true
+	}
+
+	if !source.IsFile {
 		err = ele.CreateFileSystemImage(config.ActiveImage)
 		if err != nil {
 			return err
@@ -192,28 +206,12 @@ func ResetRun(config *v1.RunConfig) (err error) {
 				err = tmpErr
 			}
 		}()
-		err = ele.CopyActive()
-		if err != nil {
-			return err
-		}
-	} else {
-		srcImg := filepath.Join(cnst.RunningStateDir, "cOS", cnst.RecoveryImgFile)
-		config.Logger.Infof("Copying Active image...")
-		err := config.Fs.MkdirAll(filepath.Dir(config.ActiveImage.File), os.ModeDir)
-		if err != nil {
-			return err
-		}
-		err = utils.CopyFile(config.Fs, srcImg, config.ActiveImage.File)
-		if err != nil {
-			return err
-		}
-		_, err = config.Runner.Run("tune2fs", "-L", config.ActiveLabel, config.ActiveImage.File)
-		if err != nil {
-			config.Logger.Errorf("Failed to apply label %s to $s", config.ActiveLabel, config.ActiveImage.File)
-			config.Fs.Remove(config.ActiveImage.File)
-			return err
-		}
-		config.Logger.Infof("Finished copying Active...")
+	}
+	err = ele.CopyActive(source)
+	if err != nil {
+		return err
+	}
+	if source.IsFile {
 		err = ele.MountImage(&config.ActiveImage, "rw")
 		if err != nil {
 			return err
@@ -224,6 +222,7 @@ func ResetRun(config *v1.RunConfig) (err error) {
 			}
 		}()
 	}
+	// TODO: here ends the CopyImage(img *v1.Image)
 
 	// install grub
 	grub := utils.NewGrub(config)

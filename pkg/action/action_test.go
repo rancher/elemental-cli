@@ -31,8 +31,8 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 	"os"
+	"path/filepath"
 	"runtime"
-        "path/filepath"
 	"testing"
 )
 
@@ -517,12 +517,12 @@ var _ = Describe("Actions", func() {
 		var upgrade *action.UpgradeAction
 		var memLog *bytes.Buffer
 		var luet *v1.Luet
-		activeImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.ActiveImgFile)
-		passiveImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.PassiveImgFile)
+		activeImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.ActiveImgFile)
+		passiveImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.PassiveImgFile)
 		recoveryImgSquash := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.RecoverySquashFile)
 		recoveryImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.RecoveryImgFile)
 		transitionImgSquash := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.TransitionSquashFile)
-		transitionImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.TransitionImgFile)
+		transitionImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.TransitionImgFile)
 		transitionImgRecovery := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.TransitionImgFile)
 
 		BeforeEach(func() {
