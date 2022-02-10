@@ -16,6 +16,10 @@ limitations under the License.
 
 package utils
 
+import (
+	"github.com/hashicorp/go-multierror"
+)
+
 type CleanJob func() error
 
 // NewCleanStack returns a new stack.
@@ -47,13 +51,16 @@ func (clean *CleanStack) Pop() CleanJob {
 // Cleanup runs the whole cleanup stack. In case of error it runs all jobs
 // and returns the first error occurrence.
 func (clean *CleanStack) Cleanup(err error) error {
-	var tmpErr error
+	var errs error
+	if err != nil {
+		errs = multierror.Append(errs, err)
+	}
 	for clean.count > 0 {
 		job := clean.Pop()
-		tmpErr = job()
-		if err == nil {
-			err = tmpErr
+		err = job()
+		if err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
-	return err
+	return errs
 }

@@ -251,6 +251,12 @@ func ResetRun(config *v1.RunConfig) (err error) {
 		return err
 	}
 
+	// Do not reboot/poweroff on cleanup errors
+	err = cleanup.Cleanup(err)
+	if err != nil {
+		return err
+	}
+
 	// Reboot, poweroff or nothing
 	if config.Reboot {
 		config.Logger.Infof("Rebooting in 5 seconds")

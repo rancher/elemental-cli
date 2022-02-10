@@ -739,6 +739,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			err = cleaner.Cleanup(err)
 			Expect(count).To(Equal(3))
 			Expect(err.Error()).To(ContainSubstring("Cleanup error 2"))
+			Expect(err.Error()).To(ContainSubstring("Cleanup error 3"))
 		})
 	})
 })
