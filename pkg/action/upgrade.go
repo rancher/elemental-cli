@@ -54,12 +54,12 @@ func upgradeHook(config *v1.RunConfig, hook string, chroot bool) error {
 		mountPoints := map[string]string{}
 
 		oemDevice, err := utils.GetFullDeviceByLabel(config.Runner, config.OEMLabel, 5)
-		if err == nil {
+		if err == nil && oemDevice.MountPoint != "" {
 			mountPoints[oemDevice.MountPoint] = "/oem"
 		}
 
 		persistentDevice, err := utils.GetFullDeviceByLabel(config.Runner, config.PersistentLabel, 5)
-		if err == nil {
+		if err == nil && persistentDevice.MountPoint != "" {
 			mountPoints[persistentDevice.MountPoint] = "/usr/local"
 		}
 
