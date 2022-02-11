@@ -368,12 +368,17 @@ func (u *UpgradeAction) getTargetAndSource() (string, v1.InstallUpgradeSource) {
 			u.Debug("Upgrading recovery")
 			upgradeTarget = constants.UpgradeRecovery
 			if u.Config.RecoveryImage == "" {
-				upgradeSource.Source = u.Config.UpgradeImage
+				if u.Config.UpgradeImage != "" {
+					upgradeSource.Source = u.Config.UpgradeImage
+				}
 			} else {
 				upgradeSource.Source = u.Config.RecoveryImage
 			}
 		} else {
-			upgradeSource.Source = u.Config.UpgradeImage // Loaded from /etc/cos-upgrade-image
+			if u.Config.UpgradeImage != "" { // I don't think it's possible to have an empty UpgradeImage....
+				// Only override the source if we have a valid UpgradeImage, otherwise use the default
+				upgradeSource.Source = u.Config.UpgradeImage // Loaded from /etc/cos-upgrade-image
+			}
 		}
 	} else {
 		// if channel_upgrades==false then
