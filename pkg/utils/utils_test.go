@@ -445,6 +445,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			BeforeEach(func() {
 				config.Target = "/dev/test"
 				action.SetPartitionsFromScratch(config)
+				action.InstallImagesSetup(config)
 			})
 			It("installs with default values", func() {
 				buf := &bytes.Buffer{}
