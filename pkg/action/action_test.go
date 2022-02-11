@@ -1077,8 +1077,9 @@ var _ = Describe("Actions", func() {
 					// This should be the new image
 					info, err := fs.Stat(recoveryImg)
 					Expect(err).ToNot(HaveOccurred())
-					// Image size should be empty
-					Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
+					// Image size should not be empty
+					Expect(info.Size()).To(BeNumerically(">", 0))
+					Expect(info.Size()).To(BeNumerically("<", int64(config.ImgSize*1024*1024)))
 					Expect(info.IsDir()).To(BeFalse())
 
 					// Transition squash should not exist
