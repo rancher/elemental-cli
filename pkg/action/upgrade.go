@@ -265,8 +265,8 @@ func (u *UpgradeAction) Run() (err error) {
 		}
 	}
 
-	// If booted from active and not updating recovery, backup active into passive
-	if utils.BootedFrom(u.Config.Runner, u.Config.ActiveLabel) && !u.Config.RecoveryUpgrade {
+	// If booted from active or recovery and not updating recovery, backup active into passive
+	if utils.BootedFrom(u.Config.Runner, u.Config.ActiveLabel) || utils.BootedFrom(u.Config.Runner, u.Config.RecoveryLabel) && !u.Config.RecoveryUpgrade {
 		// backup current active.img to passive.img before overwriting the active.img
 		u.Info("Backing up current active image")
 		source := filepath.Join(upgradeStateDir, "cOS", constants.ActiveImgFile)
