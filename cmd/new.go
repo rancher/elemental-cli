@@ -14,6 +14,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"errors"
 	"context"
 	"github.com/hashicorp/go-getter"
@@ -37,19 +38,14 @@ var newDerivative = &cobra.Command{
 		}
 
 		flavor := args[0]
-
-		var destination string
-		switch flavor {
-		case "opensuse": destination = "derivatives/opensuse"
-		case "fedora":
-		case "ubuntu":
-		default: cfg.Logger.Errorf("Unsupported flavor")
+		if (flavor != "opensuse") || (flavor != "ubuntu") || (flavor !="fedora") {
+			cfg.Logger.Errorf("Unsupported flavor")
 			return errors.New("Unsupported flavor")
 		}
 
-		client = &getter.Client{
+		client := &getter.Client{
                         Ctx: context.Background(),
-                        Dst: destination,
+                        Dst: fmt.Sprintf("derivatives/%s",flavor),
                         Dir: true,
                         Src: "github.com/rancher-sandbox/cOS-toolkit//examples/standard",
                         Mode: getter.ClientModeDir,
