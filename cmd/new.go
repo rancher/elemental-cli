@@ -38,17 +38,6 @@ var newDerivative = &cobra.Command{
 
 		flavor := args[0]
 
-		client := &getter.Client{
-			Ctx: context.Background(),
-			Dst: "derivatives/opensuse",
-			Dir: true,
-			Src: "github.com/rancher-sandbox/cOS-toolkit//examples/standard",
-			Mode: getter.ClientModeDir,
-			Detectors: []getter.Detector{
-				&getter.GitHubDetector{},
-			},
-		}
-
 		var destination string
 		switch flavor {
 		case "opensuse": destination = "derivatives/opensuse"
