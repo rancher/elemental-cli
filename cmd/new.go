@@ -38,7 +38,7 @@ var newDerivative = &cobra.Command{
 		}
 
 		flavor := args[0]
-		if (flavor != "opensuse") || (flavor != "ubuntu") || (flavor != "fedora") {
+		if flavor != "opensuse" && flavor != "ubuntu" && flavor != "fedora" {
 			cfg.Logger.Errorf("Unsupported flavor")
 			return errors.New("Unsupported flavor")
 		}
