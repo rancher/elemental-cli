@@ -14,13 +14,13 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	"errors"
 	"context"
+	"errors"
+	"fmt"
 	"github.com/hashicorp/go-getter"
+	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/rancher-sandbox/elemental/cmd/config"
 	"k8s.io/mount-utils"
 )
 
@@ -38,27 +38,27 @@ var newDerivative = &cobra.Command{
 		}
 
 		flavor := args[0]
-		if (flavor != "opensuse") || (flavor != "ubuntu") || (flavor !="fedora") {
+		if (flavor != "opensuse") || (flavor != "ubuntu") || (flavor != "fedora") {
 			cfg.Logger.Errorf("Unsupported flavor")
 			return errors.New("Unsupported flavor")
 		}
 
 		client := &getter.Client{
-                        Ctx: context.Background(),
-                        Dst: fmt.Sprintf("derivatives/%s",flavor),
-                        Dir: true,
-                        Src: "github.com/rancher-sandbox/cOS-toolkit//examples/standard",
-                        Mode: getter.ClientModeDir,
-                        Detectors: []getter.Detector{
-                                &getter.GitHubDetector{},
-                        },
-                }
+			Ctx:  context.Background(),
+			Dst:  fmt.Sprintf("derivatives/%s", flavor),
+			Dir:  true,
+			Src:  "github.com/rancher-sandbox/cOS-toolkit//examples/standard",
+			Mode: getter.ClientModeDir,
+			Detectors: []getter.Detector{
+				&getter.GitHubDetector{},
+			},
+		}
 
 		err = client.Get()
-                if err != nil {
-                	cfg.Logger.Errorf("Unable to create derivative")
-		return err
-                }
+		if err != nil {
+			cfg.Logger.Errorf("Unable to create derivative")
+			return err
+		}
 
 		return nil
 	},
