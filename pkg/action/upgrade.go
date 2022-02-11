@@ -359,19 +359,22 @@ func (u *UpgradeAction) getTargetAndSource() (string, v1.InstallUpgradeSource) {
 	upgradeSource := v1.InstallUpgradeSource{Source: constants.UpgradeSource, IsChannel: true}
 	upgradeTarget := constants.UpgradeActive
 
-	// if upgrade_recovery==true then it upgrades only the recovery
-	// if upgrade_recovery==false then it upgrades only the active
-	// default is active
-	if u.Config.RecoveryUpgrade {
-		u.Debug("Upgrading recovery")
-		upgradeTarget = constants.UpgradeRecovery
-	}
-
 	// if channel_upgrades==true then it picks the default image from /etc/cos-upgrade-image
-	// this means, it gets the UPGRADE_IMAGE(default system/cos) from the luet repo configured on the system
+	// this means, it gets the UPGRADE_IMAGE(default system/cos)/RECOVERY_IMAGE from the luet repo configured on the system
 	if u.Config.ChannelUpgrades {
 		u.Debug("Source is channel-upgrades")
-		upgradeSource.Source = u.Config.UpgradeImage // Loaded from /etc/cos-upgrade-image
+
+		if u.Config.RecoveryUpgrade {
+			u.Debug("Upgrading recovery")
+			upgradeTarget = constants.UpgradeRecovery
+			if u.Config.RecoveryImage == "" {
+				upgradeSource.Source = u.Config.UpgradeImage
+			} else {
+				upgradeSource.Source = u.Config.RecoveryImage
+			}
+		} else {
+			upgradeSource.Source = u.Config.UpgradeImage // Loaded from /etc/cos-upgrade-image
+		}
 	} else {
 		// if channel_upgrades==false then
 		// if docker-image -> upgrade from image directly, ignores release_channel and pulls the given image directly
