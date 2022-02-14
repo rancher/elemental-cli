@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 )
@@ -74,7 +75,185 @@ var _ = Describe("Actions", func() {
 		)
 	})
 
-	Describe("Install Setup", Label("parttable"), func() {
+	Describe("Reset Setup", Label("reset"), func() {
+		var lsblkTmpl, bootedFrom, blkidOut, label, cmdFail string
+		BeforeEach(func() {
+			fs.Create(constants.EfiDevice)
+			bootedFrom = constants.RecoverySquashFile
+			blkidOut = "/dev/device1"
+			lsblkTmpl = `{
+  "blockdevices": [
+    {
+      "label": "%s", "size": 0, "fstype": "ext4", "mountpoint":"",
+      "path":"/dev/device1", "pkname":"/dev/device"
+    }
+  ]
+}`
+			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
+				if cmd == cmdFail {
+					return []byte{}, errors.New("Command failed")
+				}
+				switch cmd {
+				case "cat":
+					return []byte(bootedFrom), nil
+				case "lsblk":
+					return []byte(fmt.Sprintf(lsblkTmpl, label)), nil
+				case "blkid":
+					label = args[1]
+					return []byte(blkidOut), nil
+				default:
+					return []byte{}, nil
+				}
+			}
+		})
+		It("Configures reset command", func() {
+			Expect(action.ResetSetup(config)).To(BeNil())
+			Expect(config.Target).To(Equal("/dev/device"))
+			Expect(config.ActiveImage.RootTree).To(Equal(constants.IsoBaseTree))
+		})
+		It("Configures reset command with --docker-image", func() {
+			config.DockerImg = "some-image"
+			Expect(action.ResetSetup(config)).To(BeNil())
+			Expect(config.Target).To(Equal("/dev/device"))
+			Expect(config.ActiveImage.RootTree).To(Equal("some-image"))
+		})
+		It("Configures reset command with --directory", func() {
+			config.Directory = "/some/local/dir"
+			Expect(action.ResetSetup(config)).To(BeNil())
+			Expect(config.Target).To(Equal("/dev/device"))
+			Expect(config.ActiveImage.RootTree).To(Equal("/some/local/dir"))
+		})
+		It("Fails if not booting from recovery", func() {
+			bootedFrom = ""
+			Expect(action.ResetSetup(config)).NotTo(BeNil())
+		})
+		It("Fails if partitions are not found", func() {
+			cmdFail = "blkid"
+			Expect(action.ResetSetup(config)).NotTo(BeNil())
+		})
+	})
+	Describe("Reset Action", Label("reset"), func() {
+		var activeImg v1.Image
+		var statePart, persistentPart, oemPart *v1.Partition
+		var cmdFail, activeTree, activeMount string
+		var err error
+		BeforeEach(func() {
+			activeTree, err = os.MkdirTemp("", "elemental")
+			Expect(err).To(BeNil())
+			activeMount, err = os.MkdirTemp("", "elemental")
+			Expect(err).To(BeNil())
+			fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+			statePart = &v1.Partition{
+				Label:      constants.StateLabel,
+				Path:       "/dev/device1",
+				Disk:       "/dev/device",
+				FS:         constants.LinuxFs,
+				Name:       constants.StatePartName,
+				MountPoint: constants.StateDir,
+			}
+			oemPart = &v1.Partition{
+				Label:      constants.OEMLabel,
+				Path:       "/dev/device2",
+				Disk:       "/dev/device",
+				FS:         constants.LinuxFs,
+				Name:       constants.OEMPartName,
+				MountPoint: constants.PersistentDir,
+			}
+			persistentPart = &v1.Partition{
+				Label:      constants.PersistentLabel,
+				Path:       "/dev/device3",
+				Disk:       "/dev/device",
+				FS:         constants.LinuxFs,
+				Name:       constants.PersistentPartName,
+				MountPoint: constants.OEMDir,
+			}
+			activeImg.File = filepath.Join(statePart.MountPoint, "cOS", constants.ActiveImgFile)
+			activeImg.Label = constants.ActiveLabel
+			activeImg.Size = 16
+			activeImg.FS = constants.LinuxImgFs
+			activeImg.MountPoint = activeMount
+			config.ActiveImage = activeImg
+			config.Partitions = append(config.Partitions, statePart, oemPart, persistentPart)
+			config.Target = statePart.Disk
+			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
+				if cmdFail == cmd {
+					return []byte{}, errors.New("Command failed")
+				}
+				switch cmd {
+				case "blkid":
+					return []byte("/dev/device"), nil
+				default:
+					return []byte{}, nil
+				}
+			}
+		})
+		AfterEach(func() {
+			os.RemoveAll(activeTree)
+			os.RemoveAll(activeMount)
+		})
+		It("Successfully resets on non-squashfs recovery", func() {
+			config.Reboot = true
+			Expect(action.ResetRun(config)).To(BeNil())
+		})
+		It("Successfully resets on non-squashfs recovery including persistent data", func() {
+			config.ResetPersistent = true
+			Expect(action.ResetRun(config)).To(BeNil())
+		})
+		It("Successfully resets on squashfs recovery", func() {
+			config.PowerOff = true
+			config.ActiveImage.RootTree = activeTree
+			Expect(action.ResetRun(config)).To(BeNil())
+		})
+		It("Successfully resets despite having errors on hooks", func() {
+			cloudInit.Error = true
+			Expect(action.ResetRun(config)).To(BeNil())
+		})
+		It("Successfully resets from a docker image", func() {
+			config.DockerImg = "my/image:latest"
+			config.ActiveImage.RootTree = config.DockerImg
+			luet := v1mock.NewFakeLuet()
+			config.Luet = luet
+			Expect(action.ResetRun(config)).To(BeNil())
+			Expect(luet.UnpackCalled()).To(BeTrue())
+		})
+		It("Fails installing grub", func() {
+			cmdFail = "grub2-install"
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails formatting state partition", func() {
+			cmdFail = "mkfs.ext4"
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails setting the active label on non-squashfs recovery", func() {
+			cmdFail = "tune2fs"
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails setting the passive label on squashfs recovery", func() {
+			cmdFail = "tune2fs"
+			config.ActiveImage.RootTree = activeTree
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails mounting partitions", func() {
+			mounter.ErrorOnMount = true
+			config.ActiveImage.RootTree = activeTree
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails unmounting partitions", func() {
+			mounter.ErrorOnUnmount = true
+			config.ActiveImage.RootTree = activeTree
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+		})
+		It("Fails unpacking docker image ", func() {
+			config.DockerImg = "my/image:latest"
+			config.ActiveImage.RootTree = config.DockerImg
+			luet := v1mock.NewFakeLuet()
+			luet.OnUnpackError = true
+			config.Luet = luet
+			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(luet.UnpackCalled()).To(BeTrue())
+		})
+	})
+	Describe("Install Setup", Label("install"), func() {
 		Describe("On efi system", Label("efi"), func() {
 			It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.ESP), func() {
 				_, _ = fs.Create(constants.EfiDevice)
@@ -338,12 +517,12 @@ var _ = Describe("Actions", func() {
 		var upgrade *action.UpgradeAction
 		var memLog *bytes.Buffer
 		var luet *v1.Luet
-		activeImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.ActiveImgFile)
-		passiveImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.PassiveImgFile)
+		activeImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.ActiveImgFile)
+		passiveImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.PassiveImgFile)
 		recoveryImgSquash := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.RecoverySquashFile)
 		recoveryImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.RecoveryImgFile)
 		transitionImgSquash := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.TransitionSquashFile)
-		transitionImg := fmt.Sprintf("%s/cOS/%s", constants.UpgradeStateDir, constants.TransitionImgFile)
+		transitionImg := fmt.Sprintf("%s/cOS/%s", constants.RunningStateDir, constants.TransitionImgFile)
 		transitionImgRecovery := fmt.Sprintf("%s/cOS/%s", constants.UpgradeRecoveryDir, constants.TransitionImgFile)
 
 		BeforeEach(func() {
@@ -358,10 +537,11 @@ var _ = Describe("Actions", func() {
 			config.PassiveLabel = constants.PassiveLabel
 			config.RecoveryLabel = constants.RecoveryLabel
 			config.ActiveLabel = constants.ActiveLabel
-			config.UpgradeImage = "system/cos-setup"
+			config.UpgradeImage = "system/cos-config"
+			config.RecoveryImage = "system/cos-config"
 			config.ImgSize = 10
 			// Create fake /etc/os-release
-			_ = afero.WriteFile(fs, "/etc/os-release", []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
+			_ = afero.WriteFile(fs, filepath.Join(constants.UpgradeTempDir, "etc", "os-release"), []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
 		})
 		It("Fails if some hook fails and strict is set", func() {
 			runner = v1mock.NewTestRunnerV2()
@@ -429,6 +609,9 @@ var _ = Describe("Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{
 					Device: "/dev/fake1",
@@ -470,6 +653,9 @@ var _ = Describe("Actions", func() {
 				upgrade = action.NewUpgradeAction(config)
 				err = upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
+
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
@@ -534,6 +720,9 @@ var _ = Describe("Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
 				// Should probably do well in mounting the image and checking contents to make sure everything worked
@@ -597,6 +786,8 @@ var _ = Describe("Actions", func() {
 				upgrade = action.NewUpgradeAction(config)
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
+				// Check that the rebrand worked with our os-release value
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{
@@ -686,6 +877,9 @@ var _ = Describe("Actions", func() {
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// This should be the new image
 					info, err = fs.Stat(recoveryImgSquash)
 					Expect(err).ToNot(HaveOccurred())
@@ -711,6 +905,9 @@ var _ = Describe("Actions", func() {
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// This should be the new image
 					info, err := fs.Stat(recoveryImgSquash)
 					Expect(err).ToNot(HaveOccurred())
@@ -735,17 +932,13 @@ var _ = Describe("Actions", func() {
 
 					config.ChannelUpgrades = true
 					// Required paths
-					tmpDirBase, _ := os.MkdirTemp("", "elemental")
-					pkgCache, _ := os.MkdirTemp("", "elemental")
-					dbPath, _ := os.MkdirTemp("", "elemental")
+					tmpDirBase := filepath.Join(os.TempDir(), "tmpluet")
 					defer os.RemoveAll(tmpDirBase)
-					defer os.RemoveAll(pkgCache)
-					defer os.RemoveAll(dbPath)
 					// create new config here to add system repos
 					luetSystemConfig := luetTypes.LuetSystemConfig{
-						DatabasePath:   dbPath,
-						PkgsCachePath:  pkgCache,
-						DatabaseEngine: "memory",
+						DatabasePath:   filepath.Join(tmpDirBase, "db"),
+						PkgsCachePath:  filepath.Join(tmpDirBase, "cache"),
+						DatabaseEngine: "",
 						TmpDirBase:     tmpDirBase,
 					}
 					luetGeneralConfig := luetTypes.LuetGeneralConfig{Debug: false, Quiet: true, Concurrency: runtime.NumCPU()}
@@ -770,6 +963,9 @@ var _ = Describe("Actions", func() {
 					upgrade = action.NewUpgradeAction(config)
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
+
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 					// Check that the rebrand worked with our os-release value
 					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
@@ -839,6 +1035,9 @@ var _ = Describe("Actions", func() {
 					err = upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// Expect cos-state to have been remounted back on RO
 					fakeMounted := mount.MountPoint{
 						Device: "/dev/fake1",
@@ -850,8 +1049,9 @@ var _ = Describe("Actions", func() {
 					// Should have created recovery image
 					info, err = fs.Stat(recoveryImg)
 					Expect(err).ToNot(HaveOccurred())
-					// Should have default image size
-					Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
+					// Should not be empty
+					Expect(info.Size()).To(BeNumerically(">", 0))
+					Expect(info.Size()).To(BeNumerically("<", int64(config.ImgSize*1024*1024)))
 
 					// Expect the rest of the images to not be there
 					for _, img := range []string{activeImg, passiveImg, recoveryImgSquash} {
@@ -871,11 +1071,15 @@ var _ = Describe("Actions", func() {
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
 
+					// Check that the rebrand worked with our os-release value
+					Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+
 					// This should be the new image
 					info, err := fs.Stat(recoveryImg)
 					Expect(err).ToNot(HaveOccurred())
-					// Image size should be empty
-					Expect(info.Size()).To(BeNumerically("==", int64(config.ImgSize*1024*1024)))
+					// Image size should not be empty
+					Expect(info.Size()).To(BeNumerically(">", 0))
+					Expect(info.Size()).To(BeNumerically("<", int64(config.ImgSize*1024*1024)))
 					Expect(info.IsDir()).To(BeFalse())
 
 					// Transition squash should not exist

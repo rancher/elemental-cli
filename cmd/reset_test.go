@@ -23,39 +23,28 @@ import (
 )
 
 var _ = Describe("Install", Label("install", "cmd", "systemctl"), func() {
-	It("outputs usage if no DEVICE param", Label("args"), func() {
-		buf := new(bytes.Buffer)
-		rootCmd.SetOut(buf)
-		rootCmd.SetErr(buf)
-		_, _, err := executeCommandC(rootCmd, "install")
-		// Restore cobra output
-		rootCmd.SetOut(nil)
-		rootCmd.SetErr(nil)
-		Expect(err).ToNot(BeNil())
-		Expect(buf).To(ContainSubstring("Usage:"))
-	})
 	It("Errors out setting reboot and poweroff at the same time", Label("flags"), func() {
 		buf := new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
-		_, _, err := executeCommandC(rootCmd, "install", "--reboot", "--poweroff", "/dev/whatever")
+		_, _, err := executeCommandC(rootCmd, "reset", "--reboot", "--poweroff")
 		// Restore cobra output
 		rootCmd.SetOut(nil)
 		rootCmd.SetErr(nil)
 		Expect(err).ToNot(BeNil())
 		Expect(buf).To(ContainSubstring("Usage:"))
-		Expect(err.Error()).To(ContainSubstring("'reboot' and 'poweroff' are mutually exclusive options"))
+		Expect(err.Error()).To(ContainSubstring("Invalid options"))
 	})
 	It("Errors out setting consign-key without setting cosign", Label("flags"), func() {
 		buf := new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
-		_, _, err := executeCommandC(rootCmd, "install", "--cosign-key", "pubKey.url", "/dev/whatever")
+		_, _, err := executeCommandC(rootCmd, "reset", "--cosign-key", "pubKey.url")
 		// Restore cobra output
 		rootCmd.SetOut(nil)
 		rootCmd.SetErr(nil)
 		Expect(err).ToNot(BeNil())
 		Expect(buf).To(ContainSubstring("Usage:"))
-		Expect(err.Error()).To(ContainSubstring("'cosign-key' requires 'cosign' option to be enabled"))
+		Expect(err.Error()).To(ContainSubstring("Invalid options"))
 	})
 })

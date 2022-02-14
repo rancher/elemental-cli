@@ -22,8 +22,9 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	v1mock "github.com/rancher-sandbox/elemental/tests/mocks"
 	log "github.com/sirupsen/logrus"
@@ -254,7 +255,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			cmds = [][]string{
 				{"udevadm", "settle"},
 				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH", "/dev/fake"},
+				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
 			}
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
@@ -285,7 +286,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			cmds = [][]string{
 				{"udevadm", "settle"},
 				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH", "/dev/fake"},
+				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
 			}
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
@@ -304,7 +305,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			cmds = [][]string{
 				{"udevadm", "settle"},
 				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH", "/dev/fake"},
+				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
 			}
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
@@ -412,6 +413,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 		Describe("Install", func() {
 			BeforeEach(func() {
 				config.Target = "/dev/test"
+				action.SetPartitionsFromScratch(config)
 			})
 			It("installs with default values", func() {
 				buf := &bytes.Buffer{}
@@ -644,6 +646,100 @@ var _ = Describe("Utils", Label("utils"), func() {
 		It("returns true if command exists", func() {
 			exists := utils.CommandExists("true")
 			Expect(exists).To(BeTrue())
+		})
+	})
+	Describe("LoadEnvFile", Label("LoadEnvFile"), func() {
+		It("returns proper map if file exists", func() {
+			err := afero.WriteFile(fs, "/etc/envfile", []byte("TESTKEY=TESTVALUE"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+			envData, err := utils.LoadEnvFile(fs, "/etc/envfile")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envData).To(HaveKeyWithValue("TESTKEY", "TESTVALUE"))
+		})
+		It("returns error if file doesnt exist", func() {
+			_, err := utils.LoadEnvFile(fs, "/etc/envfile")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns error if it cant unmarshall the env file", func() {
+			err := afero.WriteFile(fs, "/etc/envfile", []byte("WHATWHAT"), os.ModePerm)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = utils.LoadEnvFile(fs, "/etc/envfile")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	Describe("CleanStack", Label("CleanStack"), func() {
+		var cleaner *utils.CleanStack
+		BeforeEach(func() {
+			cleaner = utils.NewCleanStack()
+		})
+		It("Adds a callback to the stack and pops it", func() {
+			var flag bool
+			callback := func() error {
+				flag = true
+				return nil
+			}
+			Expect(cleaner.Pop()).To(BeNil())
+			cleaner.Push(callback)
+			poppedJob := cleaner.Pop()
+			Expect(poppedJob).NotTo(BeNil())
+			poppedJob()
+			Expect(flag).To(BeTrue())
+		})
+		It("On Cleanup runs callback stack in reverse order", func() {
+			result := ""
+			callback1 := func() error {
+				result = result + "one "
+				return nil
+			}
+			callback2 := func() error {
+				result = result + "two "
+				return nil
+			}
+			callback3 := func() error {
+				result = result + "three "
+				return nil
+			}
+			cleaner.Push(callback1)
+			cleaner.Push(callback2)
+			cleaner.Push(callback3)
+			cleaner.Cleanup(nil)
+			Expect(result).To(Equal("three two one "))
+		})
+		It("On Cleanup keeps former error and all callbacks are executed", func() {
+			err := errors.New("Former error")
+			count := 0
+			callback := func() error {
+				count++
+				if count == 2 {
+					return errors.New("Cleanup Error")
+				}
+				return nil
+			}
+			cleaner.Push(callback)
+			cleaner.Push(callback)
+			cleaner.Push(callback)
+			err = cleaner.Cleanup(err)
+			Expect(count).To(Equal(3))
+			Expect(err.Error()).To(ContainSubstring("Former error"))
+		})
+		It("On Cleanup error reports first error and all callbacks are executed", func() {
+			var err error
+			count := 0
+			callback := func() error {
+				count++
+				if count >= 2 {
+					return errors.New(fmt.Sprintf("Cleanup error %d", count))
+				}
+				return nil
+			}
+			cleaner.Push(callback)
+			cleaner.Push(callback)
+			cleaner.Push(callback)
+			err = cleaner.Cleanup(err)
+			Expect(count).To(Equal(3))
+			Expect(err.Error()).To(ContainSubstring("Cleanup error 2"))
+			Expect(err.Error()).To(ContainSubstring("Cleanup error 3"))
 		})
 	})
 })
