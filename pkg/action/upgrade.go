@@ -75,14 +75,26 @@ func (u *UpgradeAction) Run() (err error) {
 	// When booting from recovery the label can be the recovery or the system, depending on the recovery img type (squshs/non-squash)
 	bootedFromRecovery := utils.BootedFrom(u.Config.Runner, u.Config.RecoveryLabel) || utils.BootedFrom(u.Config.Runner, u.Config.SystemLabel)
 	upgradeTempDir := utils.GetUpgradeTempDir(u.Config)
+	isSquashRecovery := false
 
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
 
-	// if upgrading the recovery we mount the state in a different place as its already mounted RO, we need to remount it
-	if u.Config.RecoveryUpgrade {
-		upgradeStateDir = constants.UpgradeRecoveryDir
+	// if booting from recovery we need to check if we are booting from squash
+	// If booting from recovery+squash, the cos state is mounted on /run/initramfs/live, so we need to set that as the upgradeStateDir
+	if bootedFromRecovery {
+		exists, err := afero.Exists(u.Config.Fs, filepath.Join(constants.UpgradeRecoveryDir, "cOS", constants.RecoverySquashFile))
+		if exists && err == nil {
+			isSquashRecovery = true
+			upgradeStateDir = constants.UpgradeRecoveryDir
+		}
 	}
+
+	// Some debug info just in case
+	u.Debug("Upgrade state dir: %s", upgradeStateDir)
+	u.Debug("Upgrade temp dir: %s", upgradeTempDir)
+	u.Debug("Booted from recovery: %v", bootedFromRecovery)
+	u.Debug("Is squash recovery: %v", isSquashRecovery)
 
 	upgradeTarget, upgradeSource := u.getTargetAndSource()
 
@@ -122,6 +134,8 @@ func (u *UpgradeAction) Run() (err error) {
 	statePartMountOptions := []string{"remount", "rw"}
 
 	// If we want to upgrade the active but are booting from recovery, the statedir is not mounted, so dont remount
+	// TODO: WRONG! Active, passive and recovery+non-squash all mount the statedir, so we need to remount rw
+	// They mount oem by default as well. Both Recoveries do not mount persistent
 	if !u.Config.RecoveryUpgrade && bootedFromRecovery {
 		statePartMountOptions = []string{"rw"}
 		cleanup.Push(func() error { return u.unmount(upgradeStateDir) })
@@ -169,9 +183,6 @@ func (u *UpgradeAction) Run() (err error) {
 			return u.remount(mount.MountPoint{Device: statePart.Path, Path: upgradeStateDir, Type: statePart.FS}, "ro")
 		})
 	}
-
-	// Track if recovery.squash file exists which indicates that the recovery is squash
-	isSquashRecovery, _ := afero.Exists(u.Config.Fs, filepath.Join(upgradeStateDir, "cOS", constants.RecoverySquashFile))
 
 	if isSquashRecovery {
 		u.Debug("Recovery is squash")
@@ -396,5 +407,6 @@ func (u *UpgradeAction) getTargetAndSource() (string, v1.ImageSource) {
 			upgradeSource = v1.ImageSource{Source: u.Config.DirectoryUpgrade, IsDir: true}
 		}
 	}
+	u.Debug("Upgrade target: %s Upgrade source: %+v", upgradeTarget, upgradeSource)
 	return upgradeTarget, upgradeSource
 }
