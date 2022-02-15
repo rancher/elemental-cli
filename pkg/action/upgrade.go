@@ -133,25 +133,8 @@ func (u *UpgradeAction) Run() (err error) {
 
 	statePartMountOptions := []string{"remount", "rw"}
 
-	// If we want to upgrade the active but are booting from recovery, the statedir is not mounted, so dont remount
-	// TODO: WRONG! Active, passive and recovery+non-squash all mount the statedir, so we need to remount rw
-	// They mount oem by default as well. Both Recoveries do not mount persistent
-	if !u.Config.RecoveryUpgrade && bootedFromRecovery {
-		statePartMountOptions = []string{"rw"}
-		cleanup.Push(func() error { return u.unmount(upgradeStateDir) })
-		// Also mount oem and persistent as they are not mounted on recovery
-		oemPart, err := utils.GetFullDeviceByLabel(u.Config.Runner, u.Config.OEMLabel, 5)
-		if err == nil {
-			err := u.Config.Fs.MkdirAll(constants.OEMDir, os.ModeDir)
-			if err == nil {
-				err = u.Config.Mounter.Mount(oemPart.Path, constants.OEMDir, oemPart.FS, []string{})
-				if err != nil {
-					u.Config.Logger.Warnf("Could not mount oem partition: %s", err)
-				} else {
-					cleanup.Push(func() error { return u.unmount(constants.OEMDir) })
-				}
-			}
-		}
+	// Both Recoveries do not mount persistent, so try to mount it. Ignore errors, as its not mandatory.
+	if bootedFromRecovery {
 		persistentPart, err := utils.GetFullDeviceByLabel(u.Config.Runner, u.Config.PersistentLabel, 5)
 		if err == nil {
 			err := u.Config.Fs.MkdirAll(constants.PersistentDir, os.ModeDir)
@@ -166,26 +149,16 @@ func (u *UpgradeAction) Run() (err error) {
 		}
 	}
 
-	// If we want to upgrade the recovery but are not booting from recovery, the stateDir is not mounted, so dont try to remount
-	if u.Config.RecoveryUpgrade && !bootedFromRecovery {
-		statePartMountOptions = []string{"rw"}
-		cleanup.Push(func() error { return u.unmount(upgradeStateDir) })
-	}
-
 	err = u.Config.Mounter.Mount(statePart.Path, upgradeStateDir, statePart.FS, statePartMountOptions)
 	if err != nil {
 		u.Error("Error mounting %s: %s", upgradeStateDir, err)
 		return err
 	}
-
-	if !utils.BootedFrom(u.Config.Runner, u.Config.RecoveryLabel) {
-		cleanup.Push(func() error {
-			return u.remount(mount.MountPoint{Device: statePart.Path, Path: upgradeStateDir, Type: statePart.FS}, "ro")
-		})
-	}
+	cleanup.Push(func() error {
+		return u.remount(mount.MountPoint{Device: statePart.Path, Path: upgradeStateDir, Type: statePart.FS}, "ro")
+	})
 
 	if isSquashRecovery {
-		u.Debug("Recovery is squash")
 		transitionImg = filepath.Join(upgradeStateDir, "cOS", constants.TransitionSquashFile)
 	} else {
 		transitionImg = filepath.Join(upgradeStateDir, "cOS", constants.TransitionImgFile)
