@@ -74,7 +74,6 @@ func (u *UpgradeAction) Run() (err error) {
 	upgradeStateDir := constants.RunningStateDir
 	// When booting from recovery the label can be the recovery or the system, depending on the recovery img type (squshs/non-squash)
 	bootedFromRecovery := utils.BootedFrom(u.Config.Runner, u.Config.RecoveryLabel) || utils.BootedFrom(u.Config.Runner, u.Config.SystemLabel)
-	upgradeTempDir := utils.GetUpgradeTempDir(u.Config)
 	isSquashRecovery := false
 
 	cleanup := utils.NewCleanStack()
@@ -92,20 +91,12 @@ func (u *UpgradeAction) Run() (err error) {
 
 	// Some debug info just in case
 	u.Debug("Upgrade state dir: %s", upgradeStateDir)
-	u.Debug("Upgrade temp dir: %s", upgradeTempDir)
 	u.Debug("Booted from recovery: %v", bootedFromRecovery)
 	u.Debug("Is squash recovery: %v", isSquashRecovery)
 
 	upgradeTarget, upgradeSource := u.getTargetAndSource()
 
 	u.Config.Logger.Infof("Upgrading %s partition", upgradeTarget)
-
-	err = u.Config.Fs.MkdirAll(upgradeTempDir, os.ModeDir)
-	if err != nil {
-		u.Error("Error creating target dir %s: %s", upgradeTempDir, err)
-		return err
-	}
-	cleanup.Push(func() error { return u.remove(upgradeTempDir) })
 
 	if u.Config.RecoveryUpgrade {
 		statePart, err = utils.GetFullDeviceByLabel(u.Config.Runner, u.Config.RecoveryLabel, 5)
@@ -167,6 +158,17 @@ func (u *UpgradeAction) Run() (err error) {
 	u.Debug("Using transition img: %s", transitionImg)
 
 	cleanup.Push(func() error { return u.remove(transitionImg) })
+
+	// Get the upgradeTempDir here, so we use the persistent partition if mounted
+	upgradeTempDir := utils.GetUpgradeTempDir(u.Config)
+	u.Debug("Upgrade temp dir: %s", upgradeTempDir)
+
+	err = u.Config.Fs.MkdirAll(upgradeTempDir, os.ModeDir)
+	if err != nil {
+		u.Error("Error creating target dir %s: %s", upgradeTempDir, err)
+		return err
+	}
+	cleanup.Push(func() error { return u.remove(upgradeTempDir) })
 
 	// create transition.img
 	img := v1.Image{
