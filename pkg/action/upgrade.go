@@ -284,11 +284,11 @@ func (u *UpgradeAction) Run() (err error) {
 		return err
 	}
 
-	// If we boot from recovery the real statedir may not mounted, we mount the recovery "state" dir.
-	// for the grub rebrand to work, we need to mount the state partition, so it can write into it
-	if bootedFromRecovery {
-		statePartForRecovery, err := utils.GetFullDeviceByLabel(u.Config.Runner, u.Config.StateLabel, 2)
-		if err == nil {
+	// for the grub rebrand to work, we need to mount the state partition RW, so it can write into it
+	statePartForRecovery, err := utils.GetFullDeviceByLabel(u.Config.Runner, u.Config.StateLabel, 2)
+	if err == nil {
+		// If its not mounted, mount it so we can rebrand then unmount it
+		if statePartForRecovery.MountPoint == "" {
 			_ = u.Config.Fs.MkdirAll(constants.StateDir, os.ModeDir)
 			if notMounted, _ := u.Config.Mounter.IsLikelyNotMountPoint(constants.StateDir); notMounted {
 				err = u.Config.Mounter.Mount(statePartForRecovery.Path, constants.StateDir, statePartForRecovery.FS, []string{"rw"})
@@ -299,6 +299,13 @@ func (u *UpgradeAction) Run() (err error) {
 				cleanup.Push(func() error {
 					return u.unmount(constants.StateDir)
 				})
+			}
+		} else {
+			// if mounted it may be RO only, so remount it RW?
+			err = u.Config.Mounter.Mount(statePartForRecovery.Path, statePartForRecovery.MountPoint, statePartForRecovery.FS, []string{"remount", "rw"})
+			if err != nil {
+				u.Error("Could not remount state partition with label %s for rebrand: %s", u.Config.StateLabel, err)
+				return err
 			}
 		}
 	}
