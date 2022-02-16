@@ -235,8 +235,8 @@ func (u *UpgradeAction) Run() (err error) {
 		Source:     upgradeSource, // if source is a dir it will copy from here, if it's a docker img it uses Config.DockerImg IN THAT ORDER!
 	}
 
-	// If on recovery, set the label to the RecoveryLabel instead
-	if utils.BootedFrom(u.Config.Runner, u.Config.RecoveryLabel) {
+	// If upgrading recovery, set the label to the RecoveryLabel instead
+	if u.Config.RecoveryUpgrade {
 		img.Label = u.Config.SystemLabel
 	}
 
@@ -433,14 +433,15 @@ func (u *UpgradeAction) getTargetAndSource() (string, v1.ImageSource) {
 	upgradeSource := v1.ImageSource{Source: constants.UpgradeSource, IsChannel: true}
 	upgradeTarget := constants.UpgradeActive
 
+	if u.Config.RecoveryUpgrade {
+		u.Debug("Upgrading recovery")
+		upgradeTarget = constants.UpgradeRecovery
+	}
 	// if channel_upgrades==true then it picks the default image from /etc/cos-upgrade-image
 	// this means, it gets the UPGRADE_IMAGE(default system/cos)/RECOVERY_IMAGE from the luet repo configured on the system
 	if u.Config.ChannelUpgrades {
 		u.Debug("Source is channel-upgrades")
-
 		if u.Config.RecoveryUpgrade {
-			u.Debug("Upgrading recovery")
-			upgradeTarget = constants.UpgradeRecovery
 			if u.Config.RecoveryImage == "" {
 				if u.Config.UpgradeImage != "" {
 					upgradeSource.Source = u.Config.UpgradeImage
