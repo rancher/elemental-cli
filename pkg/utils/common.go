@@ -18,18 +18,19 @@ package utils
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/spf13/afero"
-	"github.com/zloylos/grsync"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
+	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/spf13/afero"
+	"github.com/zloylos/grsync"
 )
 
 // tmpBlockdevices is a temporal struct to extract the output of lsblk json
@@ -148,7 +149,12 @@ func SyncData(source string, target string, excludes ...string) error {
 		},
 	)
 
-	return task.Run()
+	err := task.Run()
+	if err != nil {
+		return errors.Wrap(err, strings.Join([]string{task.Log().Stderr, task.Log().Stdout}, "\n"))
+	}
+
+	return nil
 }
 
 // Reboot reboots the system afater the given delay (in seconds) time passed.
