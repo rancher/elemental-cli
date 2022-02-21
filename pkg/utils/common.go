@@ -18,6 +18,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,7 +28,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/pkg/errors"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/afero"
 	"github.com/zloylos/grsync"
@@ -151,7 +151,7 @@ func SyncData(source string, target string, excludes ...string) error {
 
 	err := task.Run()
 	if err != nil {
-		return errors.Wrap(err, strings.Join([]string{task.Log().Stderr, task.Log().Stdout}, "\n"))
+		return fmt.Errorf("%w: %s", err, strings.Join([]string{task.Log().Stderr, task.Log().Stdout}, "\n"))
 	}
 
 	return nil

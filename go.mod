@@ -20,7 +20,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.0
 	github.com/packethost/packngo v0.21.0 // indirect
-	github.com/pkg/errors v0.9.1
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
