@@ -117,7 +117,7 @@ func CopyFile(fs afero.Fs, source string, target string) (err error) {
 
 // Copies source file to target file using afero.Fs interface
 func CreateDirStructure(fs afero.Fs, target string) error {
-	for _, dir := range []string{"sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"} {
+	for _, dir := range []string{"run", "sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"} {
 		err := fs.MkdirAll(fmt.Sprintf("%s/%s", target, dir), 0755)
 		if err != nil {
 			return err

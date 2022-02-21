@@ -333,7 +333,7 @@ func (c *Elemental) CopyImage(img *v1.Image) error {
 			return err
 		}
 	} else if img.Source.IsDir {
-		excludes := []string{"mnt", "proc", "sys", "dev", "tmp", "host"}
+		excludes := []string{"mnt", "proc", "sys", "dev", "tmp", "host", "run"}
 		err = utils.SyncData(img.Source.Source, img.MountPoint, excludes...)
 		if err != nil {
 			return err
