@@ -77,7 +77,7 @@ func (g Grub) Install() (err error) {
 	}
 
 	statePart := g.config.Partitions.GetByName(cnst.StatePartName)
-	activeImg := g.config.Images[cnst.ActiveImgName]
+	activeImg := g.config.Images.GetActive()
 	if statePart == nil || activeImg == nil {
 		g.config.Logger.Errorf("State partition and/or Active image configuration is missing")
 		return errors.New("Failed setting grub arguments")

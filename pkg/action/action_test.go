@@ -252,7 +252,7 @@ var _ = Describe("Actions", func() {
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 	})
-	Describe("Install Setup", Label("install"), func() {
+	Describe("Install Setup", Label("installsetup"), func() {
 		Describe("On efi system", Label("efi"), func() {
 			It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.ESP), func() {
 				_, _ = fs.Create(constants.EfiDevice)
@@ -286,6 +286,35 @@ var _ = Describe("Actions", func() {
 				Expect(err).To(BeNil())
 				Expect(config.PartTable).To(Equal(v1.MSDOS))
 				Expect(config.BootFlag).To(Equal(v1.BOOT))
+			})
+			Describe("On downloaded ISO", func() {
+				It("Sets the appropriate recovery image", func() {
+					config.Iso = "someiso"
+					fs.Create("/run/cos/iso/recovery.squashfs")
+					err := action.InstallSetup(config)
+					Expect(err).To(BeNil())
+					Expect(config.Images.GetRecovery().Source.Value()).To(Equal("/run/cos/iso/recovery.squashfs"))
+				})
+			})
+			Describe("Setting images", func() {
+				It("Set a docker source type if requested", func() {
+					config.DockerImg = "someimage"
+					action.SetPartitionsFromScratch(config)
+					err := action.InstallImagesSetup(config)
+					Expect(err).To(BeNil())
+					Expect(config.Images.GetActive().Source.IsDocker()).To(BeTrue())
+				})
+				It("Set a directory source type if requested", func() {
+					config.Directory = "dir"
+					action.SetPartitionsFromScratch(config)
+					err := action.InstallImagesSetup(config)
+					Expect(err).To(BeNil())
+					Expect(config.Images.GetActive().Source.IsDir()).To(BeTrue())
+				})
+				It("Fails if partitiones are not set first", func() {
+					err := action.InstallImagesSetup(config)
+					Expect(err).NotTo(BeNil())
+				})
 			})
 		})
 	})
