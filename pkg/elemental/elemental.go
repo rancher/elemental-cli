@@ -19,6 +19,7 @@ package elemental
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -520,7 +521,7 @@ func (c *Elemental) GetUrl(url string, destination string) error {
 		if err != nil {
 			return err
 		}
-		_, err = resp.Body.Read(source)
+		source, err = io.ReadAll(resp.Body)
 		defer resp.Body.Close()
 	default:
 		c.config.Logger.Infof("Copying from %s to %s", url, destination)
