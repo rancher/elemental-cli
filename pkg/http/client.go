@@ -18,7 +18,9 @@ package http
 
 import (
 	"github.com/cavaliergopher/grab/v3"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"net/http"
 	"time"
 )
 
@@ -27,9 +29,12 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	return &Client{client: grab.NewClient()}
+	client := grab.NewClient()
+	client.HTTPClient = &http.Client{Timeout: time.Second * constants.HttpTimeout}
+	return &Client{client: client}
 }
 
+// GetUrl attempts to download the contents of the given URL to the given destination
 func (c Client) GetUrl(log v1.Logger, url string, destination string) error {
 	req, err := grab.NewRequest(destination, url)
 	if err != nil {

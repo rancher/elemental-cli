@@ -39,7 +39,7 @@ var _ = Describe("HTTPClient", Label("http"), func() {
 		destDir, _ = os.MkdirTemp("", "elemental-test")
 	})
 	AfterEach(func() {
-		defer os.RemoveAll(destDir)
+		os.RemoveAll(destDir)
 	})
 	It("Downloads a test file to destination folder", func() {
 		// Download a public elemental release
