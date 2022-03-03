@@ -26,12 +26,12 @@ jobs:
         run: make test_deps
       - name: Run tests
         run: |
-          make test
+          #make test
           sudo env PATH="$PATH" make test_root
       - name: Merge coverage
         run: |
           echo "mode: atomic" > coverage.out
-          grep -v "mode: atomic" coverage.txt >> coverage.out
+          #grep -v "mode: atomic" coverage.txt >> coverage.out
           grep -v "mode: atomic" coverage_root.txt >> coverage.out
       - name: Codecov
         uses: codecov/codecov-action@v2
