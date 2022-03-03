@@ -16,6 +16,8 @@ limitations under the License.
 
 package v1
 
+import "net/http"
+
 type HTTPClient interface {
-	GetUrl(log Logger, url string, destination string) error
+	Get(url string) (*http.Response, error)
 }
