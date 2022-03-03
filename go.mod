@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
+	github.com/aws/aws-sdk-go v1.27.0 // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -15,7 +16,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
-	github.com/mudler/luet v0.0.0-20220127164253-6f77fa2b3a72
+	github.com/mudler/luet v0.0.0-20220303140902-1642859f32d3
 	github.com/mudler/yip v0.0.0-20220127115532-dd6192ae26bf
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.0
