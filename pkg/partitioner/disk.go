@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@ package partitioner
 import (
 	"errors"
 	"fmt"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/spf13/afero"
 	"regexp"
 	"strings"
 	"time"
-
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/spf13/afero"
 )
 
 const (
@@ -133,8 +132,10 @@ func (dev *Disk) CheckDiskFreeSpaceMiB(minSpace uint) bool {
 		return false
 	}
 	minSec := MiBToSectors(minSpace, dev.sectorS)
-
-	return freeS >= minSec
+	if freeS < minSec {
+		return false
+	}
+	return true
 }
 
 func (dev *Disk) GetFreeSpace() (uint, error) {
@@ -154,18 +155,20 @@ func (dev Disk) computeFreeSpace() uint {
 	if len(dev.parts) > 0 {
 		lastPart := dev.parts[len(dev.parts)-1]
 		return dev.lastS - (lastPart.StartS + lastPart.SizeS - 1)
+	} else {
+		// First partition starts at a 1MiB offset
+		return dev.lastS - (1*1024*1024/dev.sectorS - 1)
 	}
-	// First partition starts at a 1MiB offset
-	return dev.lastS - (1*1024*1024/dev.sectorS - 1)
 }
 
 func (dev Disk) computeFreeSpaceWithoutLast() uint {
 	if len(dev.parts) > 1 {
 		part := dev.parts[len(dev.parts)-2]
 		return dev.lastS - (part.StartS + part.SizeS - 1)
+	} else {
+		// Assume first partitions is alined to 1MiB
+		return dev.lastS - (1024*1024/dev.sectorS - 1)
 	}
-	// Assume first partitions is alined to 1MiB
-	return dev.lastS - (1024*1024/dev.sectorS - 1)
 }
 
 func (dev *Disk) NewPartitionTable(label string) (string, error) {
@@ -217,7 +220,7 @@ func (dev *Disk) AddPartition(size uint, fileSystem string, pLabel string, flags
 	size = MiBToSectors(size, dev.sectorS)
 	freeS := dev.computeFreeSpace()
 	if size > freeS {
-		return 0, fmt.Errorf("not enough free space in disk. Required: %d sectors; Available %d sectors", size, freeS)
+		return 0, errors.New(fmt.Sprintf("Not enough free space in disk. Required: %d sectors; Available %d sectors", size, freeS))
 	}
 
 	partNum++
@@ -275,12 +278,12 @@ func (dev Disk) FindPartitionDevice(partNum int) (string, error) {
 
 	for tries := 0; tries <= partitionTries; tries++ {
 		dev.logger.Debugf("Trying to find the partition device %d of device %s (try number %d)", partNum, dev, tries+1)
-		_, _ = dev.runner.Run("udevadm", "settle")
+		dev.runner.Run("udevadm", "settle")
 		out, err := dev.runner.Run("lsblk", "-ltnpo", "name,type", dev.device)
 		dev.logger.Debugf("Output of lsblk: %s", out)
 		if err != nil && tries == (partitionTries-1) {
 			dev.logger.Debugf("Error of lsblk: %s", err)
-			return "", fmt.Errorf("could not list device partition nodes: %s", out)
+			return "", errors.New(fmt.Sprintf("Could not list device partition nodes: %s", out))
 		} else if err == nil {
 			matched := re.FindStringSubmatch(string(out))
 			if matched != nil {
@@ -289,7 +292,7 @@ func (dev Disk) FindPartitionDevice(partNum int) (string, error) {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return "", fmt.Errorf("could not find partition device path for partition %d", partNum)
+	return "", errors.New(fmt.Sprintf("Could not find partition device path for partition %d", partNum))
 }
 
 //Size is expressed in MiB here
@@ -320,7 +323,7 @@ func (dev *Disk) ExpandLastPartition(size uint) (string, error) {
 		}
 		freeS := dev.computeFreeSpaceWithoutLast()
 		if size > freeS {
-			return "", fmt.Errorf("not enough free space for to expand last partition up to %d sectors", size)
+			return "", errors.New(fmt.Sprintf("Not enough free space for to expand last partition up to %d sectors", size))
 		}
 	}
 	part.SizeS = size
@@ -361,9 +364,7 @@ func (dev Disk) expandFilesystem(device string) (string, error) {
 	case "xfs":
 		// to grow an xfs fs it needs to be mounted :/
 		tmpDir, err := afero.TempDir(dev.fs, "", "yip")
-		defer func(fs afero.Fs, path string) {
-			_ = fs.RemoveAll(path)
-		}(dev.fs, tmpDir)
+		defer dev.fs.RemoveAll(tmpDir)
 
 		if err != nil {
 			return string(out), err
@@ -372,7 +373,7 @@ func (dev Disk) expandFilesystem(device string) (string, error) {
 		if err != nil {
 			return string(out), err
 		}
-		_, err = dev.runner.Run("xfs_growfs", tmpDir)
+		out, err = dev.runner.Run("xfs_growfs", tmpDir)
 		if err != nil {
 			// If we error out, try to umount the dir to not leave it hanging
 			out, err2 := dev.runner.Run("umount", tmpDir)
@@ -386,7 +387,7 @@ func (dev Disk) expandFilesystem(device string) (string, error) {
 			return string(out), err
 		}
 	default:
-		return "", fmt.Errorf("could not find filesystem for %s, not resizing the filesystem", device)
+		return "", errors.New(fmt.Sprintf("Could not find filesystem for %s, not resizing the filesystem", device))
 	}
 
 	return "", nil

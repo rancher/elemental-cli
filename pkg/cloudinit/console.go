@@ -18,10 +18,9 @@ package cloudinit
 
 import (
 	"fmt"
-	"os/exec"
-
 	"github.com/hashicorp/go-multierror"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"os/exec"
 )
 
 // cloudInitConsole represents a yip's Console implementations using

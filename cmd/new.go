@@ -1,12 +1,9 @@
 /*
 Copyright © 2022 SUSE LLC
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/hashicorp/go-getter"
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/spf13/cobra"
@@ -44,7 +40,7 @@ var newDerivative = &cobra.Command{
 		flavor := args[0]
 		if flavor != "opensuse" && flavor != "ubuntu" && flavor != "fedora" {
 			cfg.Logger.Errorf("Unsupported flavor")
-			return errors.New("unsupported flavor")
+			return errors.New("Unsupported flavor")
 		}
 
 		client := &getter.Client{

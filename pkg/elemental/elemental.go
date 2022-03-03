@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ func (c Elemental) MountPartitions() error {
 		if part.MountPoint != "" {
 			err = c.MountPartition(part, "rw")
 			if err != nil {
-				_ = c.UnmountPartitions()
+				c.UnmountPartitions()
 				return err
 			}
 		}
@@ -215,7 +215,7 @@ func (c Elemental) MountImage(img *v1.Image, opts ...string) error {
 	loop := strings.TrimSpace(string(out))
 	err = c.config.Mounter.Mount(loop, img.MountPoint, "auto", opts)
 	if err != nil {
-		_, _ = c.config.Runner.Run("losetup", "-d", loop)
+		c.config.Runner.Run("losetup", "-d", loop)
 		return err
 	}
 	img.LoopDevice = loop
@@ -226,7 +226,7 @@ func (c Elemental) MountImage(img *v1.Image, opts ...string) error {
 func (c Elemental) UnmountImage(img *v1.Image) error {
 	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
 	// for bind mounts here
-	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(img.MountPoint); notMnt {
+	if notMnt, _ := c.config.Mounter.IsLikelyNotMountPoint(img.MountPoint); notMnt == true {
 		c.config.Logger.Debugf("Not unmounting image, %s doesn't look like mountpoint", img.MountPoint)
 		return nil
 	}
@@ -256,19 +256,19 @@ func (c Elemental) CreateFileSystemImage(img *v1.Image) error {
 	err = actImg.Truncate(int64(img.Size * 1024 * 1024))
 	if err != nil {
 		actImg.Close()
-		_ = c.config.Fs.RemoveAll(img.File)
+		c.config.Fs.RemoveAll(img.File)
 		return err
 	}
 	err = actImg.Close()
 	if err != nil {
-		_ = c.config.Fs.RemoveAll(img.File)
+		c.config.Fs.RemoveAll(img.File)
 		return err
 	}
 
 	mkfs := partitioner.NewMkfsCall(img.File, img.FS, img.Label, c.config.Runner)
 	_, err = mkfs.Apply()
 	if err != nil {
-		_ = c.config.Fs.RemoveAll(img.File)
+		c.config.Fs.RemoveAll(img.File)
 		return err
 	}
 	return nil
@@ -293,7 +293,7 @@ func (c *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 	}
 	err = c.CopyImage(img)
 	if err != nil {
-		_ = c.UnmountImage(img)
+		c.UnmountImage(img)
 		return err
 	}
 	if leaveMounted && img.Source.IsFile() {
@@ -312,7 +312,7 @@ func (c *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 }
 
 // CopyImage sets the image data according to the image source type
-func (c *Elemental) CopyImage(img *v1.Image) error { // nolint:gocyclo
+func (c *Elemental) CopyImage(img *v1.Image) error {
 	c.config.Logger.Infof("Copying %s image...", img.Label)
 	var err error
 
@@ -356,7 +356,7 @@ func (c *Elemental) CopyImage(img *v1.Image) error { // nolint:gocyclo
 			_, err = c.config.Runner.Run("tune2fs", "-L", img.Label, img.File)
 			if err != nil {
 				c.config.Logger.Errorf("Failed to apply label %s to $s", img.Label, img.File)
-				_ = c.config.Fs.Remove(img.File)
+				c.config.Fs.Remove(img.File)
 				return err
 			}
 		}
@@ -403,8 +403,9 @@ func (c *Elemental) SelinuxRelabel(rootDir string, raiseError bool) error {
 	// but we still add the possibility to return an error if we want to change it in the future to be more strict?
 	if raiseError && err != nil {
 		return err
+	} else {
+		return nil
 	}
-	return nil
 }
 
 // CheckNoFormat will make sure that if we set the no format option, the system doesnt already contain a cos system
@@ -417,13 +418,14 @@ func (c *Elemental) CheckNoFormat() error {
 		found, _ := utils.GetDeviceByLabel(c.config.Runner, label, 1)
 		if found != "" {
 			if c.config.Force {
-				msg := "Forcing overwrite of existing OS image due to `force` flag"
+				msg := fmt.Sprintf("Forcing overwrite of existing OS image due to `force` flag")
 				c.config.Logger.Infof(msg)
 				return nil
+			} else {
+				msg := fmt.Sprintf("There is already an active deployment in the system, use '--force' flag to overwrite it")
+				c.config.Logger.Error(msg)
+				return errors.New(msg)
 			}
-			msg := "there is already an active deployment in the system, use '--force' flag to overwrite it"
-			c.config.Logger.Error(msg)
-			return errors.New(msg)
 		}
 	}
 	return nil
@@ -441,7 +443,7 @@ func (c *Elemental) GetIso() (tmpDir string, err error) {
 	}
 	defer func() {
 		if err != nil {
-			_ = c.config.Fs.RemoveAll(tmpDir)
+			c.config.Fs.RemoveAll(tmpDir)
 		}
 	}()
 
@@ -464,7 +466,7 @@ func (c *Elemental) GetIso() (tmpDir string, err error) {
 	}
 	defer func() {
 		if err != nil {
-			_ = c.config.Mounter.Unmount(isoMnt)
+			c.config.Mounter.Unmount(isoMnt)
 		}
 	}()
 
@@ -479,7 +481,7 @@ func (c *Elemental) GetIso() (tmpDir string, err error) {
 	}
 	defer func() {
 		if err != nil {
-			_ = c.config.Mounter.Unmount(rootfsMnt)
+			c.config.Mounter.Unmount(rootfsMnt)
 		}
 	}()
 

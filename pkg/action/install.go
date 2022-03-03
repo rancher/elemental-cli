@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@ package action
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	"github.com/rancher-sandbox/elemental/pkg/partitioner"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/spf13/afero"
+	"path/filepath"
 )
 
 func installHook(config *v1.RunConfig, hook string, chroot bool) error {
@@ -34,15 +33,15 @@ func installHook(config *v1.RunConfig, hook string, chroot bool) error {
 		extraMounts := map[string]string{}
 		persistent := config.Partitions.GetByName(cnst.PersistentPartName)
 		if persistent != nil {
-			extraMounts[persistent.MountPoint] = "/usr/local" //nolint:goconst
+			extraMounts[persistent.MountPoint] = "/usr/local"
 		}
 		oem := config.Partitions.GetByName(cnst.OEMPartName)
 		if oem != nil {
-			extraMounts[oem.MountPoint] = "/oem" //nolint:goconst
+			extraMounts[oem.MountPoint] = "/oem"
 		}
-		return ChrootHook(config, hook, config.Images.GetActive().MountPoint, extraMounts)
+		return ActionChrootHook(config, hook, config.Images.GetActive().MountPoint, extraMounts)
 	}
-	return Hook(config, hook)
+	return ActionHook(config, hook)
 }
 
 // InstallImagesSetup defines the parameters of active, passive and recovery
@@ -51,7 +50,7 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 	partState := config.Partitions.GetByName(cnst.StatePartName)
 	if partState == nil {
 		config.Logger.Errorf("State partition not configured")
-		return errors.New("error setting Active image")
+		return errors.New("Error setting Active image")
 	}
 	// Set active image
 	activeImg := v1.Image{
@@ -81,9 +80,9 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 
 	// Set recovery image
 	partRecovery := config.Partitions.GetByName(cnst.RecoveryPartName)
-	if partRecovery == nil {
+	if partState == nil {
 		config.Logger.Errorf("Recovery partition not configured")
-		return errors.New("error setting Recovery image")
+		return errors.New("Error setting Recovery image")
 	}
 
 	recoveryDirCos := filepath.Join(partRecovery.MountPoint, "cOS")
@@ -113,14 +112,14 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 // the given configuration flags
 func InstallSetup(config *v1.RunConfig) error {
 	SetPartitionsFromScratch(config)
-	_ = InstallImagesSetup(config)
+	InstallImagesSetup(config)
 	SetupLuet(config)
 
 	return nil
 }
 
-// InstallRun will install the system from a given configuration
-func InstallRun(config *v1.RunConfig) (err error) { //nolint:gocyclo
+// Run will install the system from a given configuration
+func InstallRun(config *v1.RunConfig) (err error) {
 	newElemental := elemental.NewElemental(config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
@@ -151,7 +150,7 @@ func InstallRun(config *v1.RunConfig) (err error) { //nolint:gocyclo
 	// Check device valid
 	if !disk.Exists() {
 		config.Logger.Errorf("Disk %s does not exist", config.Target)
-		return fmt.Errorf("disk %s does not exist", config.Target)
+		return errors.New(fmt.Sprintf("Disk %s does not exist", config.Target))
 	}
 
 	// Check no-format flag

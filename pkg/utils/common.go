@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func BootedFrom(runner v1.Runner, label string) bool {
 // waits a second between attempts.
 func GetDeviceByLabel(runner v1.Runner, label string, attempts int) (string, error) {
 	for tries := 0; tries < attempts; tries++ {
-		_, _ = runner.Run("udevadm", "settle")
+		runner.Run("udevadm", "settle")
 		out, err := runner.Run("blkid", "--label", label)
 		if err == nil && strings.TrimSpace(string(out)) != "" {
 			return strings.TrimSpace(string(out)), nil
@@ -90,7 +90,7 @@ func GetFullDeviceByLabel(runner v1.Runner, label string, attempts int) (v1.Part
 	return v1.Partition{}, errors.New("no device found")
 }
 
-// CopyFile Copies source file to target file using afero.Fs interface
+// Copies source file to target file using afero.Fs interface
 func CopyFile(fs afero.Fs, source string, target string) (err error) {
 	sourceFile, err := fs.Open(source)
 	if err != nil {
@@ -130,11 +130,11 @@ func CreateDirStructure(fs afero.Fs, target string) error {
 // SyncData rsync's source folder contents to a target folder content,
 // both are expected to exist before hand.
 func SyncData(source string, target string, excludes ...string) error {
-	if !strings.HasSuffix(source, "/") {
+	if strings.HasSuffix(source, "/") == false {
 		source = fmt.Sprintf("%s/", source)
 	}
 
-	if !strings.HasSuffix(target, "/") {
+	if strings.HasSuffix(target, "/") == false {
 		target = fmt.Sprintf("%s/", target)
 	}
 
@@ -194,12 +194,8 @@ func CosignVerify(fs afero.Fs, runner v1.Runner, image string, publicKey string,
 		return "", err
 	}
 	_ = os.Setenv("TUF_ROOT", tmpDir)
-	defer func(fs afero.Fs, path string) {
-		_ = fs.RemoveAll(path)
-	}(fs, tmpDir)
-	defer func() {
-		_ = os.Unsetenv("TUF_ROOT")
-	}()
+	defer fs.RemoveAll(tmpDir)
+	defer os.Unsetenv("TUF_ROOT")
 
 	out, err := runner.Run("cosign", args...)
 	return string(out), err
@@ -258,9 +254,9 @@ func GetUpgradeTempDir(config *v1.RunConfig) string {
 	return filepath.Join("/", "tmp", "elemental-upgrade")
 }
 
-// IsLocalURL returns true if the url has no scheme or it has "file" scheme
+// IsLocalUrl returns true if the url has no scheme or it has "file" scheme
 // and returns false otherwise. Error is not nil if the url can't be parsed.
-func IsLocalURL(url string) (bool, error) {
+func IsLocalUrl(url string) (bool, error) {
 	u, err := uri.Parse(url)
 	if err != nil {
 		return false, err
@@ -274,7 +270,7 @@ func IsLocalURL(url string) (bool, error) {
 // GetSource copies given source to destination, if source is a local path it simply
 // copies files, if source is a remote URL it tries to download URL to destination.
 func GetSource(config *v1.RunConfig, source string, destination string) error {
-	local, err := IsLocalURL(source)
+	local, err := IsLocalUrl(source)
 	if err != nil {
 		config.Logger.Errorf("Not a valid url: %s", source)
 		return err
@@ -291,7 +287,7 @@ func GetSource(config *v1.RunConfig, source string, destination string) error {
 			return err
 		}
 	} else {
-		err = config.Client.GetURL(config.Logger, source, destination)
+		err = config.Client.GetUrl(config.Logger, source, destination)
 		if err != nil {
 			return err
 		}

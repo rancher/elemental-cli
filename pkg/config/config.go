@@ -20,7 +20,7 @@ import (
 	"github.com/rancher-sandbox/elemental/pkg/cloudinit"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/http"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/afero"
 	"k8s.io/mount-utils"
 )

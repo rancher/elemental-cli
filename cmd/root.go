@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@ limitations under the License.
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -43,8 +42,8 @@ func init() {
 	rootCmd.PersistentFlags().String("config-dir", "", "set config dir (default is empty)")
 	rootCmd.PersistentFlags().String("logfile", "", "set logfile")
 	rootCmd.PersistentFlags().Bool("quiet", false, "do not output to stdout")
-	_ = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
-	_ = viper.BindPFlag("config-dir", rootCmd.PersistentFlags().Lookup("config-dir"))
-	_ = viper.BindPFlag("logfile", rootCmd.PersistentFlags().Lookup("logfile"))
-	_ = viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
+	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+	viper.BindPFlag("config-dir", rootCmd.PersistentFlags().Lookup("config-dir"))
+	viper.BindPFlag("logfile", rootCmd.PersistentFlags().Lookup("logfile"))
+	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 }

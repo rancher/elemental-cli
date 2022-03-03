@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@ limitations under the License.
 package cmd
 
 import (
-	"io/ioutil"
-	"os"
-
 	"github.com/rancher-sandbox/elemental/cmd/config"
+	"io/ioutil"
 	"k8s.io/mount-utils"
+	"os"
 
 	"github.com/mudler/yip/pkg/schema"
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ var cloudInit = &cobra.Command{
 	Short: "elemental cloud-init",
 	Args:  cobra.MinimumNArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		_ = viper.BindPFlags(cmd.Flags())
+		viper.BindPFlags(cmd.Flags())
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.ReadConfigRun(viper.GetString("config-dir"), &mount.FakeMounter{})

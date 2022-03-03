@@ -18,14 +18,14 @@ package action
 
 import (
 	"github.com/rancher-sandbox/elemental/pkg/constants"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
 
-// Hook is RunStage wrapper that only adds logic to ignore errors
+// ActionHook is RunStage wrapper that only adds logic to ignore errors
 // in case v1.RunConfig.Strict is set to false
-func Hook(config *v1.RunConfig, hook string) error {
+func ActionHook(config *v1.RunConfig, hook string) error {
 	config.Logger.Infof("Running %s hook", hook)
 	oldLevel := config.Logger.GetLevel()
 	config.Logger.SetLevel(logrus.ErrorLevel)
@@ -37,12 +37,12 @@ func Hook(config *v1.RunConfig, hook string) error {
 	return err
 }
 
-// ChrootHook executes Hook inside a chroot environment
-func ChrootHook(config *v1.RunConfig, hook string, chrootDir string, bindMounts map[string]string) (err error) {
+// ActionChrootHook executes ActionHook inside a chroot environment
+func ActionChrootHook(config *v1.RunConfig, hook string, chrootDir string, bindMounts map[string]string) (err error) {
 	chroot := utils.NewChroot(chrootDir, config)
 	chroot.SetExtraMounts(bindMounts)
 	callback := func() error {
-		return Hook(config, hook)
+		return ActionHook(config, hook)
 	}
 	return chroot.RunCallback(callback)
 }
@@ -64,7 +64,7 @@ func SetupLuet(config *v1.RunConfig) {
 func SetPartitionsFromScratch(config *v1.RunConfig) {
 	_, err := config.Fs.Stat(constants.EfiDevice)
 	efiExists := err == nil
-	var statePartFlags []string
+	statePartFlags := []string{}
 	var part *v1.Partition
 
 	if config.ForceEfi || efiExists {

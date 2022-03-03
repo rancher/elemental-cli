@@ -18,17 +18,16 @@ package utils
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/mudler/yip/pkg/schema"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"strings"
 )
 
 // RunStage will run yip
 func RunStage(stage string, cfg *v1.RunConfig) error {
-	var cmdLineYipURI string
+	var cmdLineYipUri string
 	var errors error
 	CloudInitPaths := constants.GetCloudInitPaths()
 
@@ -53,15 +52,15 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 		if strings.Contains(line, "=") {
 			lineSplit := strings.Split(line, "=")
 			if lineSplit[0] == "cos.setup" {
-				cmdLineYipURI = lineSplit[1]
-				cfg.Logger.Debugf("Found cos.setup stanza on cmdline with value %s", cmdLineYipURI)
+				cmdLineYipUri = lineSplit[1]
+				cfg.Logger.Debugf("Found cos.setup stanza on cmdline with value %s", cmdLineYipUri)
 			}
 		}
 	}
 
 	// Run the stage.before if cmdline contains the cos.setup stanza
-	if cmdLineYipURI != "" {
-		cmdLineArgs := []string{cmdLineYipURI}
+	if cmdLineYipUri != "" {
+		cmdLineArgs := []string{cmdLineYipUri}
 		err = cfg.CloudInitRunner.Run(stageBefore, cmdLineArgs...)
 		if err != nil {
 			errors = multierror.Append(errors, err)
@@ -83,8 +82,8 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 	}
 
 	// Run the stage.after if cmdline contains the cos.setup stanza
-	if cmdLineYipURI != "" {
-		cmdLineArgs := []string{cmdLineYipURI}
+	if cmdLineYipUri != "" {
+		cmdLineArgs := []string{cmdLineYipUri}
 		err = cfg.CloudInitRunner.Run(stageAfter, cmdLineArgs...)
 		if err != nil {
 			errors = multierror.Append(errors, err)

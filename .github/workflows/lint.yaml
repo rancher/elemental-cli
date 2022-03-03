@@ -14,7 +14,13 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.16.x
-      - name: Analysis
-        uses: golangci/golangci-lint-action@v3
+      - uses: actions/cache@v2
         with:
-          args: -v
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-lint-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-lint-go-
+      - name: Lint
+        run: make lint

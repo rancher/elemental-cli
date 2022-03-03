@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 SUSE LLC
+Copyright © 2021 SUSE LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,12 +20,10 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/rancher-sandbox/elemental/pkg/constants"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 )
 
 type PartedCall struct {
@@ -61,10 +59,10 @@ func NewPartedCall(dev string, runner v1.Runner) *PartedCall {
 func (pc PartedCall) optionsBuilder() []string {
 	opts := []string{}
 	label := pc.label
-	match, _ := regexp.MatchString(fmt.Sprintf("msdos|%s", constants.GPT), label)
+	match, _ := regexp.MatchString("msdos|gpt", label)
 	// Fallback to gpt if label is empty or invalid
 	if !match {
-		label = constants.GPT
+		label = "gpt"
 	}
 
 	if pc.wipe {
@@ -77,9 +75,9 @@ func (pc PartedCall) optionsBuilder() []string {
 
 	for _, part := range pc.parts {
 		var pLabel string
-		if label == constants.GPT && part.PLabel != "" {
+		if label == "gpt" && part.PLabel != "" {
 			pLabel = part.PLabel
-		} else if label == constants.GPT {
+		} else if label == "gpt" {
 			pLabel = fmt.Sprintf("part%d", part.Number)
 		} else {
 			pLabel = "primary"
@@ -87,7 +85,7 @@ func (pc PartedCall) optionsBuilder() []string {
 
 		opts = append(opts, "mkpart", pLabel)
 
-		if matched, _ := regexp.MatchString("fat|vfat", part.FileSystem); matched { // nolint:staticcheck
+		if m, _ := regexp.MatchString("fat|vfat", part.FileSystem); m == true {
 			opts = append(opts, "fat32")
 		} else {
 			opts = append(opts, part.FileSystem)
@@ -157,7 +155,7 @@ func (pc PartedCall) Print() (string, error) {
 
 // Parses the output of a PartedCall.Print call
 func (pc PartedCall) parseHeaderFields(printOut string, field int) (string, error) {
-	re := regexp.MustCompile(`^(.*):(\d+)s:(.*):(\d+):(\d+):(.*):(.*):(.*);$`)
+	re := regexp.MustCompile("^(.*):(\\d+)s:(.*):(\\d+):(\\d+):(.*):(.*):(.*);$")
 
 	scanner := bufio.NewScanner(strings.NewReader(strings.TrimSpace(printOut)))
 	for scanner.Scan() {
@@ -166,7 +164,7 @@ func (pc PartedCall) parseHeaderFields(printOut string, field int) (string, erro
 			return match[field], nil
 		}
 	}
-	return "", errors.New("failed parsing parted header data")
+	return "", errors.New("Failed parsing parted header data")
 }
 
 // Parses the output of a PartedCall.Print call
@@ -196,7 +194,7 @@ func (pc PartedCall) GetPartitionTableLabel(printOut string) (string, error) {
 
 // Parses the output of a GdiskCall.Print call
 func (pc PartedCall) GetPartitions(printOut string) []Partition {
-	re := regexp.MustCompile(`^(\d+):(\d+)s:(\d+)s:(\d+)s:(.*):(.*):(.*);$`)
+	re := regexp.MustCompile("^(\\d+):(\\d+)s:(\\d+)s:(\\d+)s:(.*):(.*):(.*);$")
 	var start uint
 	var end uint
 	var size uint
