@@ -635,7 +635,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 					e := elemental.NewElemental(config)
 					err := e.CheckNoFormat()
 					Expect(err).ToNot(BeNil())
-					Expect(err.Error()).To(ContainSubstring("There is already an active deployment"))
+					Expect(err.Error()).To(ContainSubstring("there is already an active deployment"))
 				})
 			})
 			Describe("Force is enabled", func() {
