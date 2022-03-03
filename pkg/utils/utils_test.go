@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -44,11 +43,6 @@ func getNamesFromListFiles(list []os.FileInfo) []string {
 		names = append(names, f.Name())
 	}
 	return names
-}
-
-func TestCommonSuite(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Elemental utils suite")
 }
 
 var _ = Describe("Utils", Label("utils"), func() {
@@ -619,75 +613,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 		})
 	})
-	Describe("RunStage", Label("RunStage"), func() {
-		var memLog *bytes.Buffer
-		BeforeEach(func() {
-			// Use a different config with a buffer for logger, so we can check the output
-			// We also use the real fs
-			memLog = &bytes.Buffer{}
-			logger = v1.NewBufferLogger(memLog)
-			fs = afero.NewOsFs()
-			config = conf.NewRunConfig(
-				v1.WithFs(fs),
-				v1.WithRunner(runner),
-				v1.WithLogger(logger),
-				v1.WithMounter(mounter),
-				v1.WithSyscall(syscall),
-				v1.WithClient(client),
-			)
-		})
-		It("fails if strict mode is enabled", Label("strict"), func() {
-			config.Logger.SetLevel(log.DebugLevel)
-			config.Strict = true
-			runner.ReturnValue = []byte("stages.c3po[0].datasource") // this should fail as its wrong data
-			Expect(utils.RunStage("c3po", config)).ToNot(BeNil())
-		})
-		It("does not fail but prints errors by default", Label("strict"), func() {
-			config.Logger.SetLevel(log.DebugLevel)
-			config.Strict = false
-			runner.ReturnValue = []byte("stages.c3po[0].datasource") // this should fail as its wrong data
-			out := utils.RunStage("c3po", config)
-			Expect(out).To(BeNil())
-			Expect(memLog).To(ContainSubstring("Some errors found but were ignored"))
-		})
-		It("Goes over extra paths", func() {
-			d, _ := afero.TempDir(fs, "", "elemental")
-			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d), []byte{}, os.ModePerm)
-			defer os.RemoveAll(d)
-			config.Logger.SetLevel(log.DebugLevel)
-			config.CloudInitPaths = d
-			Expect(utils.RunStage("luke", config)).To(BeNil())
-			Expect(memLog).To(ContainSubstring(fmt.Sprintf("Adding extra paths: %s", d)))
-			Expect(memLog).To(ContainSubstring("luke"))
-			Expect(memLog).To(ContainSubstring("luke.before"))
-			Expect(memLog).To(ContainSubstring("luke.after"))
-		})
-		It("parses cmdline uri", func() {
-			d, _ := afero.TempDir(fs, "", "elemental")
-			_ = afero.WriteFile(fs, fmt.Sprintf("%s/test.yaml", d), []byte{}, os.ModePerm)
-			defer os.RemoveAll(d)
 
-			runner.ReturnValue = []byte(fmt.Sprintf("cos.setup=%s/test.yaml", d))
-			Expect(utils.RunStage("padme", config)).To(BeNil())
-			Expect(memLog).To(ContainSubstring("padme"))
-			Expect(memLog).To(ContainSubstring(fmt.Sprintf("%s/test.yaml", d)))
-		})
-		It("parses cmdline uri with dotnotation", func() {
-			config.Logger.SetLevel(log.DebugLevel)
-			runner.ReturnValue = []byte("stages.leia[0].commands[0]='echo beepboop'")
-			Expect(utils.RunStage("leia", config)).To(BeNil())
-			Expect(memLog).To(ContainSubstring("leia"))
-			Expect(memLog).To(ContainSubstring("running command `echo beepboop`"))
-			Expect(memLog).To(ContainSubstring("Command output: stages.leia[0].commands[0]='echo beepboop'"))
-
-			// try with a non-clean cmdline
-			runner.ReturnValue = []byte("BOOT=death-star single stages.leia[0].commands[0]='echo beepboop'")
-			Expect(utils.RunStage("leia", config)).To(BeNil())
-			Expect(memLog).To(ContainSubstring("leia"))
-			Expect(memLog).To(ContainSubstring("running command `echo beepboop`"))
-			Expect(memLog).To(ContainSubstring("Command output: BOOT=death-star single stages.leia[0].commands[0]='echo beepboop'"))
-		})
-	})
 	Describe("CreateSquashFS", Label("CreateSquashFS"), func() {
 		It("runs with no options if none given", func() {
 			err := utils.CreateSquashFS(runner, logger, "source", "dest", []string{})
