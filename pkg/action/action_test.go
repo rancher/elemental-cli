@@ -631,7 +631,7 @@ var _ = Describe("Actions", func() {
 				_ = fs.RemoveAll(activeImg)
 				_ = fs.RemoveAll(passiveImg)
 			})
-			It("Successfully upgrades from docker image", Label("docker", "root"), func() {
+			PIt("Successfully upgrades from docker image", Label("docker", "root"), func() {
 				config.DockerImg = "alpine"
 				upgrade = action.NewUpgradeAction(config)
 				err := upgrade.Run()
@@ -670,7 +670,7 @@ var _ = Describe("Actions", func() {
 				_, err = fs.Stat(transitionImg)
 				Expect(err).To(HaveOccurred())
 			})
-			It("Successfully upgrades from directory", Label("directory", "root"), func() {
+			PIt("Successfully upgrades from directory", Label("directory", "root"), func() {
 				config.Directory, _ = os.MkdirTemp("", "elemental")
 				// Create the dir on real os as rsync works on the real os
 				defer os.RemoveAll(config.Directory)
@@ -709,7 +709,7 @@ var _ = Describe("Actions", func() {
 				Expect(err).To(HaveOccurred())
 
 			})
-			It("Successfully upgrades from channel upgrade", Label("channel", "root"), Focus, func() {
+			It("Successfully upgrades from channel upgrade", Label("channel", "root"), func() {
 				config.ChannelUpgrades = true
 				// Required paths
 				tmpDirBase, _ := os.MkdirTemp("", "elemental")
@@ -812,7 +812,7 @@ var _ = Describe("Actions", func() {
 				_ = fs.RemoveAll(activeImg)
 				_ = fs.RemoveAll(passiveImg)
 			})
-			It("does not backup active img to passive", Label("docker", "root"), func() {
+			PIt("does not backup active img to passive", Label("docker", "root"), func() {
 				config.DockerImg = "alpine"
 				upgrade = action.NewUpgradeAction(config)
 				err := upgrade.Run()
@@ -896,7 +896,7 @@ var _ = Describe("Actions", func() {
 					_ = fs.RemoveAll(activeImg)
 					_ = fs.RemoveAll(passiveImg)
 				})
-				It("Successfully upgrades recovery from docker image", Label("docker", "root"), func() {
+				PIt("Successfully upgrades recovery from docker image", Label("docker", "root"), func() {
 					// This should be the old image
 					info, err := fs.Stat(recoveryImgSquash)
 					Expect(err).ToNot(HaveOccurred())
@@ -936,7 +936,7 @@ var _ = Describe("Actions", func() {
 					Expect(err).To(HaveOccurred())
 
 				})
-				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
+				PIt("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
 					config.Directory, _ = os.MkdirTemp("", "elemental")
 					// Create the dir on real os as rsync works on the real os
 					defer os.RemoveAll(config.Directory)
@@ -1075,7 +1075,7 @@ var _ = Describe("Actions", func() {
 					_ = fs.RemoveAll(passiveImg)
 					_ = fs.RemoveAll(recoveryImg)
 				})
-				It("Successfully upgrades recovery from docker image", Label("docker", "root"), func() {
+				PIt("Successfully upgrades recovery from docker image", Label("docker", "root"), func() {
 					// This should be the old image
 					info, err := fs.Stat(recoveryImg)
 					Expect(err).ToNot(HaveOccurred())
@@ -1116,7 +1116,7 @@ var _ = Describe("Actions", func() {
 					}
 
 				})
-				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
+				PIt("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
 					config.Directory, _ = os.MkdirTemp("", "elemental")
 					// Create the dir on real os as rsync works on the real os
 					defer os.RemoveAll(config.Directory)
@@ -1149,7 +1149,7 @@ var _ = Describe("Actions", func() {
 					info, err = fs.Stat(transitionImgRecovery)
 					Expect(err).To(HaveOccurred())
 				})
-				It("Successfully upgrades recovery from channel upgrade", Label("channel", "root"), Focus, func() {
+				It("Successfully upgrades recovery from channel upgrade", Label("channel", "root"), func() {
 					// This should be the old image
 					info, err := fs.Stat(recoveryImg)
 					Expect(err).ToNot(HaveOccurred())
