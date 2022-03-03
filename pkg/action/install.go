@@ -55,10 +55,9 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 	}
 	// Set active image
 	activeImg := v1.Image{
-		Label: config.ActiveLabel,
-		Size:  cnst.ImgSize,
-		// TODO: partState.MountPoint can be nil? We are checking for nil below on line 84...
-		File:       filepath.Join(partState.MountPoint, "cOS", cnst.ActiveImgFile), // nolint:staticcheck
+		Label:      config.ActiveLabel,
+		Size:       cnst.ImgSize,
+		File:       filepath.Join(partState.MountPoint, "cOS", cnst.ActiveImgFile),
 		FS:         cnst.LinuxImgFs,
 		MountPoint: cnst.ActiveDir,
 	}
@@ -74,8 +73,7 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 
 	// Set passive image
 	passiveImg := v1.Image{
-		// TODO: partState.MountPoint can be nil? We are checking for nil below on line 84...
-		File:   filepath.Join(partState.MountPoint, "cOS", cnst.PassiveImgFile), // nolint:staticcheck
+		File:   filepath.Join(partState.MountPoint, "cOS", cnst.PassiveImgFile),
 		Label:  config.PassiveLabel,
 		Source: v1.NewFileSrc(activeImg.File),
 		FS:     cnst.LinuxImgFs,
@@ -83,7 +81,7 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 
 	// Set recovery image
 	partRecovery := config.Partitions.GetByName(cnst.RecoveryPartName)
-	if partState == nil { // nolint:staticcheck
+	if partRecovery == nil {
 		config.Logger.Errorf("Recovery partition not configured")
 		return errors.New("error setting Recovery image")
 	}
