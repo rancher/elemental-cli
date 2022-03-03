@@ -709,7 +709,7 @@ var _ = Describe("Actions", func() {
 				Expect(err).To(HaveOccurred())
 
 			})
-			It("Successfully upgrades from channel upgrade", Label("channel", "root"), func() {
+			PIt("Successfully upgrades from channel upgrade", Label("channel", "root"), func() {
 				config.ChannelUpgrades = true
 				// Required paths
 				tmpDirBase, _ := os.MkdirTemp("", "elemental")
