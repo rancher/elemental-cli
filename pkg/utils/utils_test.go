@@ -155,7 +155,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				mounter.ErrorOnUnmount = true
 				_, err := chroot.Run("chroot-command")
 				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("Failed closing chroot"))
+				Expect(err.Error()).To(ContainSubstring("failed closing chroot"))
 			})
 		})
 	})
