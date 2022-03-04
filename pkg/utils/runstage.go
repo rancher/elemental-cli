@@ -24,7 +24,6 @@ import (
 	"github.com/mudler/yip/pkg/schema"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -73,7 +72,7 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 
 	// Make sure cloud init path specified are existing in the system
 	for _, cp := range CloudInitPaths {
-		err := cfg.Fs.MkdirAll(cp, 0600)
+		err := MkdirAll(cfg.Fs, cp, 0600)
 		if err != nil {
 			cfg.Logger.Debugf("Failed creating cloud-init config path: %s %s", cp, err.Error())
 		}
@@ -83,7 +82,7 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 	stageAfter := fmt.Sprintf("%s.after", stage)
 
 	// Check if the cmdline has the cos.setup key and extract its value to run yip on that given uri
-	cmdLineOut, err := afero.ReadFile(cfg.Fs, "/proc/cmdline")
+	cmdLineOut, err := cfg.Fs.ReadFile("/proc/cmdline")
 	if err != nil {
 		allErrors = multierror.Append(allErrors, err)
 	}

@@ -18,12 +18,11 @@ package partitioner
 
 import (
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/spf13/afero"
 )
 
 type DiskOptions func(d *Disk) error
 
-func WithFS(fs afero.Fs) func(d *Disk) error {
+func WithFS(fs v1.FS) func(d *Disk) error {
 	return func(d *Disk) error {
 		d.fs = fs
 		return nil

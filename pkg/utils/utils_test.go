@@ -34,7 +34,8 @@ import (
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	v1mock "github.com/rancher-sandbox/elemental/tests/mocks"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
+	"github.com/twpayne/go-vfs"
+	"github.com/twpayne/go-vfs/vfst"
 )
 
 func getNamesFromListFiles(list []os.FileInfo) []string {
@@ -52,7 +53,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 	var syscall *v1mock.FakeSyscall
 	var client *v1mock.FakeHTTPClient
 	var mounter *v1mock.ErrorMounter
-	var fs afero.Fs
+	var fs vfs.FS
+	var cleanup func()
 
 	BeforeEach(func() {
 		runner = v1mock.NewFakeRunner()
@@ -60,7 +62,12 @@ var _ = Describe("Utils", Label("utils"), func() {
 		mounter = v1mock.NewErrorMounter()
 		client = &v1mock.FakeHTTPClient{}
 		logger = v1.NewNullLogger()
-		fs = afero.NewMemMapFs()
+		// Ensure /tmp exists in the VFS
+		fs, cleanup, _ = vfst.NewTestFS(nil)
+		fs.Mkdir("/tmp", os.ModePerm)
+		fs.Mkdir("/run", os.ModePerm)
+		fs.Mkdir("/etc", os.ModePerm)
+
 		config = conf.NewRunConfig(
 			v1.WithFs(fs),
 			v1.WithRunner(runner),
@@ -70,6 +77,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 			v1.WithClient(client),
 		)
 	})
+	AfterEach(func() { cleanup() })
+
 	Describe("Chroot", Label("chroot"), func() {
 		var chroot *utils.Chroot
 		BeforeEach(func() {
@@ -204,7 +213,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			)).To(BeNil())
 		})
 		It("Fails to to create temporary directories", func() {
-			_, err := utils.CosignVerify(afero.NewReadOnlyFs(fs), runner, "some/image:latest", "", true)
+			_, err := utils.CosignVerify(vfs.NewReadOnlyFS(fs), runner, "some/image:latest", "", true)
 			Expect(err).NotTo(BeNil())
 		})
 	})
@@ -310,23 +319,33 @@ var _ = Describe("Utils", Label("utils"), func() {
 	})
 	Describe("CopyFile", Label("CopyFile"), func() {
 		It("Copies source to target", func() {
-			fs.Create("/some/file")
-			_, err := fs.Stat("/some/otherfile")
-			Expect(err).NotTo(BeNil())
-			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).To(BeNil())
+			err := utils.MkdirAll(fs, "/some", os.ModePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/some/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Stat("/some/otherfile")
+			Expect(err).Should(HaveOccurred())
+			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).ShouldNot(HaveOccurred())
 			_, err = fs.Stat("/some/otherfile")
 			Expect(err).To(BeNil())
+			e, err := utils.Exists(fs, "/some/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e).To(BeTrue())
 		})
 		It("Fails to open non existing file", func() {
+			err := utils.MkdirAll(fs, "/some", os.ModePerm)
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).NotTo(BeNil())
-			_, err := fs.Stat("/some/otherfile")
+			_, err = fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
 		})
 		It("Fails to copy on non writable target", func() {
+			err := utils.MkdirAll(fs, "/some", os.ModePerm)
+			Expect(err).ShouldNot(HaveOccurred())
 			fs.Create("/some/file")
-			_, err := fs.Stat("/some/otherfile")
+			_, err = fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
-			fs = afero.NewReadOnlyFs(fs)
+			fs = vfs.NewReadOnlyFS(fs)
 			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).NotTo(BeNil())
 			_, err = fs.Stat("/some/otherfile")
 			Expect(err).NotTo(BeNil())
@@ -341,7 +360,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			}
 		})
 		It("Fails on non writable target", func() {
-			fs = afero.NewReadOnlyFs(fs)
+			fs = vfs.NewReadOnlyFS(fs)
 			Expect(utils.CreateDirStructure(fs, "/my/root")).NotTo(BeNil())
 		})
 	})
@@ -460,7 +479,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(utils.GetSource(config, "$htt:|//insane.stuff", "/tmp/dest")).NotTo(BeNil())
 		})
 		It("Fails on readonly destination", func() {
-			config.Fs = afero.NewReadOnlyFs(fs)
+			config.Fs = vfs.NewReadOnlyFS(fs)
 			Expect(utils.GetSource(config, "http://something.org", "/tmp/dest")).NotTo(BeNil())
 		})
 		It("Fails on non existing local source", func() {
@@ -479,7 +498,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).To(BeNil())
 		})
 	})
-	Describe("Grub", Label("grub"), func() {
+	Describe("Grub", Label("grub", "root"), func() {
 		Describe("Install", func() {
 			BeforeEach(func() {
 				config.Target = "/dev/test"
@@ -491,9 +510,14 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger := log.New()
 				logger.SetOutput(buf)
 
-				_ = fs.MkdirAll(fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
-				err := afero.WriteFile(fs, filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
-				Expect(err).To(BeNil())
+				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
+				Expect(err).ShouldNot(HaveOccurred())
 
 				config.Logger = logger
 				config.GrubConf = "/etc/cos/grub.cfg"
@@ -506,7 +530,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(buf).To(ContainSubstring("Grub install to device /dev/test complete"))
 				Expect(buf).ToNot(ContainSubstring("efi"))
 				Expect(buf.String()).ToNot(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
-				targetGrub, err := afero.ReadFile(fs, fmt.Sprintf("%s/grub2/grub.cfg", constants.StateDir))
+				targetGrub, err := fs.ReadFile(fmt.Sprintf("%s/grub2/grub.cfg", constants.StateDir))
 				Expect(err).To(BeNil())
 				// Should not be modified at all
 				Expect(targetGrub).To(ContainSubstring("console=tty1"))
@@ -517,14 +541,18 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger := log.New()
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
+
+				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
 				_, _ = fs.Create(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf))
 				_, _ = fs.Create(constants.EfiDevice)
 
 				config.Logger = logger
 
 				grub := utils.NewGrub(config)
-				err := grub.Install()
-				Expect(err).To(BeNil())
+				err = grub.Install()
+				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(buf.String()).To(ContainSubstring("--target=x86_64-efi"))
 				Expect(buf.String()).To(ContainSubstring("--efi-directory"))
@@ -535,13 +563,17 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger := log.New()
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
+
+				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
 				_, _ = fs.Create(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf))
 
 				config.Logger = logger
 				config.ForceEfi = true
 
 				grub := utils.NewGrub(config)
-				err := grub.Install()
+				err = grub.Install()
 				Expect(err).To(BeNil())
 
 				Expect(buf.String()).To(ContainSubstring("--target=x86_64-efi"))
@@ -552,8 +584,11 @@ var _ = Describe("Utils", Label("utils"), func() {
 				buf := &bytes.Buffer{}
 				logger := log.New()
 				logger.SetOutput(buf)
-				_ = fs.MkdirAll(fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
-				err := afero.WriteFile(fs, filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
+				_ = utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
 				Expect(err).To(BeNil())
 				_, _ = fs.Create("/dev/serial")
 
@@ -565,7 +600,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(err).To(BeNil())
 
 				Expect(buf.String()).To(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
-				targetGrub, err := afero.ReadFile(fs, fmt.Sprintf("%s/grub2/grub.cfg", constants.StateDir))
+				targetGrub, err := fs.ReadFile(fmt.Sprintf("%s/grub2/grub.cfg", constants.StateDir))
 				Expect(err).To(BeNil())
 				Expect(targetGrub).To(ContainSubstring("console=tty1 console=serial"))
 			})
@@ -580,7 +615,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger := log.New()
 				logger.SetOutput(buf)
 
-				_ = fs.MkdirAll(fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				_ = utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
 
 				config.Logger = logger
 
@@ -652,7 +687,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 	})
 	Describe("LoadEnvFile", Label("LoadEnvFile"), func() {
 		It("returns proper map if file exists", func() {
-			err := afero.WriteFile(fs, "/etc/envfile", []byte("TESTKEY=TESTVALUE"), os.ModePerm)
+			err := fs.WriteFile("/etc/envfile", []byte("TESTKEY=TESTVALUE"), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 			envData, err := utils.LoadEnvFile(fs, "/etc/envfile")
 			Expect(err).ToNot(HaveOccurred())
@@ -664,7 +699,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 
 		It("returns error if it cant unmarshall the env file", func() {
-			err := afero.WriteFile(fs, "/etc/envfile", []byte("WHATWHAT"), os.ModePerm)
+			err := fs.WriteFile("/etc/envfile", []byte("WHATWHAT"), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())
 			_, err = utils.LoadEnvFile(fs, "/etc/envfile")
 			Expect(err).To(HaveOccurred())

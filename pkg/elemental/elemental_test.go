@@ -19,6 +19,10 @@ package elemental_test
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/action"
@@ -26,13 +30,12 @@ import (
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	part "github.com/rancher-sandbox/elemental/pkg/partitioner"
-	"github.com/rancher-sandbox/elemental/pkg/types/v1"
+	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/utils"
 	v1mock "github.com/rancher-sandbox/elemental/tests/mocks"
-	"github.com/spf13/afero"
+	"github.com/twpayne/go-vfs"
+	"github.com/twpayne/go-vfs/vfst"
 	"k8s.io/mount-utils"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 const printOutput = `BYT;
@@ -45,22 +48,22 @@ func TestElementalSuite(t *testing.T) {
 	RunSpecs(t, "Elemental test suite")
 }
 
-var _ = Describe("Elemental", Label("elemental"), func() {
+var _ = Describe("Elemental", Label("elemental", "root"), func() {
 	var config *v1.RunConfig
 	var runner *v1mock.FakeRunner
 	var logger v1.Logger
 	var syscall v1.SyscallInterface
 	var client v1.HTTPClient
 	var mounter mount.Interface
-	var fs afero.Fs
-
+	var fs vfs.FS
+	var cleanup func()
 	BeforeEach(func() {
 		runner = v1mock.NewFakeRunner()
 		syscall = &v1mock.FakeSyscall{}
 		mounter = v1mock.NewErrorMounter()
 		client = &v1mock.FakeHTTPClient{}
 		logger = v1.NewNullLogger()
-		fs = afero.NewMemMapFs()
+		fs, cleanup, _ = vfst.NewTestFS(nil)
 		config = conf.NewRunConfig(
 			v1.WithFs(fs),
 			v1.WithRunner(runner),
@@ -70,11 +73,12 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			v1.WithClient(client),
 		)
 	})
-
+	AfterEach(func() { cleanup() })
 	Describe("MountPartitions", Label("MountPartitions", "disk", "partition", "mount"), func() {
 		var el *elemental.Elemental
 		BeforeEach(func() {
-			fs.Create(cnst.EfiDevice)
+			_, err := fs.Create(cnst.EfiDevice)
+			Expect(err).ToNot(HaveOccurred())
 			action.InstallSetup(config)
 			Expect(config.PartTable).To(Equal(v1.GPT))
 			Expect(config.BootFlag).To(Equal(v1.ESP))
@@ -473,7 +477,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			sourceImg := "source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
-			destDir, err := afero.TempDir(fs, "", "elemental")
+			destDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
 			img.Source = v1.NewFileSrc(sourceImg)
 			img.MountPoint = destDir
@@ -483,7 +487,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			sourceImg := "source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
-			destDir, err := afero.TempDir(fs, "", "elemental")
+			destDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
 			img.Source = v1.NewFileSrc(sourceImg)
 			img.MountPoint = destDir
@@ -571,7 +575,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			sourceImg := "source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
-			destDir, err := afero.TempDir(fs, "", "elemental")
+			destDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
 			img.Source = v1.NewFileSrc(sourceImg)
 			img.MountPoint = destDir
@@ -596,7 +600,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			sourceImg := "source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
-			destDir, err := afero.TempDir(fs, "", "elemental")
+			destDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
 			img.Source = v1.NewFileSrc(sourceImg)
 			img.MountPoint = destDir
@@ -665,30 +669,30 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			c := elemental.NewElemental(config)
 			// This is actually failing but not sure we should return an error
 			Expect(c.SelinuxRelabel("/", true)).ToNot(BeNil())
-			fs = afero.NewMemMapFs()
+			fs, cleanup, _ = vfst.NewTestFS(nil)
 			_, _ = fs.Create("/etc/selinux/targeted/contexts/files/file_contexts")
 			Expect(c.SelinuxRelabel("/", false)).To(BeNil())
 		})
 	})
 	Describe("GetIso", Label("GetIso", "iso"), func() {
 		It("Gets the iso and returns the temporary where it is stored and no image sources are set", func() {
-			tmpDir, err := afero.TempDir(fs, "", "elemental-test")
+			tmpDir, err := utils.TempDir(fs, "", "elemental-test")
 			Expect(err).To(BeNil())
-			err = afero.WriteFile(fs, fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
+			err = fs.WriteFile(fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
 			Expect(err).To(BeNil())
 			config.Iso = fmt.Sprintf("%s/fake.iso", tmpDir)
 			e := elemental.NewElemental(config)
 			isoDir, err := e.GetIso()
 			Expect(err).To(BeNil())
 			// Confirm that the iso is stored in isoDir
-			afero.Exists(fs, filepath.Join(isoDir, "cOs.iso"))
+			utils.Exists(fs, filepath.Join(isoDir, "cOs.iso"))
 			Expect(config.Images.GetActive()).To(BeNil())
 			Expect(config.Images.GetRecovery()).To(BeNil())
 		})
 		It("Gets the iso and sets active and recovery images", func() {
-			tmpDir, err := afero.TempDir(fs, "", "elemental-test")
+			tmpDir, err := utils.TempDir(fs, "", "elemental-test")
 			Expect(err).To(BeNil())
-			err = afero.WriteFile(fs, fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
+			err = fs.WriteFile(fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
 			Expect(err).To(BeNil())
 			config.Iso = fmt.Sprintf("%s/fake.iso", tmpDir)
 			config.Images[cnst.ActiveImgName] = &v1.Image{File: "activeimagefile"}
@@ -697,14 +701,14 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			isoDir, err := e.GetIso()
 			Expect(err).To(BeNil())
 			// Confirm that the iso is stored in isoDir
-			afero.Exists(fs, filepath.Join(isoDir, "cOs.iso"))
+			utils.Exists(fs, filepath.Join(isoDir, "cOs.iso"))
 			Expect(config.Images.GetActive().Source.Value()).To(ContainSubstring("/rootfs"))
 			Expect(config.Images.GetRecovery().Source.Value()).To(Equal("activeimagefile"))
 		})
 		It("Fails if attemps to set recovery from active but no active is defined", func() {
-			tmpDir, err := afero.TempDir(fs, "", "elemental-test")
+			tmpDir, err := utils.TempDir(fs, "", "elemental-test")
 			Expect(err).To(BeNil())
-			err = afero.WriteFile(fs, fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
+			err = fs.WriteFile(fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
 			Expect(err).To(BeNil())
 			config.Iso = fmt.Sprintf("%s/fake.iso", tmpDir)
 			config.Images[cnst.RecoveryImgName] = &v1.Image{}
@@ -720,9 +724,9 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 		It("Fails if it cannot mount the iso", func() {
 			config.Mounter = v1mock.ErrorMounter{ErrorOnMount: true}
-			tmpDir, err := afero.TempDir(fs, "", "elemental-test")
+			tmpDir, err := utils.TempDir(fs, "", "elemental-test")
 			Expect(err).To(BeNil())
-			err = afero.WriteFile(fs, fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
+			err = fs.WriteFile(fmt.Sprintf("%s/fake.iso", tmpDir), []byte("Hi"), os.ModePerm)
 			Expect(err).To(BeNil())
 			config.Iso = fmt.Sprintf("%s/fake.iso", tmpDir)
 			e := elemental.NewElemental(config)
@@ -734,14 +738,14 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 	Describe("CloudConfig", Label("CloudConfig", "cloud-config"), func() {
 		It("Copies the cloud config file", func() {
 			testString := "In a galaxy far far away..."
-			err := afero.WriteFile(fs, "config.yaml", []byte(testString), os.ModePerm)
+			err := fs.WriteFile("config.yaml", []byte(testString), os.ModePerm)
 			Expect(err).To(BeNil())
 			Expect(err).To(BeNil())
 			config.CloudInit = "config.yaml"
 			e := elemental.NewElemental(config)
 			err = e.CopyCloudConfig()
 			Expect(err).To(BeNil())
-			copiedFile, err := afero.ReadFile(fs, fmt.Sprintf("%s/99_custom.yaml", cnst.OEMDir))
+			copiedFile, err := fs.ReadFile(fmt.Sprintf("%s/99_custom.yaml", cnst.OEMDir))
 			Expect(err).To(BeNil())
 			Expect(copiedFile).To(ContainSubstring(testString))
 		})
