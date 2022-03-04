@@ -18,6 +18,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -69,6 +70,14 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 		cfg.Logger.Debugf("Adding extra paths: %s", cfg.CloudInitPaths)
 		extraCloudInitPathsSplit := strings.Split(cfg.CloudInitPaths, " ")
 		CloudInitPaths = append(CloudInitPaths, extraCloudInitPathsSplit...)
+	}
+
+	// Make sure cloud init path specified are existing in the system
+	for _, cp := range CloudInitPaths {
+		err := os.MkdirAll(cp, 0600)
+		if err != nil {
+			cfg.Logger.Debugf("Failed creating cloud-init config path: %s %s", cp, err.Error())
+		}
 	}
 
 	stageBefore := fmt.Sprintf("%s.before", stage)
