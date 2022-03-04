@@ -18,13 +18,13 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/mudler/yip/pkg/schema"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,7 +45,6 @@ func onlyYAMLPartialErrors(er error) bool {
 }
 
 func checkYAMLError(cfg *v1.RunConfig, allErrors, err error) error {
-	fmt.Println("Checking out", err)
 	if !onlyYAMLPartialErrors(err) {
 		// here we absorb errors only if are related to YAML unmarshalling
 		// As cmdline is parsed out as a yaml file
@@ -74,7 +73,7 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 
 	// Make sure cloud init path specified are existing in the system
 	for _, cp := range CloudInitPaths {
-		err := os.MkdirAll(cp, 0600)
+		err := cfg.Fs.MkdirAll(cp, 0600)
 		if err != nil {
 			cfg.Logger.Debugf("Failed creating cloud-init config path: %s %s", cp, err.Error())
 		}
@@ -84,7 +83,7 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 	stageAfter := fmt.Sprintf("%s.after", stage)
 
 	// Check if the cmdline has the cos.setup key and extract its value to run yip on that given uri
-	cmdLineOut, err := cfg.Runner.Run("cat", "/proc/cmdline")
+	cmdLineOut, err := afero.ReadFile(cfg.Fs, "/proc/cmdline")
 	if err != nil {
 		allErrors = multierror.Append(allErrors, err)
 	}
@@ -100,38 +99,26 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 		}
 	}
 
-	// Run the stage.before if cmdline contains the cos.setup stanza
-	if cmdLineYipURI != "" {
-		cmdLineArgs := []string{cmdLineYipURI}
-		err = cfg.CloudInitRunner.Run(stageBefore, cmdLineArgs...)
-		if err != nil {
-			allErrors = multierror.Append(allErrors, err)
-		}
-	}
-
 	// Run all stages for each of the default cloud config paths + extra cloud config paths
-	err = cfg.CloudInitRunner.Run(stageBefore, CloudInitPaths...)
-	if err != nil {
-		allErrors = multierror.Append(allErrors, err)
-	}
-	err = cfg.CloudInitRunner.Run(stage, CloudInitPaths...)
-	if err != nil {
-		allErrors = multierror.Append(allErrors, err)
-	}
-	err = cfg.CloudInitRunner.Run(stageAfter, CloudInitPaths...)
-	if err != nil {
-		allErrors = multierror.Append(allErrors, err)
-	}
-
-	// Run the stage.after if cmdline contains the cos.setup stanza
-	if cmdLineYipURI != "" {
-		cmdLineArgs := []string{cmdLineYipURI}
-		err = cfg.CloudInitRunner.Run(stageAfter, cmdLineArgs...)
+	for _, s := range []string{stageBefore, stage, stageAfter} {
+		err = cfg.CloudInitRunner.Run(s, CloudInitPaths...)
 		if err != nil {
 			allErrors = multierror.Append(allErrors, err)
 		}
 	}
 
+	// Run the stages if cmdline contains the cos.setup stanza
+	if cmdLineYipURI != "" {
+		cmdLineArgs := []string{cmdLineYipURI}
+		for _, s := range []string{stageBefore, stage, stageAfter} {
+			err = cfg.CloudInitRunner.Run(s, cmdLineArgs...)
+			if err != nil {
+				allErrors = multierror.Append(allErrors, err)
+			}
+		}
+	}
+
+	// Run stages encoded from /proc/cmdlines
 	cfg.CloudInitRunner.SetModifier(schema.DotNotationModifier)
 
 	for _, s := range []string{stageBefore, stage, stageAfter} {
