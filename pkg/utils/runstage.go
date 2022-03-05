@@ -18,6 +18,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -66,6 +67,12 @@ func RunStage(stage string, cfg *v1.RunConfig) error {
 		if err != nil {
 			errors = multierror.Append(errors, err)
 		}
+	}
+
+	// Blindly try to create the dir that we are gonna pass to yip to avoid yip trying to unmarshal a non.existing dir
+	for _, path := range CloudInitPaths {
+		// We dont care if it fails to create, thats a different issue altogether
+		_ = cfg.Fs.MkdirAll(path, os.ModeDir)
 	}
 
 	// Run all stages for each of the default cloud config paths + extra cloud config paths
