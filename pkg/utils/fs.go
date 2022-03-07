@@ -1,9 +1,27 @@
+/*
+Copyright © 2022 spf13/afero
+Copyright © 2022 SUSE LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package utils
 
 import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -72,7 +90,7 @@ func Exists(fs v1.FS, path string) (bool, error) {
 	return false, err
 }
 
-// Check if the path is a dir
+// IsDir check if the path is a dir
 func IsDir(fs v1.FS, path string) (bool, error) {
 	fi, err := fs.Stat(path)
 	if err != nil {
@@ -81,6 +99,7 @@ func IsDir(fs v1.FS, path string) (bool, error) {
 	return fi.IsDir(), nil
 }
 
+// MkdirAll directory and all parents if not existing
 func MkdirAll(fs v1.FS, name string, mode os.FileMode) (err error) {
 	if _, isReadOnly := fs.(*vfs.ReadOnlyFS); isReadOnly {
 		return permError("mkdir", name)
@@ -98,4 +117,35 @@ func permError(op, path string) error {
 		Path: path,
 		Err:  syscall.EPERM,
 	}
+}
+
+// TempFile creates a temp file in the virtual fs
+// Took from afero.FS code and adapted
+func TempFile(fs v1.FS, dir, pattern string) (f *os.File, err error) {
+	if dir == "" {
+		dir = os.TempDir()
+	}
+
+	var prefix, suffix string
+	if pos := strings.LastIndex(pattern, "*"); pos != -1 {
+		prefix, suffix = pattern[:pos], pattern[pos+1:]
+	} else {
+		prefix = pattern
+	}
+
+	nconflict := 0
+	for i := 0; i < 10000; i++ {
+		name := filepath.Join(dir, prefix+nextRandom()+suffix)
+		f, err = fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		if os.IsExist(err) {
+			if nconflict++; nconflict > 10 {
+				randmu.Lock()
+				rand = reseed()
+				randmu.Unlock()
+			}
+			continue
+		}
+		break
+	}
+	return
 }

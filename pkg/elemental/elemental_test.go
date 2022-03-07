@@ -77,6 +77,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 	Describe("MountPartitions", Label("MountPartitions", "disk", "partition", "mount"), func() {
 		var el *elemental.Elemental
 		BeforeEach(func() {
+			utils.MkdirAll(fs, filepath.Dir(cnst.EfiDevice), os.ModePerm)
 			_, err := fs.Create(cnst.EfiDevice)
 			Expect(err).ToNot(HaveOccurred())
 			action.InstallSetup(config)
@@ -115,7 +116,12 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 		var el *elemental.Elemental
 		BeforeEach(func() {
 			runner.ReturnValue = []byte("/some/device")
-			fs.Create(cnst.EfiDevice)
+			utils.MkdirAll(fs, filepath.Dir("/some"), os.ModePerm)
+
+			utils.MkdirAll(fs, filepath.Dir(cnst.EfiDevice), os.ModePerm)
+			_, err := fs.Create(cnst.EfiDevice)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			action.InstallSetup(config)
 			Expect(config.PartTable).To(Equal(v1.GPT))
 			Expect(config.BootFlag).To(Equal(v1.ESP))
@@ -245,7 +251,9 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 		BeforeEach(func() {
 			cInit = &v1mock.FakeCloudInitRunner{ExecStages: []string{}, Error: false}
 			config.CloudInitRunner = cInit
-			fs.Create(cnst.EfiDevice)
+			utils.MkdirAll(fs, filepath.Dir(cnst.EfiDevice), os.ModePerm)
+			_, err := fs.Create(cnst.EfiDevice)
+			Expect(err).ToNot(HaveOccurred())
 			el = elemental.NewElemental(config)
 			dev = part.NewDisk(
 				"/some/device",
@@ -437,10 +445,10 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 		var img *v1.Image
 		var destDir, sourceDir, cmdFail string
 		BeforeEach(func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
+			sourceDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
 			cmdFail = ""
 			el = elemental.NewElemental(config)
 			img = &v1.Image{
@@ -474,7 +482,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 			Expect(el.DeployImage(img, false)).To(BeNil())
 		})
 		It("Deploys a file image and mounts it", func() {
-			sourceImg := "source.img"
+			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
 			destDir, err := utils.TempDir(fs, "", "elemental")
@@ -484,7 +492,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 			Expect(el.DeployImage(img, true)).To(BeNil())
 		})
 		It("Deploys a file image and fails to mount it", func() {
-			sourceImg := "source.img"
+			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
 			destDir, err := utils.TempDir(fs, "", "elemental")
@@ -520,12 +528,10 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 			img = &v1.Image{}
 		})
 		It("Copies files from a directory source", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
+			sourceDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
 			img.Source = v1.NewDirSrc(sourceDir)
 			img.MountPoint = destDir
 			c := elemental.NewElemental(config)
@@ -572,7 +578,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Copies image file to target", func() {
-			sourceImg := "source.img"
+			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
 			destDir, err := utils.TempDir(fs, "", "elemental")
@@ -588,7 +594,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 			Expect(err).To(BeNil())
 		})
 		It("Fails to copy, source file is not present", func() {
-			sourceImg := "source.img"
+			sourceImg := "/source.img"
 			destDir := "whatever"
 			img.Source = v1.NewFileSrc(sourceImg)
 			img.MountPoint = destDir
@@ -597,7 +603,7 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 		})
 		It("Fails to set the label", Label("fails"), func() {
 			runner.ReturnError = errors.New("run error")
-			sourceImg := "source.img"
+			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
 			destDir, err := utils.TempDir(fs, "", "elemental")
@@ -738,10 +744,10 @@ var _ = Describe("Elemental", Label("elemental", "root"), func() {
 	Describe("CloudConfig", Label("CloudConfig", "cloud-config"), func() {
 		It("Copies the cloud config file", func() {
 			testString := "In a galaxy far far away..."
-			err := fs.WriteFile("config.yaml", []byte(testString), os.ModePerm)
+			err := fs.WriteFile("/config.yaml", []byte(testString), os.ModePerm)
 			Expect(err).To(BeNil())
 			Expect(err).To(BeNil())
-			config.CloudInit = "config.yaml"
+			config.CloudInit = "/config.yaml"
 			e := elemental.NewElemental(config)
 			err = e.CopyCloudConfig()
 			Expect(err).To(BeNil())

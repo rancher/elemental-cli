@@ -25,7 +25,6 @@ import (
 
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/spf13/afero"
 )
 
 // Grub is the struct that will allow us to install grub to the target device
@@ -119,9 +118,8 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 	if err != nil {
 		return err
 	}
-	defer func(grubConfTarget afero.File) {
-		_ = grubConfTarget.Close()
-	}(grubConfTarget)
+
+	defer grubConfTarget.Close()
 
 	ttyExists, _ := Exists(g.config.Fs, fmt.Sprintf("/dev/%s", tty))
 

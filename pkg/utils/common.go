@@ -90,7 +90,7 @@ func GetFullDeviceByLabel(runner v1.Runner, label string, attempts int) (v1.Part
 	return v1.Partition{}, errors.New("no device found")
 }
 
-// CopyFile Copies source file to target file using afero.Fs interface
+// CopyFile Copies source file to target file using Fs interface
 func CopyFile(fs v1.FS, source string, target string) (err error) {
 	sourceFile, err := fs.Open(source)
 	if err != nil {
@@ -116,7 +116,7 @@ func CopyFile(fs v1.FS, source string, target string) (err error) {
 	return err
 }
 
-// Copies source file to target file using afero.Fs interface
+// Copies source file to target file using Fs interface
 func CreateDirStructure(fs v1.FS, target string) error {
 	for _, dir := range []string{"run", "sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"} {
 		err := MkdirAll(fs, fmt.Sprintf("%s/%s", target, dir), 0755)

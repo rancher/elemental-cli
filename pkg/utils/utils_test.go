@@ -513,7 +513,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
@@ -542,7 +542,10 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
 
-				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = utils.MkdirAll(fs, filepath.Dir(constants.EfiDevice), os.ModePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, _ = fs.Create(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf))
@@ -564,7 +567,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
 
-				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, _ = fs.Create(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf))
@@ -584,13 +587,20 @@ var _ = Describe("Utils", Label("utils"), func() {
 				buf := &bytes.Buffer{}
 				logger := log.New()
 				logger.SetOutput(buf)
-				_ = utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
-				err := utils.MkdirAll(fs, config.Images.GetActive().MountPoint, os.ModePerm)
+
+				fs.Mkdir("/dev", os.ModePerm)
+
+				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
-				Expect(err).To(BeNil())
-				_, _ = fs.Create("/dev/serial")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				_, err = fs.Create("/dev/serial")
+				Expect(err).ShouldNot(HaveOccurred())
 
 				config.Logger = logger
 				config.Tty = "serial"
@@ -686,6 +696,9 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 	})
 	Describe("LoadEnvFile", Label("LoadEnvFile"), func() {
+		BeforeEach(func() {
+			fs.Mkdir("/etc", os.ModePerm)
+		})
 		It("returns proper map if file exists", func() {
 			err := fs.WriteFile("/etc/envfile", []byte("TESTKEY=TESTVALUE"), os.ModePerm)
 			Expect(err).ToNot(HaveOccurred())

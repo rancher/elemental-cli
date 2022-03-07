@@ -27,8 +27,8 @@ import (
 
 	. "github.com/rancher-sandbox/elemental/pkg/cloudinit"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/utils"
 	v1mock "github.com/rancher-sandbox/elemental/tests/mocks"
-	"github.com/spf13/afero"
 	"github.com/twpayne/go-vfs/vfst"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -42,7 +42,7 @@ const printOutput = `BYT;
 2:98304s:29394943s:29296640s:ext4::boot, type=83;
 3:29394944s:45019135s:15624192s:ext4::type=83;`
 
-var _ = Describe("CloudRunner", Label("CloudRunner", "types", "cloud-init"), func() {
+var _ = Describe("CloudRunner", Label("CloudRunner", "types", "cloud-init", "root"), func() {
 	// unit test stolen from yip
 	Describe("loading yaml files", func() {
 		logger := logrus.New()
@@ -98,14 +98,16 @@ stages:
 	})
 	Describe("layout plugin execution", func() {
 		var runner *v1mock.FakeRunner
-		var afs afero.Fs
+		var afs v1.FS
 		var tmpf, cmdFail string
 		var partNum int
+		var cleanup func()
 		logger := logrus.New()
 		logger.SetOutput(ioutil.Discard)
 		BeforeEach(func() {
-			afs = afero.NewOsFs()
-			f, err := afero.TempFile(afs, "", "cloudinit-test")
+			afs, cleanup, _ = vfst.NewTestFS(nil)
+			afs.Mkdir("/tmp", os.ModePerm)
+			f, err := utils.TempFile(afs, "", "cloudinit-test")
 			Expect(err).To(BeNil())
 			tmpf = f.Name()
 			runner = v1mock.NewFakeRunner()
@@ -139,6 +141,7 @@ stages:
 		})
 		AfterEach(func() {
 			afs.Remove(tmpf)
+			cleanup()
 		})
 		It("Does nothing if no changes are defined", func() {
 			fs, cleanup, _ := vfst.NewTestFS(map[string]interface{}{

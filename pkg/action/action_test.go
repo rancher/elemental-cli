@@ -153,12 +153,23 @@ var _ = Describe("Actions", Label("root"), func() {
 		var err error
 		BeforeEach(func() {
 			cmdFail = ""
-			activeTree, err = os.MkdirTemp("", "elemental")
+			activeTree, err = utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
-			activeMount, err = os.MkdirTemp("", "elemental")
+			activeMount, err = utils.TempDir(fs, "", "elemental")
 			Expect(err).To(BeNil())
-			fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
-			fs.Create(filepath.Join(activeMount, constants.GrubConf))
+
+			utils.MkdirAll(fs, filepath.Join(constants.RunningStateDir, "cOS"), os.ModePerm)
+			_, e := fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+			Expect(e).ShouldNot(HaveOccurred())
+			_, e = fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+			Expect(e).ShouldNot(HaveOccurred())
+
+			utils.MkdirAll(fs, activeMount, os.ModePerm)
+			utils.MkdirAll(fs, filepath.Join(activeMount, filepath.Dir(constants.GrubConf)), os.ModePerm)
+
+			_, err := fs.Create(filepath.Join(activeMount, constants.GrubConf))
+			Expect(err).ShouldNot(HaveOccurred())
+
 			statePart = &v1.Partition{
 				Label:      constants.StateLabel,
 				Path:       "/dev/device1",
@@ -267,9 +278,10 @@ var _ = Describe("Actions", Label("root"), func() {
 	Describe("Install Setup", Label("installsetup"), func() {
 		Describe("On efi system", Label("efi"), func() {
 			It(fmt.Sprintf("sets part to %s and boot to %s", v1.GPT, v1.ESP), func() {
-				_, _ = fs.Create(constants.EfiDevice)
-				err := action.InstallSetup(config)
-				Expect(err).To(BeNil())
+				utils.MkdirAll(fs, filepath.Dir(constants.EfiDevice), os.ModePerm)
+				_, err := fs.Create(constants.EfiDevice)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(action.InstallSetup(config)).ShouldNot(HaveOccurred())
 				Expect(config.PartTable).To(Equal(v1.GPT))
 				Expect(config.BootFlag).To(Equal(v1.ESP))
 			})
@@ -328,14 +340,33 @@ var _ = Describe("Actions", Label("root"), func() {
 		var err error
 
 		BeforeEach(func() {
-			activeTree, err = os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			activeMount, err = os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			fs.Create(filepath.Join(activeMount, constants.GrubConf))
+			activeTree, err = utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			activeMount, err = utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			utils.MkdirAll(fs, filepath.Join(constants.RunningStateDir, "cOS"), os.ModePerm)
+			_, e := fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+			Expect(e).ShouldNot(HaveOccurred())
+			_, e = fs.Create(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+			Expect(e).ShouldNot(HaveOccurred())
+
+			utils.MkdirAll(fs, activeMount, os.ModePerm)
+			utils.MkdirAll(fs, filepath.Join(activeMount, filepath.Dir(constants.GrubConf)), os.ModePerm)
+
+			_, err := fs.Create(filepath.Join(activeMount, constants.GrubConf))
+			Expect(err).ShouldNot(HaveOccurred())
+
+			utils.MkdirAll(fs, activeMount, os.ModePerm)
+			utils.MkdirAll(fs, "/disk", os.ModePerm)
+
+			_, err = fs.Create(filepath.Join(activeMount, constants.GrubConf))
+			Expect(err).ShouldNot(HaveOccurred())
+
 			activeSize = 16
 			device = "/disk/device"
-			fs.Create(device)
+			_, err = fs.Create(device)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			partNum := 0
 			partedOut := printOutput
@@ -422,7 +453,9 @@ var _ = Describe("Actions", Label("root"), func() {
 			config.Images.GetActive().Source = v1.NewDirSrc(activeTree)
 			config.Images.GetActive().MountPoint = activeMount
 			config.CloudInit = "http://my.config.org"
-			fs.Create(filepath.Join(constants.OEMDir, "99_custom.yaml"))
+			utils.MkdirAll(fs, constants.OEMDir, os.ModePerm)
+			_, err := fs.Create(filepath.Join(constants.OEMDir, "99_custom.yaml"))
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(action.InstallRun(config)).To(BeNil())
 			Expect(client.WasGetCalledWith("http://my.config.org")).To(BeTrue())
 		})
@@ -575,7 +608,14 @@ var _ = Describe("Actions", Label("root"), func() {
 			config.RecoveryImage = "system/cos-config"
 			config.ImgSize = 10
 			// Create fake /etc/os-release
-			_ = config.Fs.WriteFile(filepath.Join(utils.GetUpgradeTempDir(config), "etc", "os-release"), []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
+			utils.MkdirAll(fs, filepath.Join(utils.GetUpgradeTempDir(config), "etc"), os.ModePerm)
+
+			err := config.Fs.WriteFile(filepath.Join(utils.GetUpgradeTempDir(config), "etc", "os-release"), []byte("GRUB_ENTRY_NAME=TESTOS"), os.ModePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create paths used by tests
+			utils.MkdirAll(fs, fmt.Sprintf("%s/cOS", constants.RunningStateDir), os.ModePerm)
+			utils.MkdirAll(fs, fmt.Sprintf("%s/cOS", constants.UpgradeRecoveryDir), os.ModePerm)
 		})
 		It("Fails if some hook fails and strict is set", func() {
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
@@ -682,11 +722,11 @@ var _ = Describe("Actions", Label("root"), func() {
 				Expect(err).To(HaveOccurred())
 			})
 			It("Successfully upgrades from directory", Label("directory", "root"), func() {
-				config.Directory, _ = os.MkdirTemp("", "elemental")
+				config.Directory, _ = utils.TempDir(fs, "", "elemental")
 				// Create the dir on real os as rsync works on the real os
-				defer os.RemoveAll(config.Directory)
+				defer fs.RemoveAll(config.Directory)
 				// create a random file on it
-				err := os.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
+				err := fs.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
 				Expect(err).ToNot(HaveOccurred())
 
 				upgrade = action.NewUpgradeAction(config)
@@ -948,11 +988,11 @@ var _ = Describe("Actions", Label("root"), func() {
 
 				})
 				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
-					config.Directory, _ = os.MkdirTemp("", "elemental")
+					config.Directory, _ = utils.TempDir(fs, "", "elemental")
 					// Create the dir on real os as rsync works on the real os
-					defer os.RemoveAll(config.Directory)
+					defer fs.RemoveAll(config.Directory)
 					// create a random file on it
-					_ = os.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
+					_ = fs.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
 
 					upgrade = action.NewUpgradeAction(config)
 					err := upgrade.Run()
@@ -1128,11 +1168,11 @@ var _ = Describe("Actions", Label("root"), func() {
 
 				})
 				It("Successfully upgrades recovery from directory", Label("directory", "root"), func() {
-					config.Directory, _ = os.MkdirTemp("", "elemental")
+					config.Directory, _ = utils.TempDir(fs, "", "elemental")
 					// Create the dir on real os as rsync works on the real os
-					defer os.RemoveAll(config.Directory)
+					defer fs.RemoveAll(config.Directory)
 					// create a random file on it
-					_ = os.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
+					_ = fs.WriteFile(fmt.Sprintf("%s/file.file", config.Directory), []byte("something"), os.ModePerm)
 
 					upgrade = action.NewUpgradeAction(config)
 					err := upgrade.Run()
