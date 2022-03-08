@@ -377,7 +377,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				_, _ = os.CreateTemp(sourceDir, "file*")
 			}
 
-			Expect(utils.SyncData(sourceDir, destDir)).To(BeNil())
+			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
 
 			filesDest, err := ioutil.ReadDir(destDir)
 			Expect(err).To(BeNil())
@@ -406,7 +406,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				_, _ = os.CreateTemp(sourceDir, "file*")
 			}
 
-			Expect(utils.SyncData(sourceDir, destDir, "host", "run")).To(BeNil())
+			Expect(utils.SyncData(nil, sourceDir, destDir, "host", "run")).To(BeNil())
 
 			filesDest, err := ioutil.ReadDir(destDir)
 			Expect(err).To(BeNil())
@@ -437,19 +437,19 @@ var _ = Describe("Utils", Label("utils"), func() {
 			destDir, err := os.MkdirTemp("", "elemental")
 			Expect(err).To(BeNil())
 			defer os.RemoveAll(destDir)
-			Expect(utils.SyncData(sourceDir, destDir)).To(BeNil())
+			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
 		})
 		It("should fail if destination does not exist", func() {
 			sourceDir, err := os.MkdirTemp("", "elemental")
 			Expect(err).To(BeNil())
 			defer os.RemoveAll(sourceDir)
-			Expect(utils.SyncData(sourceDir, "/welp")).NotTo(BeNil())
+			Expect(utils.SyncData(nil, sourceDir, "/welp")).NotTo(BeNil())
 		})
 		It("should fail if source does not exist", func() {
 			destDir, err := os.MkdirTemp("", "elemental")
 			Expect(err).To(BeNil())
 			defer os.RemoveAll(destDir)
-			Expect(utils.SyncData("/welp", destDir)).NotTo(BeNil())
+			Expect(utils.SyncData(nil, "/welp", destDir)).NotTo(BeNil())
 		})
 	})
 	Describe("IsLocalUrl", Label("IsLocalUrl"), func() {

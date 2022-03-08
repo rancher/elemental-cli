@@ -129,13 +129,22 @@ func CreateDirStructure(fs v1.FS, target string) error {
 
 // SyncData rsync's source folder contents to a target folder content,
 // both are expected to exist before hand.
-func SyncData(source string, target string, excludes ...string) error {
+func SyncData(fs v1.FS, source string, target string, excludes ...string) error {
 	if !strings.HasSuffix(source, "/") {
 		source = fmt.Sprintf("%s/", source)
 	}
 
 	if !strings.HasSuffix(target, "/") {
 		target = fmt.Sprintf("%s/", target)
+	}
+
+	if fs != nil {
+		if s, err := fs.RawPath(source); err == nil {
+			source = s
+		}
+		if t, err := fs.RawPath(target); err == nil {
+			target = t
+		}
 	}
 
 	task := grsync.NewTask(
