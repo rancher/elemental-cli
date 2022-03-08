@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
+	"github.com/rancher-sandbox/elemental/cmd/constants"
 	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,7 +37,19 @@ var upgradeCmd = &cobra.Command{
 		_ = viper.BindPFlag("RecoveryUpgrade", cmd.Flags().Lookup("recovery"))
 		// bind the rest of the flags into their direct values as they are mapped 1to1
 		_ = viper.BindPFlags(cmd.Flags())
-		return CheckRoot()
+		// Check first for root, otherwise the check for deps may fail
+		err := CheckRoot()
+		if err != nil {
+			return err
+		}
+		// If cosign is enabled, check that the binary exists
+		if cosign, err := cmd.Flags().GetBool("cosign"); cosign && err != nil {
+			err := CheckDeps([]string{"cosign"})
+			if err != nil {
+				return err
+			}
+		}
+		return CheckDeps(constants.UpgradeDeps())
 	},
 
 	RunE: func(cmd *cobra.Command, args []string) error {

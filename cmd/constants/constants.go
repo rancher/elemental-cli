@@ -14,29 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package constants
 
-import (
-	"errors"
-	"os"
-	"os/exec"
-)
-
-// CheckRoot is a helper to return on PreRunE, so we can add it to commands that require root
-func CheckRoot() error {
-	if os.Geteuid() != 0 {
-		return errors.New("this command requires root privileges")
+func InstallDeps() []string {
+	return []string{
+		"rsync", "losetup",
+		"wipefs", "tune2fs",
+		"blkid", "lsblk",
+		"e2fsck", "resize2fs",
+		"mount", "umount",
+		"xfs_growfs", "udevadm",
+		"mksquashfs", "grub2-install",
+		"grub2-editenv",
 	}
-	return nil
 }
 
-// CheckDeps is used by cmd to check a list of deps for a command and fail if they don't exists
-func CheckDeps(deps []string) error {
-	for _, dep := range deps {
-		_, err := exec.LookPath(dep)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func UpgradeDeps() []string {
+	return InstallDeps()
 }

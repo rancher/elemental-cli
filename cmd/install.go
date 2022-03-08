@@ -21,6 +21,7 @@ import (
 	"os/exec"
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
+	"github.com/rancher-sandbox/elemental/cmd/constants"
 	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,7 +36,19 @@ var installCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		_ = viper.BindEnv("target", "ELEMENTAL_TARGET")
 		_ = viper.BindPFlags(cmd.Flags())
-		return CheckRoot()
+		// Check first for root, otherwise the check for deps may fail
+		err := CheckRoot()
+		if err != nil {
+			return err
+		}
+		// If cosign is enabled, check that the binary exists
+		if cosign, err := cmd.Flags().GetBool("cosign"); cosign && err != nil {
+			err := CheckDeps([]string{"cosign"})
+			if err != nil {
+				return err
+			}
+		}
+		return CheckDeps(constants.InstallDeps())
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := exec.LookPath("mount")
