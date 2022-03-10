@@ -30,7 +30,7 @@ require (
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/zcalusic/sysinfo v0.0.0-20210905121133-6fa2f969a900 // indirect
-	github.com/zloylos/grsync v1.5.1
+	github.com/zloylos/grsync v1.6.1
 	golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect

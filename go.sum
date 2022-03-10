@@ -1168,8 +1168,8 @@ github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f/go
 github.com/zcalusic/sysinfo v0.0.0-20210831153053-2c6e1d254246/go.mod h1:WGLNaWsjKQ2gXmAHh+MQztgu3FLFAnOFJjFzhpgShCY=
 github.com/zcalusic/sysinfo v0.0.0-20210905121133-6fa2f969a900 h1:4klaqgLMtyCrRio4MV/xE8gcrMOYnvXtmbWPOLjxVBA=
 github.com/zcalusic/sysinfo v0.0.0-20210905121133-6fa2f969a900/go.mod h1:Z/gPVufBrFc8X5sef3m6kkw3r3nlNFp+I6bvASfvBZQ=
-github.com/zloylos/grsync v1.5.1 h1:ZK+4ikSrXftZUndmC3rYZt7WHvyT2WoZz1MBTztxDo4=
-github.com/zloylos/grsync v1.5.1/go.mod h1:2utuy8p4VcWXfB5p9wTL+VCberFM+MwTDjDf1nr8s78=
+github.com/zloylos/grsync v1.6.1 h1:TShhGwI6Xi38pc58kS97ExnmqH7nBt/n6So6hqR5r54=
+github.com/zloylos/grsync v1.6.1/go.mod h1:0Ue43fnWwx3doC5GkfmwmUwCAvQ54h06FRHXXX3ZWls=
 go.etcd.io/bbolt v1.3.0/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
