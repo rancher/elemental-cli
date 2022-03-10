@@ -365,55 +365,52 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 	})
 	Describe("SyncData", Label("SyncData"), func() {
+		var sourceDir, destDir, rawSrc, rawDst string
+		var err error
+		BeforeEach(func() {
+			sourceDir, err = utils.TempDir(fs, "", "elemental")
+			Expect(err).To(BeNil())
+			destDir, err = utils.TempDir(fs, "", "elemental")
+			Expect(err).To(BeNil())
+			rawDst, err = fs.RawPath(destDir)
+			Expect(err).To(BeNil())
+			rawSrc, err = fs.RawPath(sourceDir)
+			Expect(err).To(BeNil())
+		})
 		It("Copies all files from source to target", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
-
 			for i := 0; i < 5; i++ {
-				_, _ = os.CreateTemp(sourceDir, "file*")
+				_, _ = utils.TempDir(fs, sourceDir, "file*")
 			}
+			Expect(utils.SyncData(fs, sourceDir, destDir)).To(BeNil())
 
-			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
-
-			filesDest, err := ioutil.ReadDir(destDir)
+			filesDest, err := ioutil.ReadDir(rawDst)
 			Expect(err).To(BeNil())
-
 			destNames := getNamesFromListFiles(filesDest)
-			filesSource, err := ioutil.ReadDir(sourceDir)
-			Expect(err).To(BeNil())
 
-			SourceNames := getNamesFromListFiles(filesSource)
+			filesSource, err := ioutil.ReadDir(rawSrc)
+			Expect(err).To(BeNil())
+			sourceNames := getNamesFromListFiles(filesSource)
 
 			// Should be the same files in both dirs now
-			Expect(destNames).To(Equal(SourceNames))
+			Expect(destNames).To(Equal(sourceNames))
 		})
 
 		It("Copies all files from source to target respecting excludes", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
 
-			os.MkdirAll(filepath.Join(sourceDir, "host"), os.ModePerm)
-			os.MkdirAll(filepath.Join(sourceDir, "run"), os.ModePerm)
+			utils.MkdirAll(fs, filepath.Join(sourceDir, "host"), os.ModePerm)
+			utils.MkdirAll(fs, filepath.Join(sourceDir, "run"), os.ModePerm)
 			for i := 0; i < 5; i++ {
-				_, _ = os.CreateTemp(sourceDir, "file*")
+				_, _ = utils.TempDir(fs, sourceDir, "file*")
 			}
 
-			Expect(utils.SyncData(nil, sourceDir, destDir, "host", "run")).To(BeNil())
+			Expect(utils.SyncData(fs, sourceDir, destDir, "host", "run")).To(BeNil())
 
-			filesDest, err := ioutil.ReadDir(destDir)
+			filesDest, err := ioutil.ReadDir(rawDst)
 			Expect(err).To(BeNil())
 
 			destNames := getNamesFromListFiles(filesDest)
 
-			filesSource, err := ioutil.ReadDir(sourceDir)
+			filesSource, err := ioutil.ReadDir(rawSrc)
 			Expect(err).To(BeNil())
 
 			SourceNames := getNamesFromListFiles(filesSource)
@@ -431,25 +428,15 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 
 		It("should not fail if dirs are empty", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
-			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
+			Expect(utils.SyncData(fs, sourceDir, destDir)).To(BeNil())
 		})
-		It("should fail if destination does not exist", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			Expect(utils.SyncData(nil, sourceDir, "/welp")).NotTo(BeNil())
+		It("should not fail if destination does not exist and it is a writable path", func() {
+			Expect(utils.SyncData(fs, sourceDir, "/welp")).To(BeNil())
+			exists, _ := utils.Exists(fs, "/welp")
+			Expect(exists).To(BeTrue())
 		})
 		It("should fail if source does not exist", func() {
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
-			Expect(utils.SyncData(nil, "/welp", destDir)).NotTo(BeNil())
+			Expect(utils.SyncData(fs, "/welp", destDir)).NotTo(BeNil())
 		})
 	})
 	Describe("IsLocalUrl", Label("IsLocalUrl"), func() {
@@ -498,7 +485,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).To(BeNil())
 		})
 	})
-	Describe("Grub", Label("grub", "root"), func() {
+	Describe("Grub", Label("grub"), func() {
 		Describe("Install", func() {
 			BeforeEach(func() {
 				// Create iso dir so InstallImagesSetup does not fail to get a source
@@ -512,10 +499,10 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger := log.New()
 				logger.SetOutput(buf)
 
-				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
+				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
@@ -544,7 +531,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
 
-				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
+				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = utils.MkdirAll(fs, filepath.Dir(constants.EfiDevice), os.ModePerm)
@@ -569,7 +556,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				logger.SetOutput(buf)
 				logger.SetLevel(log.DebugLevel)
 
-				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
+				err := utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, _ = fs.Create(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf))
@@ -592,13 +579,13 @@ var _ = Describe("Utils", Label("utils"), func() {
 
 				fs.Mkdir("/dev", os.ModePerm)
 
-				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), 0666)
+				err := utils.MkdirAll(fs, fmt.Sprintf("%s/grub2/", constants.StateDir), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), os.ModePerm)
+				err = utils.MkdirAll(fs, filepath.Dir(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), 0644)
+				err = fs.WriteFile(filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf), []byte("console=tty1"), constants.FilePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				_, err = fs.Create("/dev/serial")
