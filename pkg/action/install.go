@@ -80,7 +80,7 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 	// Error out if we could not find the source
 	if activeImg.Source.Value() == "" {
 		config.Logger.Error("Could not find source for the install")
-		return errors.New("could not find source for the install")
+		return &v1.SourceNotFound{}
 	}
 
 	// Set passive image
@@ -125,9 +125,14 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 // the given configuration flags
 func InstallSetup(config *v1.RunConfig) error {
 	SetPartitionsFromScratch(config)
-	_ = InstallImagesSetup(config)
-	SetupLuet(config)
+	err := InstallImagesSetup(config)
 
+	// Only error out if we can't find the source
+	switch e := err.(type) {
+	case *v1.SourceNotFound:
+		return e
+	}
+	SetupLuet(config)
 	return nil
 }
 
