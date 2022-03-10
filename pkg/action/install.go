@@ -65,20 +65,18 @@ func InstallImagesSetup(config *v1.RunConfig) error {
 		activeImg.Source = v1.NewDockerSrc(config.DockerImg)
 	} else if config.Directory != "" {
 		activeImg.Source = v1.NewDirSrc(config.Directory)
-	} else {
+	} else if _, err := config.Fs.Stat(cnst.IsoBaseTree); err == nil {
 		// If cnst.IsoBaseTree exists we are booting from iso, use that as source
-		if _, err := config.Fs.Stat(cnst.IsoBaseTree); err == nil {
-			activeImg.Source = v1.NewDirSrc(cnst.IsoBaseTree)
-		} else {
-			// We cannot fall back to channel upgrades always as they may be disabled, so check before setting it as source
-			if config.ChannelUpgrades {
-				activeImg.Source = v1.NewChannelSrc(cnst.ChannelSource)
-			}
+		activeImg.Source = v1.NewDirSrc(cnst.IsoBaseTree)
+	} else {
+		// We cannot fall back to channel upgrades always as they may be disabled, so check before setting it as source
+		if config.ChannelUpgrades {
+			activeImg.Source = v1.NewChannelSrc(cnst.ChannelSource)
 		}
 	}
 
-	// Error out if we could not find the source
-	if activeImg.Source.Value() == "" {
+	// Error out if we could not find the source and we haven't set the iso file, which fill the source later
+	if activeImg.Source.Value() == "" && config.Iso == "" {
 		config.Logger.Error("Could not find source for the install")
 		return &v1.SourceNotFound{}
 	}
