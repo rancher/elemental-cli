@@ -90,8 +90,8 @@ const (
 	GPT                    = "gpt"
 
 	// Default directory and file fileModes
-	DirPerm  = os.ModeDir | 0755
-	FilePerm = 0644
+	DirPerm  = os.ModeDir | os.ModePerm
+	FilePerm = 0666
 )
 
 func GetCloudInitPaths() []string {
