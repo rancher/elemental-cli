@@ -262,11 +262,6 @@ func (dev Disk) FormatPartition(partNum int, fileSystem string, label string) (s
 }
 
 func (dev Disk) WipeFsOnPartition(device string) error {
-	/*pDev, err := dev.FindPartitionDevice(partNum)
-	if err != nil {
-		return err
-	}*/
-
 	_, err := dev.runner.Run("wipefs", "--all", device)
 	return err
 }
