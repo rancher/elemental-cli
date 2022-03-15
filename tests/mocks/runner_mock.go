@@ -18,6 +18,7 @@ package mocks
 
 import (
 	"fmt"
+	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"os/exec"
 	"strings"
 )
@@ -27,6 +28,7 @@ type FakeRunner struct {
 	ReturnValue []byte
 	SideEffect  func(command string, args ...string) ([]byte, error)
 	ReturnError error
+	Logger      v1.Logger
 }
 
 func NewFakeRunner() *FakeRunner {
@@ -116,4 +118,12 @@ func (r FakeRunner) MatchMilestones(cmdList [][]string) error {
 	}
 
 	return nil
+}
+
+func (r FakeRunner) GetLogger() v1.Logger {
+	return r.Logger
+}
+
+func (r FakeRunner) SetLogger(logger v1.Logger) {
+	r.Logger = logger
 }
