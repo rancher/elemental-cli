@@ -21,7 +21,7 @@ RUN go build -o /usr/bin/elemental
 
 FROM opensuse/leap:$LEAP_VERSION AS elemental
 RUN zypper ref
-RUN zypper in -y xfsprogs parted util-linux-systemd e2fsprogs util-linux udev rsync grub2
+RUN zypper in -y xfsprogs parted util-linux-systemd e2fsprogs util-linux udev rsync grub2 dosfstools
 COPY --from=elemental-bin /usr/bin/elemental /usr/bin/elemental
 COPY --from=cosign-bin /usr/bin/cosign /usr/bin/cosign
 # Fix for blkid only using udev on opensuse

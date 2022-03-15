@@ -39,4 +39,13 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
+          load: true # loads it locally, so it can be used from docker client
           target: elemental
+      - name: Test docker image
+        run: |
+          # create a 30Gb file
+          dd if=/dev/zero of=loopbackfile.img bs=3000M count=10
+          # mount loop device and get the device
+          LOOP=`sudo losetup -fP --show loopbackfile.img`
+          # run the install tot he loop device as a small test
+          docker run --privileged ${{ steps.meta.outputs.tags }} install --debug $LOOP
