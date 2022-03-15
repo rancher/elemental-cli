@@ -48,4 +48,4 @@ jobs:
           # mount loop device and get the device
           LOOP=`sudo losetup -fP --show loopbackfile.img`
           # run the install tot he loop device as a small test
-          docker run --privileged ${{ steps.meta.outputs.tags }} install --debug $LOOP
+          docker run --privileged ${{ steps.meta.outputs.tags }} install --debug -d quay.io/costoolkit/releases-green:cos-system-0.8.6 $LOOP
