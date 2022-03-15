@@ -176,24 +176,24 @@ var _ = Describe("Utils", Label("utils"), func() {
 		BeforeEach(func() {
 			cmds = [][]string{
 				{"udevadm", "settle"},
-				{"blkid", "--label", "FAKE"},
+				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE"},
 			}
 		})
 		It("returns found device", func() {
-			runner.ReturnValue = []byte("/some/device")
+			runner.ReturnValue = []byte(`{"blockdevices": [{"label": "FAKE", "type": "loop", "path": "/some/loop0"}]}`)
 			out, err := utils.GetDeviceByLabel(runner, "FAKE", 1)
 			Expect(err).To(BeNil())
-			Expect(out).To(Equal("/some/device"))
+			Expect(out).To(Equal("/some/loop0"))
 			Expect(runner.CmdsMatch(cmds)).To(BeNil())
 		})
-		It("fails to run blkid", func() {
-			runner.ReturnError = errors.New("failed running blkid")
+		It("fails to run lsblk", func() {
+			runner.ReturnError = errors.New("failed running lsblk")
 			_, err := utils.GetDeviceByLabel(runner, "FAKE", 1)
 			Expect(err).NotTo(BeNil())
 			Expect(runner.CmdsMatch(cmds)).To(BeNil())
 		})
 		It("fails if no device is found in two attempts", func() {
-			runner.ReturnValue = []byte("")
+			runner.ReturnValue = []byte(`{"blockdevices": [{"type": "disk", "path": "/some/disk"}]}`)
 			_, err := utils.GetDeviceByLabel(runner, "FAKE", 2)
 			Expect(err).NotTo(BeNil())
 			Expect(runner.CmdsMatch(append(cmds, cmds...))).To(BeNil())
@@ -238,80 +238,35 @@ var _ = Describe("Utils", Label("utils"), func() {
 		BeforeEach(func() {
 			cmds = [][]string{
 				{"udevadm", "settle"},
-				{"blkid", "--label", "FAKE"},
+				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE"},
 			}
 		})
 		It("returns found v1.Partition", func() {
-			cmds = [][]string{
-				{"udevadm", "settle"},
-				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
-			}
-			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
-				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
-					return []byte("/dev/fake"), nil
-				}
-				if command == "lsblk" {
-					return []byte(`{"blockdevices":[{"label":"fake","size":1,"partlabel":"pfake","fstype":"fakefs","partflags":null,"mountpoint":"/mnt/fake"}]}`), nil
-				}
-				return nil, nil
-			}
+			runner.ReturnValue = []byte(`{"blockdevices":[{"label":"FAKE","size":1048576,"partlabel":"pfake","fstype":"fakefs","partflags":null,"mountpoint":"/mnt/fake", "type": "part"}]}`)
 			out, err := utils.GetFullDeviceByLabel(runner, "FAKE", 1)
-			var flags []string
+			flags := []string{}
 			Expect(err).To(BeNil())
-			Expect(out.Label).To(Equal("fake"))
+			Expect(out.Label).To(Equal("FAKE"))
 			Expect(out.Size).To(Equal(uint(1)))
 			Expect(out.FS).To(Equal("fakefs"))
 			Expect(out.MountPoint).To(Equal("/mnt/fake"))
 			Expect(out.Flags).To(Equal(flags))
 			Expect(runner.CmdsMatch(cmds)).To(BeNil())
 		})
-		It("fails to run blkid", func() {
-			runner.ReturnError = errors.New("failed running blkid")
-			_, err := utils.GetFullDeviceByLabel(runner, "FAKE", 1)
-			Expect(err).To(HaveOccurred())
-			Expect(runner.CmdsMatch(cmds)).To(BeNil())
-		})
 		It("fails to run lsblk", func() {
-			cmds = [][]string{
-				{"udevadm", "settle"},
-				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
-			}
-			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
-				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
-					return []byte("/dev/fake"), nil
-				}
-				if command == "lsblk" {
-					return nil, errors.New("error")
-				}
-				return nil, nil
-			}
+			runner.ReturnError = errors.New("failed running lsblk")
 			_, err := utils.GetFullDeviceByLabel(runner, "FAKE", 1)
 			Expect(err).To(HaveOccurred())
 			Expect(runner.CmdsMatch(cmds)).To(BeNil())
 		})
 		It("fails to parse json output", func() {
-			cmds = [][]string{
-				{"udevadm", "settle"},
-				{"blkid", "--label", "FAKE"},
-				{"lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME", "/dev/fake"},
-			}
-			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
-				if command == "blkid" && args[0] == "--label" && args[1] == "FAKE" {
-					return []byte("/dev/fake"), nil
-				}
-				if command == "lsblk" {
-					return []byte("output changed"), nil
-				}
-				return nil, nil
-			}
+			runner.ReturnValue = []byte(`{"invalidobject": []}`)
 			_, err := utils.GetFullDeviceByLabel(runner, "FAKE", 1)
 			Expect(err).To(HaveOccurred())
 			Expect(runner.CmdsMatch(cmds)).To(BeNil())
 		})
 		It("fails if no device is found in two attempts", func() {
-			runner.ReturnValue = []byte("")
+			runner.ReturnValue = []byte(`{"blockdevices":[{"label":"something","type": "part"}]}`)
 			_, err := utils.GetFullDeviceByLabel(runner, "FAKE", 2)
 			Expect(err).To(HaveOccurred())
 			Expect(runner.CmdsMatch(append(cmds, cmds...))).To(BeNil())
