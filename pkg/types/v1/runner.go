@@ -53,6 +53,6 @@ func (r RealRunner) GetLogger() Logger {
 	return r.Logger
 }
 
-func (r RealRunner) SetLogger(logger Logger) {
+func (r *RealRunner) SetLogger(logger Logger) {
 	r.Logger = logger
 }

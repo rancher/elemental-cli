@@ -18,9 +18,10 @@ package mocks
 
 import (
 	"fmt"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"os/exec"
 	"strings"
+
+	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 )
 
 type FakeRunner struct {
@@ -124,6 +125,6 @@ func (r FakeRunner) GetLogger() v1.Logger {
 	return r.Logger
 }
 
-func (r FakeRunner) SetLogger(logger v1.Logger) {
+func (r *FakeRunner) SetLogger(logger v1.Logger) {
 	r.Logger = logger
 }
