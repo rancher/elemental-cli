@@ -41,11 +41,13 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           load: true # loads it locally, so it can be used from docker client
           target: elemental
+      - name: Install qemu-utils
+        run: sudo apt-get install qemu-utils
       - name: Test docker image
         run: |
           # create a 30Gb file
-          dd if=/dev/zero of=loopbackfile.img bs=3000M count=10
+          qemu-img create -f raw disk.img 30G
           # mount loop device and get the device
-          LOOP=`sudo losetup -fP --show loopbackfile.img`
+          LOOP=`sudo losetup -fP --show disk.img`
           # run the install tot he loop device as a small test
           docker run --privileged ${{ steps.meta.outputs.tags }} install --debug -d quay.io/costoolkit/releases-green:cos-system-0.8.6 $LOOP
