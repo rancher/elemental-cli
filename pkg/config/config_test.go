@@ -40,12 +40,12 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				logger := v1.NewNullLogger()
 				ci := &v1mock.FakeCloudInitRunner{}
 				c := config.NewRunConfig(
-					v1.WithFs(fs),
-					v1.WithMounter(mounter),
-					v1.WithRunner(runner),
-					v1.WithSyscall(sysc),
-					v1.WithLogger(logger),
-					v1.WithCloudInitRunner(ci),
+					config.WithFs(fs),
+					config.WithMounter(mounter),
+					config.WithRunner(runner),
+					config.WithSyscall(sysc),
+					config.WithLogger(logger),
+					config.WithCloudInitRunner(ci),
 				)
 				Expect(c.Fs).To(Equal(fs))
 				Expect(c.Mounter).To(Equal(mounter))
@@ -61,9 +61,9 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				sysc := &v1mock.FakeSyscall{}
 				logger := v1.NewNullLogger()
 				c := config.NewRunConfig(
-					v1.WithRunner(runner),
-					v1.WithSyscall(sysc),
-					v1.WithLogger(logger),
+					config.WithRunner(runner),
+					config.WithSyscall(sysc),
+					config.WithLogger(logger),
 				)
 				Expect(c.Mounter).To(Equal(mount.New(constants.MountBinary)))
 			})
@@ -79,10 +79,10 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				_, _ = fs.Create(constants.EfiDevice)
 
 				c = config.NewRunConfig(
-					v1.WithFs(fs),
-					v1.WithMounter(&mount.FakeMounter{}),
-					v1.WithRunner(v1mock.NewFakeRunner()),
-					v1.WithSyscall(&v1mock.FakeSyscall{}))
+					config.WithFs(fs),
+					config.WithMounter(&mount.FakeMounter{}),
+					config.WithRunner(v1mock.NewFakeRunner()),
+					config.WithSyscall(&v1mock.FakeSyscall{}))
 				c.Partitions = []*v1.Partition{
 					{
 						Label:      constants.StateLabel,
