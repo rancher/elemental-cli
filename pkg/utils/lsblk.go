@@ -86,8 +86,8 @@ func unmarshalLsblk(lsblkOut []byte) ([]*v1.Partition, error) {
 	return parts, nil
 }
 
-// GetAllPartitions gets an array of partition devices mapped into v1.Partition
-// objects.
+// GetAllPartitions gets a slice of all partition devices found in the host
+// mapped into a v1.PartitionList object.
 func GetAllPartitions(runner v1.Runner) (v1.PartitionList, error) {
 	out, err := runner.Run("lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE")
 	if err != nil {
@@ -97,8 +97,9 @@ func GetAllPartitions(runner v1.Runner) (v1.PartitionList, error) {
 	return unmarshalLsblk(out)
 }
 
-// GetDevicePartitions gets an array of partition devices mapped into v1.Partition
-// objects.
+// GetDevicePartitions gets a slice of partitions found in the given device mapped
+// into a v1.PartitionList object. If the device is a disk it will list all disk
+// partitions, if the device is already a partition it will simply list a single partition.
 func GetDevicePartitions(runner v1.Runner, device string) (v1.PartitionList, error) {
 	out, err := runner.Run("lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE", device)
 	if err != nil {
