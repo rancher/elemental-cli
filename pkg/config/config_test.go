@@ -68,40 +68,6 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(c.Mounter).To(Equal(mount.New(constants.MountBinary)))
 			})
 		})
-		Describe("PartitionList.GetByName", Label("partition"), func() {
-			var c *v1.RunConfig
-
-			BeforeEach(func() {
-				fs, cleanup, err := vfst.NewTestFS(nil)
-				defer cleanup()
-				Expect(err).ToNot(HaveOccurred())
-
-				_, _ = fs.Create(constants.EfiDevice)
-
-				c = config.NewRunConfig(
-					config.WithFs(fs),
-					config.WithMounter(&mount.FakeMounter{}),
-					config.WithRunner(v1mock.NewFakeRunner()),
-					config.WithSyscall(&v1mock.FakeSyscall{}))
-				c.Partitions = []*v1.Partition{
-					{
-						Label:      constants.StateLabel,
-						Size:       constants.StateSize,
-						Name:       constants.StatePartName,
-						FS:         constants.LinuxFs,
-						MountPoint: constants.StateDir,
-						Flags:      []string{},
-					},
-				}
-			})
-			It("Finds a partition given a partition label", func() {
-				part := c.Partitions.GetByName(constants.StatePartName)
-				Expect(part.Name).To(Equal(constants.StatePartName))
-			})
-			It("Returns nil if requested partition label is not found", func() {
-				Expect(c.Partitions.GetByName("whatever")).To(BeNil())
-			})
-		})
 	})
 
 })
