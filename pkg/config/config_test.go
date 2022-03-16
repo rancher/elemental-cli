@@ -36,9 +36,11 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(err).ToNot(HaveOccurred())
 				mounter := mount.NewFakeMounter([]mount.MountPoint{})
 				runner := v1mock.NewFakeRunner()
+				client := &v1mock.FakeHTTPClient{}
 				sysc := &v1mock.FakeSyscall{}
 				logger := v1.NewNullLogger()
 				ci := &v1mock.FakeCloudInitRunner{}
+				luet := &v1mock.FakeLuet{}
 				c := config.NewRunConfig(
 					config.WithFs(fs),
 					config.WithMounter(mounter),
@@ -46,6 +48,8 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					config.WithSyscall(sysc),
 					config.WithLogger(logger),
 					config.WithCloudInitRunner(ci),
+					config.WithClient(client),
+					config.WithLuet(luet),
 				)
 				Expect(c.Fs).To(Equal(fs))
 				Expect(c.Mounter).To(Equal(mounter))
@@ -53,6 +57,21 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(c.Syscall).To(Equal(sysc))
 				Expect(c.Logger).To(Equal(logger))
 				Expect(c.CloudInitRunner).To(Equal(ci))
+				Expect(c.Client).To(Equal(client))
+				Expect(c.Luet).To(Equal(luet))
+			})
+			It("Sets the runner if we dont pass one", func() {
+				fs, cleanup, err := vfst.NewTestFS(nil)
+				defer cleanup()
+				Expect(err).ToNot(HaveOccurred())
+				mounter := mount.NewFakeMounter([]mount.MountPoint{})
+				c := config.NewRunConfig(
+					config.WithFs(fs),
+					config.WithMounter(mounter),
+				)
+				Expect(c.Fs).To(Equal(fs))
+				Expect(c.Mounter).To(Equal(mounter))
+				Expect(c.Runner).ToNot(BeNil())
 			})
 		})
 		Describe("ConfigOptions no mounter specified", Label("mount", "mounter"), func() {
