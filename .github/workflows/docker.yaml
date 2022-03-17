@@ -36,6 +36,11 @@ jobs:
           tags: |
             type=semver,pattern=v{{version}}
             type=sha,format=short,prefix=${{ steps.export_tag.outputs.elemental_tag }}-
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: amd64,arm64,armv6,arm/v7,386
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
@@ -55,6 +60,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: elemental
+          platforms: ${{ steps.qemu.outputs.platforms }}
           build-args: |
             ELEMENTAL_VERSION=${{ steps.export_tag.outputs.elemental_tag }}
             ELEMENTAL_COMMIT=${{ github.sha }}
