@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ishidawataru/sctp v0.0.0-20210707070123-9a39160e9062 // indirect
 	github.com/itchyny/gojq v0.12.6 // indirect
+	github.com/jaypipes/ghw v0.8.1-0.20220318151444-ff0e9d9f4e6c
 	github.com/joho/godotenv v1.4.0
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
@@ -38,3 +39,6 @@ require (
 	k8s.io/mount-utils v0.23.0
 	pault.ag/go/topsort v0.1.1 // indirect
 )
+
+// until https://github.com/jaypipes/ghw/pull/305 is merged
+replace github.com/jaypipes/ghw v0.8.1-0.20220318151444-ff0e9d9f4e6c => github.com/itxaka/ghw v0.8.1-0.20220318151444-ff0e9d9f4e6c

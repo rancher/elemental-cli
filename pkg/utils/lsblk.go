@@ -17,94 +17,80 @@ limitations under the License.
 package utils
 
 import (
-	"encoding/json"
-	"errors"
+	"fmt"
+	"path/filepath"
+	"strings"
 
+	"github.com/jaypipes/ghw"
+	"github.com/jaypipes/ghw/pkg/block"
+	ghwUtil "github.com/jaypipes/ghw/pkg/util"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 )
 
-type jPart struct {
-	Label      string `json:"label,omitempty"`
-	Size       uint64 `json:"size,omitempty"`
-	FS         string `json:"fstype,omitempty"`
-	MountPoint string `json:"mountpoint,omitempty"`
-	Path       string `json:"path,omitempty"`
-	Disk       string `json:"pkname,omitempty"`
-	Type       string `json:"type,omitempty"`
-}
-
-type jParts []*v1.Partition
-
-func (p jPart) Partition() *v1.Partition {
-	// Converts B to MB
+// GhwPartitionToInternalPartition transforms a block.Partition from ghw lib to our v1.Partition type
+func GhwPartitionToInternalPartition(partition *block.Partition) *v1.Partition {
 	return &v1.Partition{
-		Label:      p.Label,
-		Size:       uint(p.Size / (1024 * 1024)),
-		FS:         p.FS,
-		Flags:      []string{},
-		MountPoint: p.MountPoint,
-		Path:       p.Path,
-		Disk:       p.Disk,
+		Label:      partition.Label,
+		Size:       uint(partition.SizeBytes / (1024 * 1024)), // Converts B to MB
+		Name:       partition.Name,
+		FS:         partition.Type,
+		Flags:      nil,
+		MountPoint: partition.MountPoint,
+		Path:       filepath.Join("/dev", partition.Name),
+		Disk:       filepath.Join("/dev", partition.Disk.Name),
 	}
 }
 
-func (p *jParts) UnmarshalJSON(data []byte) error {
-	var parts []jPart
-
-	if err := json.Unmarshal(data, &parts); err != nil {
-		return err
-	}
-
-	var partitions jParts
-	for _, part := range parts {
-		// filter only partition or loop devices
-		if part.Type == "part" || part.Type == "loop" {
-			partitions = append(partitions, part.Partition())
-		}
-	}
-	*p = partitions
-	return nil
-}
-
-func unmarshalLsblk(lsblkOut []byte) ([]*v1.Partition, error) {
-	var objmap map[string]*json.RawMessage
-	err := json.Unmarshal(lsblkOut, &objmap)
+// GetAllPartitionsV2 returns all partitions in the system for all disks
+func GetAllPartitionsV2() ([]*block.Partition, error) {
+	var parts []*block.Partition
+	blockDevices, err := block.New(ghw.WithDisableTools(), ghw.WithDisableWarnings())
 	if err != nil {
 		return nil, err
 	}
-
-	if _, ok := objmap["blockdevices"]; !ok {
-		return nil, errors.New("Invalid json object, no 'blockdevices' key found")
+	for _, d := range blockDevices.Disks {
+		parts = append(parts, d.Partitions...)
 	}
-
-	var parts jParts
-	err = json.Unmarshal(*objmap["blockdevices"], &parts)
-	if err != nil {
-		return nil, err
-	}
-
 	return parts, nil
 }
 
-// GetAllPartitions gets a slice of all partition devices found in the host
-// mapped into a v1.PartitionList object.
-func GetAllPartitions(runner v1.Runner) (v1.PartitionList, error) {
-	out, err := runner.Run("lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE")
+// GetDevicePartitionsV2 returns partitions under a given device
+func GetDevicePartitionsV2(device string) ([]*block.Partition, error) {
+	// We want to have the device always prefixed with a /dev
+	if !strings.HasPrefix(device, "/dev") {
+		device = filepath.Join("/dev", device)
+	}
+	blockDevices, err := block.New(ghw.WithDisableTools(), ghw.WithDisableWarnings())
 	if err != nil {
 		return nil, err
 	}
-
-	return unmarshalLsblk(out)
+	for _, disk := range blockDevices.Disks {
+		if filepath.Join("/dev", disk.Name) == device {
+			return disk.Partitions, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find disk %s", device)
 }
 
-// GetDevicePartitions gets a slice of partitions found in the given device mapped
-// into a v1.PartitionList object. If the device is a disk it will list all disk
-// partitions, if the device is already a partition it will simply list a single partition.
-func GetDevicePartitions(runner v1.Runner, device string) (v1.PartitionList, error) {
-	out, err := runner.Run("lsblk", "-p", "-b", "-n", "-J", "--output", "LABEL,SIZE,FSTYPE,MOUNTPOINT,PATH,PKNAME,TYPE", device)
+func GetPartitionFSV2(partition string) (string, error) {
+	// We want to have the device always prefixed with a /dev
+	if !strings.HasPrefix(partition, "/dev") {
+		partition = filepath.Join("/dev", partition)
+	}
+	blockDevices, err := block.New(ghw.WithDisableTools(), ghw.WithDisableWarnings())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return unmarshalLsblk(out)
+	for _, disk := range blockDevices.Disks {
+		for _, part := range disk.Partitions {
+			if filepath.Join("/dev", part.Name) == partition {
+				if part.Type == ghwUtil.UNKNOWN {
+					return "", fmt.Errorf("could not find filesystem for partition %s", partition)
+				}
+				return part.Type, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("could not find filesystem for partition %s", partition)
 }
