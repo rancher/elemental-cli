@@ -376,7 +376,7 @@ func (dev Disk) expandFilesystem(device string) (string, error) {
 	var out []byte
 	var err error
 
-	fs, err := utils.GetPartitionFSV2(device)
+	fs, err := utils.GetPartitionFS(device)
 	if err != nil {
 		return fs, err
 	}

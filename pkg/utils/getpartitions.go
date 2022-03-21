@@ -27,8 +27,8 @@ import (
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 )
 
-// GhwPartitionToInternalPartition transforms a block.Partition from ghw lib to our v1.Partition type
-func GhwPartitionToInternalPartition(partition *block.Partition) *v1.Partition {
+// ghwPartitionToInternalPartition transforms a block.Partition from ghw lib to our v1.Partition type
+func ghwPartitionToInternalPartition(partition *block.Partition) *v1.Partition {
 	return &v1.Partition{
 		Label:      partition.Label,
 		Size:       uint(partition.SizeBytes / (1024 * 1024)), // Converts B to MB
@@ -41,38 +41,23 @@ func GhwPartitionToInternalPartition(partition *block.Partition) *v1.Partition {
 	}
 }
 
-// GetAllPartitionsV2 returns all partitions in the system for all disks
-func GetAllPartitionsV2() ([]*block.Partition, error) {
-	var parts []*block.Partition
+// GetAllPartitions returns all partitions in the system for all disks
+func GetAllPartitions() ([]*v1.Partition, error) {
+	var parts []*v1.Partition
 	blockDevices, err := block.New(ghw.WithDisableTools(), ghw.WithDisableWarnings())
 	if err != nil {
 		return nil, err
 	}
 	for _, d := range blockDevices.Disks {
-		parts = append(parts, d.Partitions...)
+		for _, part := range d.Partitions {
+			parts = append(parts, ghwPartitionToInternalPartition(part))
+		}
 	}
 	return parts, nil
 }
 
-// GetDevicePartitionsV2 returns partitions under a given device
-func GetDevicePartitionsV2(device string) ([]*block.Partition, error) {
-	// We want to have the device always prefixed with a /dev
-	if !strings.HasPrefix(device, "/dev") {
-		device = filepath.Join("/dev", device)
-	}
-	blockDevices, err := block.New(ghw.WithDisableTools(), ghw.WithDisableWarnings())
-	if err != nil {
-		return nil, err
-	}
-	for _, disk := range blockDevices.Disks {
-		if filepath.Join("/dev", disk.Name) == device {
-			return disk.Partitions, nil
-		}
-	}
-	return nil, fmt.Errorf("could not find disk %s", device)
-}
-
-func GetPartitionFSV2(partition string) (string, error) {
+// GetPartitionFS gets the FS of a partition given
+func GetPartitionFS(partition string) (string, error) {
 	// We want to have the device always prefixed with a /dev
 	if !strings.HasPrefix(partition, "/dev") {
 		partition = filepath.Join("/dev", partition)

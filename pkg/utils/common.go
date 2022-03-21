@@ -61,29 +61,18 @@ func GetDeviceByLabel(runner v1.Runner, label string, attempts int) (string, err
 func GetFullDeviceByLabel(runner v1.Runner, label string, attempts int) (*v1.Partition, error) {
 	for tries := 0; tries < attempts; tries++ {
 		_, _ = runner.Run("udevadm", "settle")
-		parts, err := GetAllPartitionsV2()
+		parts, err := GetAllPartitions()
 		if err != nil {
 			return nil, err
 		}
 		for _, part := range parts {
 			if part.Label == label {
-				// TODO: Move to use partitions from ghw instead? return it transformed already?
-				return GhwPartitionToInternalPartition(part), nil
+				return part, nil
 			}
 		}
 		time.Sleep(1 * time.Second)
 	}
 	return nil, errors.New("no device found")
-}
-
-// GetPartitionFS returns the partition filesystem for the given device.
-// If the device is not a partition returns an error.
-func GetPartitionFS(device string) (string, error) {
-	fs, err := GetPartitionFSV2(device)
-	if err != nil {
-		return "", err
-	}
-	return fs, nil
 }
 
 // CopyFile Copies source file to target file using Fs interface

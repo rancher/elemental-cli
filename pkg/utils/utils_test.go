@@ -201,7 +201,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(runner.CmdsMatch(append(cmds, cmds...))).To(BeNil())
 		})
 	})
-	Describe("GetAllPartitionsV2", Label("lsblk", "partitions"), func() {
+	Describe("GetAllPartitions", Label("lsblk", "partitions"), func() {
 		var ghwTest v1mock.GhwMock
 		BeforeEach(func() {
 			ghwTest = v1mock.GhwMock{}
@@ -232,7 +232,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			ghwTest.Clean()
 		})
 		It("returns all found partitions", func() {
-			parts, err := utils.GetAllPartitionsV2()
+			parts, err := utils.GetAllPartitions()
 			Expect(err).To(BeNil())
 			var partNames []string
 			for _, p := range parts {
@@ -243,23 +243,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(partNames).To(ContainElement("sdb1Test"))
 		})
 	})
-	Describe("GetDevicePartitionsV2", Label("lsblk", "partitions"), func() {
-		It("returns all found partitions", func() {
-			ghwTest := v1mock.GhwMock{}
-			disk := block.Disk{Name: "device", Partitions: []*block.Partition{
-				{
-					Name: "device1ForTest",
-				},
-			}}
-			ghwTest.AddDisk(disk)
-			ghwTest.CreateDevices()
-			defer ghwTest.Clean()
-			parts, err := utils.GetDevicePartitionsV2("device")
-			Expect(err).To(BeNil())
-			Expect(parts[0].Name).To(Equal("device1ForTest"))
-		})
-	})
-	Describe("GetPartitionFSV2", Label("lsblk", "partitions"), func() {
+	Describe("GetPartitionFS", Label("lsblk", "partitions"), func() {
 		var ghwTest v1mock.GhwMock
 		BeforeEach(func() {
 			ghwTest = v1mock.GhwMock{}
@@ -279,12 +263,12 @@ var _ = Describe("Utils", Label("utils"), func() {
 			ghwTest.Clean()
 		})
 		It("returns found device with plain partition device", func() {
-			pFS, err := utils.GetPartitionFSV2("device1")
+			pFS, err := utils.GetPartitionFS("device1")
 			Expect(err).To(BeNil())
 			Expect(pFS).To(Equal("xfs"))
 		})
 		It("returns found device with full partition device", func() {
-			pFS, err := utils.GetPartitionFSV2("/dev/device1")
+			pFS, err := utils.GetPartitionFS("/dev/device1")
 			Expect(err).To(BeNil())
 			Expect(pFS).To(Equal("xfs"))
 		})
