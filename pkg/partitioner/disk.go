@@ -118,6 +118,19 @@ func (dev *Disk) Reload() error {
 		return err
 	}
 
+	if pc.HasUnallocatedSpace(prnt) {
+		// Parted has not a proper way to doing it in non interactive mode,
+		// because of that we use sgdisk for that...
+		_, err = dev.runner.Run("sgdisk", "-e", dev.device)
+		if err != nil {
+			return err
+		}
+		prnt, err = pc.Print()
+		if err != nil {
+			return err
+		}
+	}
+
 	sectorS, err := pc.GetSectorSize(prnt)
 	if err != nil {
 		return err
