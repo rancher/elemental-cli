@@ -155,17 +155,6 @@ func (pc PartedCall) Print() (string, error) {
 	return string(out), err
 }
 
-// HasUnallocatedSpace parses a parted print command output and checks for a
-// warning within the output complaining about wrong GPT end header. If
-// the warning is found it assumes the GPT end header is not at the end of
-// the disk, hence it needs to be adapted to get valid sizes from parted
-// print. Parted has no proper command to verify GPT headers neither a
-// proper command to fix them whenever is possible in a non interactive mode.
-func (pc PartedCall) HasUnallocatedSpace(printOut string) bool {
-	unallocated, _ := regexp.MatchString("Not all of the space available", printOut)
-	return unallocated
-}
-
 // Parses the output of a PartedCall.Print call
 func (pc PartedCall) parseHeaderFields(printOut string, field int) (string, error) {
 	re := regexp.MustCompile(`^(.*):(\d+)s:(.*):(\d+):(\d+):(.*):(.*):(.*);$`)
