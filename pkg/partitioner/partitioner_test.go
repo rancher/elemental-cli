@@ -257,9 +257,9 @@ var _ = Describe("Partitioner", Label("disk", "partition", "partitioner"), func(
 				runner.ReturnValue = []byte("Warning: Not all of the space available to /dev/loop0...\n" + printOutput)
 				Expect(dev.Reload()).To(BeNil())
 				Expect(runner.MatchMilestones([][]string{
-					{"parted", "--script", "--machine", "--", "/some/device", "unit", "s", "print"},
-					{"sgdisk", "-e", "/some/device"},
-					{"parted", "--script", "--machine", "--", "/some/device", "unit", "s", "print"},
+					{"parted", "--script", "--machine", "--", "/dev/device", "unit", "s", "print"},
+					{"sgdisk", "-e", "/dev/device"},
+					{"parted", "--script", "--machine", "--", "/dev/device", "unit", "s", "print"},
 				})).To(BeNil())
 			})
 		})
