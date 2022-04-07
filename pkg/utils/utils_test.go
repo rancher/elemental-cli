@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/jaypipes/ghw/pkg/block"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/jaypipes/ghw/pkg/block"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -362,7 +363,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 	})
 	Describe("CopyFile", Label("CopyFile"), func() {
-		It("Copies source to target", func() {
+		It("Copies source file to target file", func() {
 			err := utils.MkdirAll(fs, "/some", constants.DirPerm)
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = fs.Create("/some/file")
@@ -370,9 +371,21 @@ var _ = Describe("Utils", Label("utils"), func() {
 			_, err = fs.Stat("/some/otherfile")
 			Expect(err).Should(HaveOccurred())
 			Expect(utils.CopyFile(fs, "/some/file", "/some/otherfile")).ShouldNot(HaveOccurred())
-			_, err = fs.Stat("/some/otherfile")
-			Expect(err).To(BeNil())
 			e, err := utils.Exists(fs, "/some/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e).To(BeTrue())
+		})
+		It("Copies source file to target folder", func() {
+			err := utils.MkdirAll(fs, "/some", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = utils.MkdirAll(fs, "/someotherfolder", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/some/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Stat("/someotherfolder/file")
+			Expect(err).Should(HaveOccurred())
+			Expect(utils.CopyFile(fs, "/some/file", "/someotherfolder")).ShouldNot(HaveOccurred())
+			e, err := utils.Exists(fs, "/someotherfolder/file")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e).To(BeTrue())
 		})
@@ -540,6 +553,50 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(utils.GetSource(config, "file:///tmp/file", "/tmp/dest")).To(BeNil())
 			_, err := fs.Stat("/tmp/dest")
 			Expect(err).To(BeNil())
+		})
+	})
+	Describe("ValidContainerReference", Label("reference"), func() {
+		It("Returns true on valid references", func() {
+			Expect(utils.ValidContainerReference("opensuse/leap:15.3")).To(BeTrue())
+			Expect(utils.ValidContainerReference("opensuse")).To(BeTrue())
+			Expect(utils.ValidContainerReference("registry.suse.com/opensuse/something")).To(BeTrue())
+			Expect(utils.ValidContainerReference("registry.suse.com:8080/something:253")).To(BeTrue())
+		})
+		It("Returns false on invalid references", func() {
+			Expect(utils.ValidContainerReference("opensuse/leap:15+3")).To(BeFalse())
+			Expect(utils.ValidContainerReference("opensusE")).To(BeFalse())
+			Expect(utils.ValidContainerReference("registry.suse.com:8080/Something:253")).To(BeFalse())
+			Expect(utils.ValidContainerReference("http://registry.suse.com:8080/something:253")).To(BeFalse())
+		})
+	})
+	Describe("ValidTaggedContainerReference", Label("reference"), func() {
+		It("Returns true on valid references including explicit tag", func() {
+			Expect(utils.ValidTaggedContainerReference("opensuse/leap:15.3")).To(BeTrue())
+			Expect(utils.ValidTaggedContainerReference("registry.suse.com/opensuse/something:latest")).To(BeTrue())
+			Expect(utils.ValidTaggedContainerReference("registry.suse.com:8080/something:253")).To(BeTrue())
+		})
+		It("Returns false on valid references without explicit tag", func() {
+			Expect(utils.ValidTaggedContainerReference("opensuse")).To(BeFalse())
+			Expect(utils.ValidTaggedContainerReference("registry.suse.com/opensuse/something")).To(BeFalse())
+			Expect(utils.ValidTaggedContainerReference("registry.suse.com:8080/something")).To(BeFalse())
+		})
+	})
+	Describe("DirSize", Label("fs"), func() {
+		It("Returns the expected size of a test folder", func() {
+			err := utils.MkdirAll(fs, "/folder/subfolder", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			f, err := fs.Create("/folder/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			err = f.Truncate(1024)
+			Expect(err).ShouldNot(HaveOccurred())
+			f, err = fs.Create("/folder/subfolder/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			err = f.Truncate(2048)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			size, err := utils.DirSize(fs, "/folder")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(size).To(Equal(int64(3072)))
 		})
 	})
 	Describe("Grub", Label("grub", "root"), func() {

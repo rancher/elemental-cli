@@ -64,6 +64,7 @@ const (
 	EfiDir                 = "/run/cos/efi"
 	RecoverySquashFile     = "recovery.squashfs"
 	IsoRootFile            = "rootfs.squashfs"
+	IsoEFIPath             = "/boot/uefi.img"
 	ActiveImgFile          = "active.img"
 	PassiveImgFile         = "passive.img"
 	RecoveryImgFile        = "recovery.img"
@@ -88,6 +89,18 @@ const (
 	PassiveImgName         = "passive"
 	RecoveryImgName        = "recovery"
 	GPT                    = "gpt"
+	BuildImgName           = "elemental"
+
+	//TODO these paths are abitrary, coupled to package live/grub2 and assuming xz
+	// I'd suggest using `/boot/kernel` and `/boot/initrd`
+	IsoKernelPath = "/boot/kernel.xz"
+	IsoInitrdPath = "/boot/rootfs.xz"
+
+	// TODO would be nice to discover these ISO loader values instead of hardcoding them
+	// These values are coupled with package live/grub2
+	IsoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
+	IsoBootCatalog = "/boot/x86_64/boot.catalog"
+	IsoBootFile    = "/boot/x86_64/loader/eltorito.img"
 
 	// Default directory and file fileModes
 	DirPerm  = os.ModeDir | os.ModePerm
