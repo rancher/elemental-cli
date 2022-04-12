@@ -329,9 +329,8 @@ func NewSrcGuessingType(c v1.Config, value string) v1.ImageSource {
 	if exists, _ := Exists(c.Fs, value); exists {
 		if dir, _ := IsDir(c.Fs, value); dir {
 			return v1.NewDirSrc(value)
-		} else {
-			return v1.NewFileSrc(value)
 		}
+		return v1.NewFileSrc(value)
 	} else if ValidTaggedContainerReference(value) {
 		return v1.NewDockerSrc(value)
 	}

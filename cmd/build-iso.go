@@ -52,7 +52,10 @@ var buildISO = &cobra.Command{
 			cfg.ISO.RootFS = []string{args[0]}
 		}
 
-		validateCosignFlags(cfg.Logger)
+		err = validateCosignFlags(cfg.Logger)
+		if err != nil {
+			return err
+		}
 
 		// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 		cmd.SilenceUsage = true
@@ -74,7 +77,7 @@ var buildISO = &cobra.Command{
 			if ok, err := utils.Exists(cfg.Fs, oUEFI); ok {
 				cfg.ISO.UEFI = append(cfg.ISO.UEFI, oUEFI)
 			} else {
-				cfg.Logger.Errorf("Invalid value for overlay-rootfs")
+				cfg.Logger.Errorf("Invalid value for overlay-uefi")
 				return fmt.Errorf("Invalid path '%s': %v", oUEFI, err)
 			}
 		}
@@ -82,7 +85,7 @@ var buildISO = &cobra.Command{
 			if ok, err := utils.Exists(cfg.Fs, oISO); ok {
 				cfg.ISO.Image = append(cfg.ISO.Image, oISO)
 			} else {
-				cfg.Logger.Errorf("Invalid value for overlay-rootfs")
+				cfg.Logger.Errorf("Invalid value for overlay-iso")
 				return fmt.Errorf("Invalid path '%s': %v", oISO, err)
 			}
 		}
@@ -104,7 +107,7 @@ func init() {
 	buildISO.Flags().String("overlay-rootfs", "", "Path of the overlayed rootfs data")
 	buildISO.Flags().String("overlay-uefi", "", "Path of the overlayed uefi data")
 	buildISO.Flags().String("overlay-iso", "", "Path of the overlayed iso data")
-	// TODO find away to specify or guess source types
+	// TBC expose rootfs as flags?
 	//buildISO.Flags().StringArray("rootfs", []string{}, "A list of sources for the rootfs image. Can be repeated to add more than one source.")
 	buildISO.Flags().StringArray("isoimage", []string{}, "A list of sources for the ISO image. Can be repeated to add more than one source.")
 	buildISO.Flags().StringArray("uefi", []string{}, "A list of sources for the UEFI image. Can be repeated to add more than one source.")

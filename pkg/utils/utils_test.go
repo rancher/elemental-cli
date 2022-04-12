@@ -582,7 +582,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 	})
 	Describe("DirSize", Label("fs"), func() {
-		It("Returns the expected size of a test folder", func() {
+		BeforeEach(func() {
 			err := utils.MkdirAll(fs, "/folder/subfolder", constants.DirPerm)
 			Expect(err).ShouldNot(HaveOccurred())
 			f, err := fs.Create("/folder/file")
@@ -593,10 +593,51 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			err = f.Truncate(2048)
 			Expect(err).ShouldNot(HaveOccurred())
-
+		})
+		It("Returns the expected size of a test folder", func() {
 			size, err := utils.DirSize(fs, "/folder")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(size).To(Equal(int64(3072)))
+		})
+		It("Returns the expected size of a test folder", func() {
+			err := fs.Chmod("/folder/subfolder", 0600)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = utils.DirSize(fs, "/folder")
+			Expect(err).Should(HaveOccurred())
+		})
+	})
+	Describe("NewSourceGuessingType", Label("source"), func() {
+		It("Creates a new Docker source for a tagged reference", func() {
+			src := utils.NewSrcGuessingType(config.Config, "registry.suse.com/elemental/image:v0.1")
+			Expect(src.IsDocker()).To(BeTrue())
+			src = utils.NewSrcGuessingType(config.Config, "registry.suse.com:1906/elemental/image:tag")
+			Expect(src.IsDocker()).To(BeTrue())
+			src = utils.NewSrcGuessingType(config.Config, "elemental/image:tag")
+			Expect(src.IsDocker()).To(BeTrue())
+		})
+		It("Creates a new Directory source from a path only if it exists", func() {
+			err := utils.MkdirAll(fs, "/dir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			src := utils.NewSrcGuessingType(config.Config, "/dir")
+			Expect(src.IsDir()).To(BeTrue())
+			src = utils.NewSrcGuessingType(config.Config, "/folder")
+			Expect(src.IsDir()).To(BeFalse())
+		})
+		It("Creates a new File source from a path only if it exists", func() {
+			err := utils.MkdirAll(fs, "/dir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/dir/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			src := utils.NewSrcGuessingType(config.Config, "/dir/file")
+			Expect(src.IsFile()).To(BeTrue())
+			src = utils.NewSrcGuessingType(config.Config, "/dir/otherfile")
+			Expect(src.IsFile()).To(BeFalse())
+		})
+		It("Creates a new Channel source", func() {
+			src := utils.NewSrcGuessingType(config.Config, "system/cos")
+			Expect(src.IsChannel()).To(BeTrue())
+			src = utils.NewSrcGuessingType(config.Config, "cos")
+			Expect(src.IsChannel()).To(BeTrue())
 		})
 	})
 	Describe("Grub", Label("grub", "root"), func() {
