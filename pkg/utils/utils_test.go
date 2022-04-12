@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -423,24 +422,22 @@ var _ = Describe("Utils", Label("utils"), func() {
 	})
 	Describe("SyncData", Label("SyncData"), func() {
 		It("Copies all files from source to target", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
+			sourceDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
 
 			for i := 0; i < 5; i++ {
-				_, _ = os.CreateTemp(sourceDir, "file*")
+				_, _ = utils.TempFile(fs, sourceDir, "file*")
 			}
 
-			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
+			Expect(utils.SyncData(fs, sourceDir, destDir)).To(BeNil())
 
-			filesDest, err := ioutil.ReadDir(destDir)
+			filesDest, err := fs.ReadDir(destDir)
 			Expect(err).To(BeNil())
 
 			destNames := getNamesFromListFiles(filesDest)
-			filesSource, err := ioutil.ReadDir(sourceDir)
+			filesSource, err := fs.ReadDir(sourceDir)
 			Expect(err).To(BeNil())
 
 			SourceNames := getNamesFromListFiles(filesSource)
@@ -450,27 +447,26 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 
 		It("Copies all files from source to target respecting excludes", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
+			sourceDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
 
-			os.MkdirAll(filepath.Join(sourceDir, "host"), constants.DirPerm)
-			os.MkdirAll(filepath.Join(sourceDir, "run"), constants.DirPerm)
+			utils.MkdirAll(fs, filepath.Join(sourceDir, "host"), constants.DirPerm)
+			utils.MkdirAll(fs, filepath.Join(sourceDir, "run"), constants.DirPerm)
+
 			for i := 0; i < 5; i++ {
-				_, _ = os.CreateTemp(sourceDir, "file*")
+				_, _ = utils.TempFile(fs, sourceDir, "file*")
 			}
 
-			Expect(utils.SyncData(nil, sourceDir, destDir, "host", "run")).To(BeNil())
+			Expect(utils.SyncData(fs, sourceDir, destDir, "host", "run")).To(BeNil())
 
-			filesDest, err := ioutil.ReadDir(destDir)
+			filesDest, err := fs.ReadDir(destDir)
 			Expect(err).To(BeNil())
 
 			destNames := getNamesFromListFiles(filesDest)
 
-			filesSource, err := ioutil.ReadDir(sourceDir)
+			filesSource, err := fs.ReadDir(sourceDir)
 			Expect(err).To(BeNil())
 
 			SourceNames := getNamesFromListFiles(filesSource)
@@ -488,13 +484,11 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 
 		It("should not fail if dirs are empty", func() {
-			sourceDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(sourceDir)
-			destDir, err := os.MkdirTemp("", "elemental")
-			Expect(err).To(BeNil())
-			defer os.RemoveAll(destDir)
-			Expect(utils.SyncData(nil, sourceDir, destDir)).To(BeNil())
+			sourceDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(utils.SyncData(fs, sourceDir, destDir)).To(BeNil())
 		})
 		It("should fail if destination does not exist", func() {
 			sourceDir, err := os.MkdirTemp("", "elemental")
