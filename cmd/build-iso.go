@@ -57,6 +57,8 @@ var buildISO = &cobra.Command{
 			return err
 		}
 
+		//TODO validate there is, at least some source for rootfs, uefi and isoimage
+
 		// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 		cmd.SilenceUsage = true
 		cmd.SilenceErrors = true // Do not propagate errors down the line, we control them

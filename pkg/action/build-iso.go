@@ -18,6 +18,7 @@ package action
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -51,18 +52,21 @@ func BuildISORun(cfg *v1.BuildConfig) (err error) {
 	}
 	cleanup.Push(func() error { return cfg.Fs.RemoveAll(isoDir) })
 
+	cfg.Logger.Infof("Preparing squashfs root...")
 	err = applySources(cfg.Config, rootDir, cfg.ISO.RootFS...)
 	if err != nil {
 		cfg.Logger.Errorf("Failed installing OS packages: %v", err)
 		return err
 	}
 
+	cfg.Logger.Infof("Preparing EFI image...")
 	err = applySources(cfg.Config, uefiDir, cfg.ISO.UEFI...)
 	if err != nil {
 		cfg.Logger.Errorf("Failed installing EFI packages: %v", err)
 		return err
 	}
 
+	cfg.Logger.Infof("Preparing ISO image root tree...")
 	err = applySources(cfg.Config, isoDir, cfg.ISO.Image...)
 	if err != nil {
 		cfg.Logger.Errorf("Failed installing ISO image packages: %v", err)
@@ -75,6 +79,7 @@ func BuildISORun(cfg *v1.BuildConfig) (err error) {
 		return err
 	}
 
+	cfg.Logger.Infof("Creating ISO image...")
 	err = burnISO(cfg, isoDir)
 	if err != nil {
 		cfg.Logger.Errorf("Failed preparing ISO's root tree: %v", err)
@@ -129,9 +134,13 @@ func findFileWithPrefix(fs v1.FS, path string, prefixes ...string) (string, erro
 	for _, f := range files {
 		for _, p := range prefixes {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), p) {
-				found, err := fs.Readlink(filepath.Join(path, f.Name()))
-				if err == nil {
-					return filepath.Join(path, found), nil
+				if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+					found, err := fs.Readlink(filepath.Join(path, f.Name()))
+					if err == nil {
+						return filepath.Join(path, found), nil
+					}
+				} else {
+					return filepath.Join(path, f.Name()), nil
 				}
 			}
 		}
