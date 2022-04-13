@@ -21,7 +21,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/rancher-sandbox/elemental/cmd/config"
-	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/luet"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/mount-utils"
@@ -72,9 +72,9 @@ var pullImage = &cobra.Command{
 			RegistryToken: registryToken,
 		}
 
-		luet := v1.NewLuet(v1.WithLuetLogger(cfg.Logger), v1.WithLuetAuth(auth), v1.WithLuetPlugins(plugins...))
-		luet.VerifyImageUnpack = verify
-		err = luet.Unpack(destination, image, local)
+		l := luet.NewLuet(luet.WithLogger(cfg.Logger), luet.WithAuth(auth), luet.WithPlugins(plugins...))
+		l.VerifyImageUnpack = verify
+		err = l.Unpack(destination, image, local)
 
 		if err != nil {
 			cfg.Logger.Error(err.Error())

@@ -22,6 +22,7 @@ import (
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
+	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -66,6 +67,7 @@ var buildISO = &cobra.Command{
 		oRootfs, _ := cmd.Flags().GetString("overlay-rootfs")
 		oUEFI, _ := cmd.Flags().GetString("overlay-uefi")
 		oISO, _ := cmd.Flags().GetString("overlay-iso")
+		repoURIs, _ := cmd.Flags().GetStringArray("repo")
 
 		if oRootfs != "" {
 			if ok, err := utils.Exists(cfg.Fs, oRootfs); ok {
@@ -92,6 +94,12 @@ var buildISO = &cobra.Command{
 			}
 		}
 
+		repos := []v1.Repository{}
+		for _, u := range repoURIs {
+			repos = append(repos, v1.Repository{URI: u})
+		}
+		cfg.Repos = repos
+
 		err = action.BuildISORun(cfg)
 		if err != nil {
 			return err
@@ -109,9 +117,8 @@ func init() {
 	buildISO.Flags().String("overlay-rootfs", "", "Path of the overlayed rootfs data")
 	buildISO.Flags().String("overlay-uefi", "", "Path of the overlayed uefi data")
 	buildISO.Flags().String("overlay-iso", "", "Path of the overlayed iso data")
-	// TBC expose rootfs as flags?
-	//buildISO.Flags().StringArray("rootfs", []string{}, "A list of sources for the rootfs image. Can be repeated to add more than one source.")
-	buildISO.Flags().StringArray("isoimage", []string{}, "A list of sources for the ISO image. Can be repeated to add more than one source.")
-	buildISO.Flags().StringArray("uefi", []string{}, "A list of sources for the UEFI image. Can be repeated to add more than one source.")
+	buildISO.Flags().StringArray("isoimage", []string{}, "A source for the ISO image. Can be repeated to add more than one source.")
+	buildISO.Flags().StringArray("uefi", []string{}, "A source for the UEFI image. Can be repeated to add more than one source.")
+	buildISO.Flags().StringArray("repo", []string{}, "A repository URI for luet. Can be repeated to add more than one source.")
 	addCosignFlags(buildISO)
 }

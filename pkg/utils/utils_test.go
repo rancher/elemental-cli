@@ -503,24 +503,32 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(utils.SyncData(nil, "/welp", destDir)).NotTo(BeNil())
 		})
 	})
-	Describe("IsLocalUrl", Label("IsLocalUrl"), func() {
+	FDescribe("IsLocalURI", Label("uri"), func() {
 		It("Detects a local url", func() {
-			local, err := utils.IsLocalURL("file://some/path")
+			local, err := utils.IsLocalURI("file://some/path")
 			Expect(err).To(BeNil())
 			Expect(local).To(BeTrue())
 		})
 		It("Detects a local path", func() {
-			local, err := utils.IsLocalURL("/some/path")
+			local, err := utils.IsLocalURI("/some/path")
 			Expect(err).To(BeNil())
 			Expect(local).To(BeTrue())
 		})
-		It("Detects a remote url", func() {
-			local, err := utils.IsLocalURL("http://something.org")
+		It("Detects a remote uri", func() {
+			local, err := utils.IsLocalURI("http://something.org")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeFalse())
+		})
+		It("Detects a remote uri", func() {
+			local, err := utils.IsLocalURI("some.domain.org:33/some/path")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeFalse())
+			local, err = utils.IsLocalURI("some.domain.org/some/path:latest")
 			Expect(err).To(BeNil())
 			Expect(local).To(BeFalse())
 		})
 		It("Fails on invalid URL", func() {
-			local, err := utils.IsLocalURL("$htt:|//insane.stuff")
+			local, err := utils.IsLocalURI("$htt:|//insane.stuff")
 			Expect(err).NotTo(BeNil())
 			Expect(local).To(BeFalse())
 		})
