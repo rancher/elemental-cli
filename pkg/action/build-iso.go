@@ -242,38 +242,8 @@ func burnISO(c *v1.BuildConfig, root string) error {
 		"-volid", c.ISO.Label, "-joliet", "on", "-padding", "0",
 		"-outdev", outputFile, "-map", root, "/", "-chmod", "0755", "--",
 	}
+	args = append(args, constants.GetDefaultXorrisoBooloaderArgs(root, c.ISO.BootFile, c.ISO.BootCatalog, c.ISO.HybridMBR)...)
 
-	// TODO: make this detection more robust
-	// Assume ISOLINUX bootloader is used if boot file is includes 'isolinux'
-	// in its name, otherwise assume an eltorito based grub2 setup
-	if strings.Contains(c.ISO.BootFile, "isolinux") {
-		args = append(args, []string{
-			"-boot_image", "isolinux", fmt.Sprintf("bin_path=%s", c.ISO.BootFile),
-			"-boot_image", "isolinux", fmt.Sprintf("system_area=%s/%s", root, c.ISO.HybridMBR),
-			"-boot_image", "isolinux", "partition_table=on",
-		}...)
-	} else {
-		args = append(args, []string{
-			"-boot_image", "grub", fmt.Sprintf("bin_path=%s", c.ISO.BootFile),
-			"-boot_image", "grub", fmt.Sprintf("grub2_mbr=%s/%s", root, c.ISO.HybridMBR),
-			"-boot_image", "grub", "grub2_boot_info=on",
-		}...)
-	}
-
-	args = append(args, []string{
-		"-boot_image", "any", "partition_offset=16",
-		"-boot_image", "any", fmt.Sprintf("cat_path=%s", c.ISO.BootCatalog),
-		"-boot_image", "any", "cat_hidden=on",
-		"-boot_image", "any", "boot_info_table=on",
-		"-boot_image", "any", "platform_id=0x00",
-		"-boot_image", "any", "emul_type=no_emulation",
-		"-boot_image", "any", "load_size=2048",
-		"-append_partition", "2", "0xef", fmt.Sprintf("%s/boot/uefi.img", root),
-		"-boot_image", "any", "next",
-		"-boot_image", "any", "efi_path=--interval:appended_partition_2:all::",
-		"-boot_image", "any", "platform_id=0xef",
-		"-boot_image", "any", "emul_type=no_emulation",
-	}...)
 	out, err := c.Runner.Run(cmd, args...)
 	c.Logger.Debugf("Xorriso: %s", string(out))
 	if err != nil {
