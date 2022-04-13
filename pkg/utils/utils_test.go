@@ -503,7 +503,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(utils.SyncData(nil, "/welp", destDir)).NotTo(BeNil())
 		})
 	})
-	FDescribe("IsLocalURI", Label("uri"), func() {
+	Describe("IsLocalURI", Label("uri"), func() {
 		It("Detects a local url", func() {
 			local, err := utils.IsLocalURI("file://some/path")
 			Expect(err).To(BeNil())
@@ -524,6 +524,31 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).To(BeNil())
 			Expect(local).To(BeFalse())
 			local, err = utils.IsLocalURI("some.domain.org/some/path:latest")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeFalse())
+		})
+		It("Fails on invalid URL", func() {
+			local, err := utils.IsLocalURI("$htt:|//insane.stuff")
+			Expect(err).NotTo(BeNil())
+			Expect(local).To(BeFalse())
+		})
+	})
+	Describe("IsHTTPURI", Label("uri"), func() {
+		It("Detects a http url", func() {
+			local, err := utils.IsHTTPURI("http://domain.org/path")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeTrue())
+		})
+		It("Detects a https url", func() {
+			local, err := utils.IsHTTPURI("https://domain.org/path")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeTrue())
+		})
+		It("Detects it is a non http URL", func() {
+			local, err := utils.IsHTTPURI("file://path")
+			Expect(err).To(BeNil())
+			Expect(local).To(BeFalse())
+			local, err = utils.IsHTTPURI("container.reg.org:1024/some/repository")
 			Expect(err).To(BeNil())
 			Expect(local).To(BeFalse())
 		})
