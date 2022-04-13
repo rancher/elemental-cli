@@ -35,6 +35,7 @@ var buildISO = &cobra.Command{
 	Short: "elemental build-iso IMAGE",
 	Args:  cobra.MaximumNArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		_ = viper.BindPFlags(cmd.Flags())
 		return CheckRoot()
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -58,7 +59,17 @@ var buildISO = &cobra.Command{
 			return err
 		}
 
-		//TODO validate there is, at least some source for rootfs, uefi and isoimage
+		if len(cfg.ISO.RootFS) == 0 {
+			return fmt.Errorf("no rootfs image source provided")
+		}
+
+		if len(cfg.ISO.UEFI) == 0 {
+			return fmt.Errorf("no UEFI image sources provided")
+		}
+
+		if len(cfg.ISO.Image) == 0 {
+			return fmt.Errorf("no ISO image sources provided")
+		}
 
 		// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 		cmd.SilenceUsage = true
@@ -111,14 +122,17 @@ var buildISO = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(buildISO)
-	buildISO.Flags().String("label", "", "Label of the ISO volume")
 	buildISO.Flags().StringP("name", "n", "", "Basename of the generated ISO file")
 	buildISO.Flags().Bool("date", true, "Adds a date suffix into the generated ISO file")
 	buildISO.Flags().String("overlay-rootfs", "", "Path of the overlayed rootfs data")
 	buildISO.Flags().String("overlay-uefi", "", "Path of the overlayed uefi data")
 	buildISO.Flags().String("overlay-iso", "", "Path of the overlayed iso data")
-	buildISO.Flags().StringArray("isoimage", []string{}, "A source for the ISO image. Can be repeated to add more than one source.")
-	buildISO.Flags().StringArray("uefi", []string{}, "A source for the UEFI image. Can be repeated to add more than one source.")
+
+	// The dot notation is used to express nested maps in viper settings which is needed to unmarshal nested structs.
+	buildISO.Flags().String("iso.label", "", "Label of the ISO volume")
+	buildISO.Flags().StringArray("iso.image", []string{}, "A source for the ISO image. Can be repeated to add more than one source.")
+	buildISO.Flags().StringArray("iso.uefi", []string{}, "A source for the UEFI image. Can be repeated to add more than one source.")
+
 	buildISO.Flags().StringArray("repo", []string{}, "A repository URI for luet. Can be repeated to add more than one source.")
 	addCosignFlags(buildISO)
 }

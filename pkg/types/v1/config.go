@@ -156,7 +156,7 @@ func (pl PartitionList) GetByName(name string) *Partition {
 type LiveISO struct {
 	RootFS      []string `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
 	UEFI        []string `yaml:"uefi,omitempty" mapstructure:"uefi"`
-	Image       []string `yaml:"isoimage,omitempty" mapstructure:"isoimage"`
+	Image       []string `yaml:"image,omitempty" mapstructure:"image"`
 	Label       string   `yaml:"label,omitempty" mapstructure:"label"`
 	BootCatalog string   `yaml:"boot_catalog,omitempty" mapstructure:"boot_catalog"`
 	BootFile    string   `yaml:"boot_file,omitempty" mapstructure:"boot_file"`
