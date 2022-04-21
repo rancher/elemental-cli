@@ -29,7 +29,7 @@ import (
 
 var MB = int64(1024 * 1024)
 
-func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, output string) (err error) {
+func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, oemLabel string, recoveryLabel string, output string) (err error) {
 	cfg.Logger.Infof("Building disk image type %s for arch %s", imgType, arch)
 
 	cleanup := utils.NewCleanStack()
@@ -70,7 +70,7 @@ func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, output strin
 		cfg,
 		rootfsPart,
 		filepath.Join(baseDir, "root"),
-		constants.RecoveryLabel,
+		recoveryLabel,
 		constants.LinuxImgFs,
 		2048*MB,
 	)
@@ -109,7 +109,7 @@ func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, output strin
 		cfg,
 		oemPart,
 		filepath.Join(baseDir, "oem"),
-		constants.OEMLabel,
+		oemLabel,
 		constants.LinuxImgFs,
 		64*MB,
 	)

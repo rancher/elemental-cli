@@ -59,6 +59,8 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			imgType, _ := cmd.Flags().GetString("type")
 			archType, _ := cmd.Flags().GetString("arch")
 			output, _ := cmd.Flags().GetString("arch")
+			oemLabel, _ := cmd.Flags().GetString("oem_label")
+			recoveryLabel, _ := cmd.Flags().GetString("recovery_label")
 
 			// Set the repo depending on the arch we are building for
 			var repos []v1.Repository
@@ -67,7 +69,7 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			}
 			cfg.Config.Repos = repos
 
-			err = action.BuildDiskRun(cfg, imgType, archType, output)
+			err = action.BuildDiskRun(cfg, imgType, archType, oemLabel, recoveryLabel, output)
 			if err != nil {
 				return err
 			}
@@ -77,10 +79,12 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	}
 	root.AddCommand(c)
 	imgType := newEnumFlag([]string{"raw"}, "raw")
-	archType := newEnumFlag([]string{"x86_64", "aarch64"}, "x86_64")
+	archType := newEnumFlag([]string{"x86_64", "aarch64", "odroid_c2"}, "x86_64")
 	c.Flags().VarP(imgType, "type", "t", "Type of image to create")
 	c.Flags().VarP(archType, "arch", "a", "Arch to build the image for")
 	c.Flags().StringP("output", "o", "disk.raw", "Arch to build the image for")
+	c.Flags().String("oem_label", "COS_OEM", "Oem partition label")
+	c.Flags().String("recovery_label", "COS_RECOVERY", "Recovery partition label")
 	addCosignFlags(c)
 	return c
 }
