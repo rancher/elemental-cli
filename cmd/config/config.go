@@ -23,8 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/rancher-sandbox/elemental/internal/version"
 	"github.com/rancher-sandbox/elemental/pkg/config"
 	"github.com/rancher-sandbox/elemental/pkg/luet"
@@ -35,6 +37,30 @@ import (
 	"github.com/spf13/viper"
 	"k8s.io/mount-utils"
 )
+
+type Unmarshaler interface {
+	CustomUnmarshal(interface{}) error
+}
+
+func UnmarshalerHook() mapstructure.DecodeHookFunc {
+	return func(from reflect.Value, to reflect.Value) (interface{}, error) {
+		// If the destination implements the unmarshaling interface
+		u, ok := to.Interface().(Unmarshaler)
+		if !ok {
+			return from.Interface(), nil
+		}
+		// If it is nil and a pointer, create and assign the target value first
+		if to.IsNil() && to.Type().Kind() == reflect.Ptr {
+			to.Set(reflect.New(to.Type().Elem()))
+			u = to.Interface().(Unmarshaler)
+		}
+		// Call the custom unmarshaling method
+		if err := u.CustomUnmarshal(from.Interface()); err != nil {
+			return to.Interface(), err
+		}
+		return to.Interface(), nil
+	}
+}
 
 func ReadConfigBuild(configDir string, mounter mount.Interface) (*v1.BuildConfig, error) {
 	logger := v1.NewLogger()
@@ -116,6 +142,67 @@ func ReadConfigRun(configDir string, mounter mount.Interface) (*v1.RunConfig, er
 
 	// unmarshal all the vars into the config object
 	err := viper.Unmarshal(cfg)
+	if err != nil {
+		cfg.Logger.Warnf("error unmarshalling config: %s", err)
+	}
+
+	cfg.Logger.Debugf("Full config loaded: %+v", cfg)
+
+	return cfg, nil
+}
+
+func ReadConfigRunNew(configDir string, mounter mount.Interface) (*v1.RunConfigNew, error) {
+	cfg := config.NewRunConfigNew(
+		config.WithLogger(v1.NewLogger()),
+		config.WithMounter(mounter),
+	)
+
+	configLogger(cfg.Logger, cfg.Fs)
+
+	cfgDefault := []string{"/etc/os-release", "/etc/cos/config", "/etc/cos-upgrade-image"}
+
+	for _, c := range cfgDefault {
+		if _, err := os.Stat(c); err == nil {
+			viper.SetConfigFile(c)
+			viper.SetConfigType("env")
+			cobra.CheckErr(viper.MergeInConfig())
+		}
+	}
+
+	if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
+		viper.AddConfigPath(configDir)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("config")
+		// If a config file is found, read it in.
+		err := viper.MergeInConfig()
+		if err != nil {
+			cfg.Logger.Warnf("error merging config files: %s", err)
+		}
+	}
+
+	// Load extra config files on configdir/config.d/ so we can override config values
+	cfgExtra := fmt.Sprintf("%s/config.d/", strings.TrimSuffix(configDir, "/"))
+	if _, err := os.Stat(cfgExtra); err == nil {
+		viper.AddConfigPath(cfgExtra)
+		_ = filepath.WalkDir(cfgExtra, func(path string, d fs.DirEntry, err error) error {
+			if !d.IsDir() {
+				viper.SetConfigName(d.Name())
+				cobra.CheckErr(viper.MergeInConfig())
+			}
+			return nil
+		})
+	}
+
+	viperReadEnv()
+
+	// unmarshal all the vars into the config object
+	err := viper.Unmarshal(cfg, viper.DecodeHook(
+		mapstructure.ComposeDecodeHookFunc(
+			UnmarshalerHook(),
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+		),
+	))
 	if err != nil {
 		cfg.Logger.Warnf("error unmarshalling config: %s", err)
 	}

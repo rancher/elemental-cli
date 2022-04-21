@@ -25,7 +25,7 @@ import (
 var _ = Describe("Types", Label("types", "common"), func() {
 	Describe("Source", func() {
 		It("Initiates each type as expected", func() {
-			o := v1.ImageSource{}
+			o := &v1.ImageSource{}
 			Expect(o.Value()).To(Equal(""))
 			Expect(o.IsDir()).To(BeFalse())
 			Expect(o.IsChannel()).To(BeFalse())

@@ -173,6 +173,20 @@ func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
 	return r
 }
 
+func NewRunConfigNew(opts ...GenericOptions) *v1.RunConfigNew {
+	r := &v1.RunConfigNew{
+		Config:  *NewConfig(opts...),
+		Install: *NewInstallSpec(),
+	}
+	return r
+}
+
+func NewInstallSpec() *v1.InstallSpec {
+	return &v1.InstallSpec{
+		Partitions: v1.PartitionList{},
+	}
+}
+
 func NewISO() *v1.LiveISO {
 	return &v1.LiveISO{
 		HybridMBR:   cnst.IsoHybridMBR,

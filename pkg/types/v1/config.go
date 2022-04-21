@@ -91,13 +91,41 @@ type RunConfig struct {
 	Config
 }
 
+type RunConfigNew struct {
+	CloudInit      string `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
+	Strict         bool   `yaml:"strict,omitempty" mapstructure:"strict"`
+	NoVerify       bool   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	CloudInitPaths string `yaml:"CLOUD_INIT_PATHS,omitempty" mapstructure:"CLOUD_INIT_PATHS"`
+	GrubDefEntry   string `yaml:"GRUB_ENTRY_NAME,omitempty" mapstructure:"GRUB_ENTRY_NAME"`
+	Reboot         bool   `yaml:"reboot,omitempty" mapstructure:"reboot"`
+	PowerOff       bool   `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
+
+	Tty string `yaml:"tty,omitempty" mapstructure:"tty"`
+
+	Install InstallSpec
+	Config
+}
+
+type InstallSpec struct {
+	Target      string        `yaml:"target,omitempty" mapstructure:"target"`
+	Firmware    string        `yaml:"firmware,omitempty" mapstructure:"firmware"`
+	PartTable   string        `yaml:"partition-table,omitempty" mapstructure:"partition-table"`
+	Partitions  PartitionList `yaml:"partitions,omitempty" mapstructure:"partitions"`
+	NoFormat    bool          `yaml:"no-format,omitempty" mapstructure:"no-format"`
+	Force       bool          `yaml:"force,omitempty" mapstructure:"force"`
+	Iso         string
+	ActiveImg   Image `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg Image `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	PassiveImg  Image
+}
+
 // Partition struct represents a partition with its commonly configurable values, size in MiB
 type Partition struct {
-	Label      string
-	Size       uint
-	Name       string
-	FS         string
-	Flags      []string
+	Label      string   `yaml:"label,omitempty" mapstructure:"label"`
+	Size       uint     `yaml:"size,omitempty" mapstructure:"size"`
+	Name       string   `yaml:"id,omitempty" mapstructure:"id"`
+	FS         string   `yaml:"fs,omitempty" mapstrcuture:"fs"`
+	Flags      []string `yaml:"flags,omitempty" mapstrcuture:"flags"`
 	MountPoint string
 	Path       string
 	Disk       string
@@ -108,10 +136,10 @@ type PartitionList []*Partition
 // Image struct represents a file system image with its commonly configurable values, size in MiB
 type Image struct {
 	File       string
-	Label      string
-	Size       uint
-	FS         string
-	Source     ImageSource
+	Label      string       `yaml:"label,omitempty" mapstructure:"label"`
+	Size       uint         `yaml:"size,omitempty" mapstructure:"size"`
+	FS         string       `yaml:"fs,omitempty" mapstructure:"fs"`
+	Source     *ImageSource `yaml:"source,omitempty" mapstructure:"source"`
 	MountPoint string
 	LoopDevice string
 }

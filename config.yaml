@@ -1,0 +1,51 @@
+install:
+  # target is the only mandatory
+  target: /dev/sda
+
+  # basic disk configs for formatting
+  firmware: efi
+  partition-table: gpt
+
+  # partitions setup, any missing value is taken from defaults
+  partitions:
+  - id: oem
+    label: COS_OEM
+    size: 8192
+    fs: ext4
+  - id: recovery
+    label: COS_RECOVERY
+    size: 8192
+    fs: ext4
+
+  # format disk or not
+  no-format: false
+
+  # use this iso as installation media (overwrites 'image' and 'recoveryImage' sources with iso contents)
+  iso: https://my.domain.org/some/powerful.iso
+
+  # main OS image
+  system:
+    label: COS_ACTIVE
+    size: 1024
+    fs: ext2
+    source: docker://quay.io/costoolkit/green-releases:v1.2.3
+
+  recovery:
+    label: COS_RECOVERY
+    size: 1024
+    fs: ext2
+    source: docker:quay.io/costoolkit/green-releases:latest
+
+
+cosign: true
+cosign-key: myKey
+
+# attempt a verify process
+no-verify: false
+
+# fail on cloud-init hooks errors
+strict: false
+
+# reboot/power off when done
+reboot: false
+poweroff: false
