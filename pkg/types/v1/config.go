@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"k8s.io/mount-utils"
 )
@@ -27,6 +29,7 @@ const (
 	BIOS  = "bios_grub"
 	MSDOS = "msdos"
 	BOOT  = "boot"
+	EFI   = "esp"
 )
 
 // Config is the struct that includes basic and generic configuration of elemental binary runtime.
@@ -92,13 +95,42 @@ type RunConfig struct {
 	Config
 }
 
+type RunConfigNew struct {
+	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
+	NoVerify       bool     `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
+	PowerOff       bool     `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
+	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	//GrubDefEntry   string `yaml:"GRUB_ENTRY_NAME,omitempty" mapstructure:"GRUB_ENTRY_NAME"`
+
+	Tty string `yaml:"tty,omitempty" mapstructure:"tty"`
+
+	Install InstallSpec
+	Config
+}
+
+// InstallSpec struct represents all the installation action details
+type InstallSpec struct {
+	Target      string       `yaml:"target,omitempty" mapstructure:"target"`
+	Firmware    string       `yaml:"firmware,omitempty" mapstructure:"firmware"`
+	PartTable   string       `yaml:"partition-table,omitempty" mapstructure:"partition-table"`
+	Partitions  PartitionMap `yaml:"partitions,omitempty" mapstructure:"partitions"`
+	NoFormat    bool         `yaml:"no-format,omitempty" mapstructure:"no-format"`
+	Force       bool         `yaml:"force,omitempty" mapstructure:"force"`
+	CloudInit   string       `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
+	Iso         string       `yaml:"iso,omitempty" mapstructure:"iso"`
+	ActiveImg   Image        `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg Image        `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	PassiveImg  Image
+}
+
 // Partition struct represents a partition with its commonly configurable values, size in MiB
 type Partition struct {
-	Label      string
-	Size       uint
 	Name       string
-	FS         string
-	Flags      []string
+	Label      string   `yaml:"label,omitempty" mapstructure:"label"`
+	Size       uint     `yaml:"size,omitempty" mapstructure:"size"`
+	FS         string   `yaml:"fs,omitempty" mapstrcuture:"fs"`
+	Flags      []string `yaml:"flags,omitempty" mapstrcuture:"flags"`
 	MountPoint string
 	Path       string
 	Disk       string
@@ -106,13 +138,53 @@ type Partition struct {
 
 type PartitionList []*Partition
 
+type PartitionMap map[string]*Partition
+
+// validName checks if the given partition name is valid within the unmarshaling scope
+func (pm PartitionMap) validName(name string) bool {
+	for _, n := range constants.GetCustomizablePartitions() {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+// CustomUnmarshal only checks the keys of the PartitionMap are valid, non valid ones are ignored
+func (pm PartitionMap) CustomUnmarshal(data interface{}) (bool, error) {
+	m, ok := data.(map[string]interface{})
+	if !ok {
+		return true, fmt.Errorf("cannot unmarshal to PartitionMap, unexpected format %+v", data)
+	}
+	for k := range m {
+		if !pm.validName(k) {
+			// Removing the invalid entry causes to completely ignore it
+			delete(m, k)
+		}
+	}
+	return true, nil
+}
+
+func (pm PartitionMap) OrderedPartitions() PartitionList {
+	var part *Partition
+	var present bool
+
+	partitions := PartitionList{}
+	for _, name := range constants.GetPartitionsOrder() {
+		if part, present = pm[name]; present {
+			partitions = append(partitions, part)
+		}
+	}
+	return partitions
+}
+
 // Image struct represents a file system image with its commonly configurable values, size in MiB
 type Image struct {
 	File       string
-	Label      string
-	Size       uint
-	FS         string
-	Source     ImageSource
+	Label      string       `yaml:"label,omitempty" mapstructure:"label"`
+	Size       uint         `yaml:"size,omitempty" mapstructure:"size"`
+	FS         string       `yaml:"fs,omitempty" mapstructure:"fs"`
+	Source     *ImageSource `yaml:"source,omitempty" mapstructure:"source"`
 	MountPoint string
 	LoopDevice string
 }
@@ -171,6 +243,7 @@ type Repository struct {
 	Priority int    `yaml:"priority,omitempty" mapstructure:"priority"`
 	URI      string `yaml:"uri,omitempty" mapstructure:"uri"`
 	Type     string `yaml:"type,omitempty" mapstructure:"type"`
+	Arch     string `yaml:"arch,omitempty" mapstructure:"arch"`
 }
 
 // BuildConfig represents the config we need for building isos, raw images, artifacts

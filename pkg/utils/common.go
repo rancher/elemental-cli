@@ -361,7 +361,7 @@ func ValidTaggedContainerReference(ref string) bool {
 //	 2. Assume it is a container registry reference if it matches [<domain>/]<repositry>:<tag>
 //      (only domain is optional)
 //	 3. Fallback to a channel source
-func NewSrcGuessingType(c v1.Config, value string) v1.ImageSource {
+func NewSrcGuessingType(c v1.Config, value string) *v1.ImageSource {
 	if exists, _ := Exists(c.Fs, value); exists {
 		if dir, _ := IsDir(c.Fs, value); dir {
 			return v1.NewDirSrc(value)
