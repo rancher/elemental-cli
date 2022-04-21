@@ -43,9 +43,15 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mounter := &mountUtils.FakeMounter{}
 
-			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), mounter)
+			// If configDir is empty try to get the manifest from current dir
+			configDir := viper.GetString("config-dir")
+			if configDir == "" {
+				configDir = "."
+			}
+
+			cfg, err := config.ReadConfigBuild(configDir, mounter, true)
 			if err != nil {
-				cfg.Logger.Errorf("Error reading config: %s\n", err)
+				return err
 			}
 
 			err = validateCosignFlags(cfg.Logger)
