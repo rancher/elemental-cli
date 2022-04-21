@@ -111,7 +111,7 @@ func ResetSetup(config *v1.RunConfig) error {
 // ResetImagesSetup defines the parameters of active and passive images
 // as they are used during the reset.
 func ResetImagesSetup(config *v1.RunConfig) error {
-	var imgSource v1.ImageSource
+	var imgSource *v1.ImageSource
 	// TODO add reset from channel
 	// TODO execute rootTree sanity checks?
 	if config.Directory != "" {

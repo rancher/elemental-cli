@@ -421,7 +421,7 @@ func (u *UpgradeAction) remove(path string) error {
 }
 
 // getTargetAndSource finds our the target and source for the upgrade
-func (u *UpgradeAction) getTargetAndSource() (string, v1.ImageSource) {
+func (u *UpgradeAction) getTargetAndSource() (string, *v1.ImageSource) {
 	upgradeSource := v1.NewChannelSrc(constants.ChannelSource)
 	upgradeTarget := constants.UpgradeActive
 

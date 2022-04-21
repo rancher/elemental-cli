@@ -17,10 +17,13 @@ limitations under the License.
 package config
 
 import (
+	"path/filepath"
+
 	"github.com/rancher-sandbox/elemental/pkg/cloudinit"
-	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/http"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
+	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/twpayne/go-vfs"
 	"k8s.io/mount-utils"
 )
@@ -126,7 +129,7 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 	}
 
 	if c.Mounter == nil {
-		c.Mounter = mount.New(cnst.MountBinary)
+		c.Mounter = mount.New(constants.MountBinary)
 	}
 	return c
 }
@@ -137,58 +140,164 @@ func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
 	}
 	// Set defaults if empty
 	if r.GrubConf == "" {
-		r.GrubConf = cnst.GrubConf
+		r.GrubConf = constants.GrubConf
 	}
 
 	if r.ActiveLabel == "" {
-		r.ActiveLabel = cnst.ActiveLabel
+		r.ActiveLabel = constants.ActiveLabel
 	}
 
 	if r.PassiveLabel == "" {
-		r.PassiveLabel = cnst.PassiveLabel
+		r.PassiveLabel = constants.PassiveLabel
 	}
 
 	if r.SystemLabel == "" {
-		r.SystemLabel = cnst.SystemLabel
+		r.SystemLabel = constants.SystemLabel
 	}
 
 	if r.RecoveryLabel == "" {
-		r.RecoveryLabel = cnst.RecoveryLabel
+		r.RecoveryLabel = constants.RecoveryLabel
 	}
 
 	if r.PersistentLabel == "" {
-		r.PersistentLabel = cnst.PersistentLabel
+		r.PersistentLabel = constants.PersistentLabel
 	}
 
 	if r.OEMLabel == "" {
-		r.OEMLabel = cnst.OEMLabel
+		r.OEMLabel = constants.OEMLabel
 	}
 
 	if r.StateLabel == "" {
-		r.StateLabel = cnst.StateLabel
+		r.StateLabel = constants.StateLabel
 	}
 
 	r.Partitions = v1.PartitionList{}
 	r.Images = v1.ImageMap{}
 
 	if r.GrubDefEntry == "" {
-		r.GrubDefEntry = cnst.GrubDefEntry
+		r.GrubDefEntry = constants.GrubDefEntry
 	}
 
 	if r.ImgSize == 0 {
-		r.ImgSize = cnst.ImgSize
+		r.ImgSize = constants.ImgSize
 	}
 	return r
 }
 
+func NewRunConfigNew(opts ...GenericOptions) *v1.RunConfigNew {
+	config := NewConfig(opts...)
+	r := &v1.RunConfigNew{
+		Config: *config,
+	}
+	return r
+}
+
+// NewInstallSpec returns an InstallSpec struct all based on defaults and basic host checks (e.g. EFI vs BIOS)
+func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
+	var firmware string
+	var recoveryImg, activeImg, passiveImg v1.Image
+
+	recoveryImgFile := filepath.Join(constants.IsoMnt, constants.RecoverySquashFile)
+
+	// Check if current host has EFI firmware
+	efiExists, _ := utils.Exists(cfg.Fs, constants.EfiDevice)
+	// Check the default ISO installation media is available
+	isoRootExists, _ := utils.Exists(cfg.Fs, constants.IsoBaseTree)
+	// Check the default ISO recovery installation media is available)
+	recoveryExists, _ := utils.Exists(cfg.Fs, recoveryImgFile)
+
+	if efiExists {
+		firmware = v1.EFI
+	} else {
+		firmware = v1.BIOS
+	}
+
+	activeImg.Label = constants.ActiveLabel
+	activeImg.Size = constants.ImgSize
+	activeImg.File = filepath.Join(constants.StateDir, "cOS", constants.ActiveImgFile)
+	activeImg.FS = constants.LinuxImgFs
+	activeImg.MountPoint = constants.ActiveDir
+	if isoRootExists {
+		activeImg.Source = v1.NewDirSrc(constants.IsoBaseTree)
+	} else {
+		activeImg.Source = v1.NewEmptySrc()
+	}
+
+	recoveryImg.File = filepath.Join(constants.RecoveryDir, "cOS", constants.RecoverySquashFile)
+	if recoveryExists {
+		recoveryImg.Source = v1.NewFileSrc(recoveryImgFile)
+		recoveryImg.FS = constants.SquashFs
+	} else {
+		recoveryImg.Source = v1.NewFileSrc(activeImg.File)
+		recoveryImg.FS = constants.LinuxImgFs
+		recoveryImg.Label = constants.SystemLabel
+	}
+
+	passiveImg = v1.Image{
+		File:   filepath.Join(constants.StateDir, "cOS", constants.PassiveImgFile),
+		Label:  constants.PassiveLabel,
+		Source: v1.NewFileSrc(activeImg.File),
+		FS:     constants.LinuxImgFs,
+	}
+
+	return &v1.InstallSpec{
+		Firmware:    firmware,
+		PartTable:   v1.GPT,
+		Partitions:  NewInstallParitionMap(),
+		ActiveImg:   activeImg,
+		RecoveryImg: recoveryImg,
+		PassiveImg:  passiveImg,
+	}
+}
+
+func NewInstallParitionMap() v1.PartitionMap {
+	partitions := v1.PartitionMap{}
+	partitions[constants.OEMPartName] = &v1.Partition{
+		Label:      constants.OEMLabel,
+		Size:       constants.OEMSize,
+		Name:       constants.OEMPartName,
+		FS:         constants.LinuxFs,
+		MountPoint: constants.OEMDir,
+		Flags:      []string{},
+	}
+
+	partitions[constants.RecoveryPartName] = &v1.Partition{
+		Label:      constants.RecoveryLabel,
+		Size:       constants.RecoverySize,
+		Name:       constants.RecoveryPartName,
+		FS:         constants.LinuxFs,
+		MountPoint: constants.RecoveryDir,
+		Flags:      []string{},
+	}
+
+	partitions[constants.StatePartName] = &v1.Partition{
+		Label:      constants.StateLabel,
+		Size:       constants.StateSize,
+		Name:       constants.StatePartName,
+		FS:         constants.LinuxFs,
+		MountPoint: constants.StateDir,
+		Flags:      []string{},
+	}
+
+	partitions[constants.PersistentPartName] = &v1.Partition{
+		Label:      constants.PersistentLabel,
+		Size:       constants.PersistentSize,
+		Name:       constants.PersistentPartName,
+		FS:         constants.LinuxFs,
+		MountPoint: constants.PersistentDir,
+		Flags:      []string{},
+	}
+	return partitions
+}
+
 func NewISO() *v1.LiveISO {
 	return &v1.LiveISO{
-		Label:       cnst.ISOLabel,
-		UEFI:        cnst.GetDefaultISOUEFI(),
-		Image:       cnst.GetDefaultISOImage(),
-		HybridMBR:   cnst.IsoHybridMBR,
-		BootFile:    cnst.IsoBootFile,
-		BootCatalog: cnst.IsoBootCatalog,
+		Label:       constants.ISOLabel,
+		UEFI:        constants.GetDefaultISOUEFI(),
+		Image:       constants.GetDefaultISOImage(),
+		HybridMBR:   constants.IsoHybridMBR,
+		BootFile:    constants.IsoBootFile,
+		BootCatalog: constants.IsoBootCatalog,
 	}
 }
 
@@ -196,7 +305,7 @@ func NewBuildConfig(opts ...GenericOptions) *v1.BuildConfig {
 	b := &v1.BuildConfig{
 		Config: *NewConfig(opts...),
 		ISO:    NewISO(),
-		Name:   cnst.BuildImgName,
+		Name:   constants.BuildImgName,
 	}
 	return b
 }

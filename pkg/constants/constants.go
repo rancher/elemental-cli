@@ -28,20 +28,20 @@ const (
 	GrubConf               = "/etc/cos/grub.cfg"
 	GrubOEMEnv             = "grub_oem_env"
 	GrubDefEntry           = "cOs"
-	BiosPartName           = "p.bios"
+	BiosPartName           = "bios"
 	EfiLabel               = "COS_GRUB"
-	EfiPartName            = "p.grub"
+	EfiPartName            = "efi"
 	ActiveLabel            = "COS_ACTIVE"
 	PassiveLabel           = "COS_PASSIVE"
 	SystemLabel            = "COS_SYSTEM"
 	RecoveryLabel          = "COS_RECOVERY"
-	RecoveryPartName       = "p.recovery"
+	RecoveryPartName       = "recovery"
 	StateLabel             = "COS_STATE"
-	StatePartName          = "p.state"
+	StatePartName          = "state"
 	PersistentLabel        = "COS_PERSISTENT"
-	PersistentPartName     = "p.persistent"
+	PersistentPartName     = "persistent"
 	OEMLabel               = "COS_OEM"
-	OEMPartName            = "p.oem"
+	OEMPartName            = "oem"
 	ISOLabel               = "COS_LIVE"
 	MountBinary            = "/usr/bin/mount"
 	EfiDevice              = "/sys/firmware/efi"
@@ -189,5 +189,25 @@ func GetBuildDiskDefaultPackages() map[string]string {
 		"system/grub2-config":    "root",
 		"system/grub2-artifacts": "root/grub2",
 		"recovery/cos-img":       "root/cOS",
+	}
+}
+
+func GetPartitionsOrder() []string {
+	return []string{
+		BiosPartName,
+		EfiPartName,
+		OEMPartName,
+		RecoveryPartName,
+		StatePartName,
+		PersistentPartName,
+	}
+}
+
+func GetCustomizablePartitions() []string {
+	return []string{
+		OEMPartName,
+		RecoveryPartName,
+		StatePartName,
+		PersistentPartName,
 	}
 }
