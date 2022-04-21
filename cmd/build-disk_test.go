@@ -33,7 +33,7 @@ var _ = Describe("BuildDisk", Label("disk", "raw", "cmd"), func() {
 		rootCmd.SetErr(buf)
 	})
 	It("Errors out setting consign-key without setting cosign", Label("flags"), func() {
-		_, _, err := executeCommandC(rootCmd, "build-disk", "--cosign-key", "pubKey.url")
+		_, _, err := executeCommandC(rootCmd, "--config-dir", "config/config", "build-disk", "--cosign-key", "pubKey.url")
 		Expect(err).ToNot(BeNil())
 		Expect(buf.String()).To(ContainSubstring("Usage:"))
 		Expect(err.Error()).To(ContainSubstring("'cosign-key' requires 'cosign' option to be enabled"))
