@@ -58,7 +58,7 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 			imgType, _ := cmd.Flags().GetString("type")
 			archType, _ := cmd.Flags().GetString("arch")
-			output, _ := cmd.Flags().GetString("arch")
+			output, _ := cmd.Flags().GetString("output")
 			oemLabel, _ := cmd.Flags().GetString("oem_label")
 			recoveryLabel, _ := cmd.Flags().GetString("recovery_label")
 
