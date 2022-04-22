@@ -20,7 +20,6 @@ limitations under the License.
 package utils
 
 import (
-	"github.com/twpayne/go-vfs/vfst"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,6 +30,7 @@ import (
 
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/twpayne/go-vfs"
+	"github.com/twpayne/go-vfs/vfst"
 )
 
 // DirSize returns the accumulated size of all files in folder
