@@ -811,7 +811,7 @@ var _ = Describe("Runtime Actions", func() {
 				Expect(err).To(HaveOccurred())
 			})
 			It("Successfully upgrades from directory", Label("directory", "root"), func() {
-				config.Directory, _ = utils.TempDir(fs, "", "elemental")
+				config.Directory, _ = utils.TempDir(fs, "", "elementalupgrade")
 				// Create the dir on real os as rsync works on the real os
 				defer fs.RemoveAll(config.Directory)
 				// create a random file on it
