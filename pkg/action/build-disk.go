@@ -32,6 +32,14 @@ var MB = int64(1024 * 1024)
 func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, oemLabel string, recoveryLabel string, output string) (err error) {
 	cfg.Logger.Infof("Building disk image type %s for arch %s", imgType, arch)
 
+	if oemLabel == "" {
+		oemLabel = constants.OEMLabel
+	}
+
+	if recoveryLabel == "" {
+		recoveryLabel = constants.RecoveryLabel
+	}
+
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
 
@@ -147,11 +155,11 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 		_ = c.Fs.RemoveAll(img)
 		return err
 	}
-	// Seek to the end of the file so we start copying the files at the end of those 3Mb that we truncated before
+	// Seek to the end of the file, so we start copying the files at the end of those 3Mb that we truncated before
 	_, _ = actImg.Seek(0, io.SeekEnd)
 	for _, p := range parts {
 		c.Logger.Debugf("Copying %s", p)
-		toRead, _ := os.Open(p)
+		toRead, _ := c.Fs.Open(p)
 		_, err = io.Copy(actImg, toRead)
 		if err != nil {
 			return err
