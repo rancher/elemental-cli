@@ -56,7 +56,7 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
 
-			if len(args) == 1 {
+			if len(args) >= 1 {
 				cfg.ISO.RootFS = []string{args[0]}
 			}
 

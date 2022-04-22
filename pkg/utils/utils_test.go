@@ -446,7 +446,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(destNames).To(Equal(SourceNames))
 		})
 
-		FIt("Copies all files from source to target respecting excludes", func() {
+		It("Copies all files from source to target respecting excludes", func() {
 			sourceDir, err := utils.TempDir(fs, "", "elementalsource")
 			Expect(err).ShouldNot(HaveOccurred())
 			destDir, err := utils.TempDir(fs, "", "elementaltarget")
