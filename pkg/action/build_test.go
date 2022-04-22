@@ -191,7 +191,7 @@ var _ = Describe("Runtime Actions", func() {
 			Expect(err).Should(HaveOccurred())
 		})
 	})
-	FDescribe("Build disk", Label("disk", "build"), func() {
+	Describe("Build disk", Label("disk", "build"), func() {
 		It("Builds a raw image", func() {
 			// temp dir for output, otherwise we write to .
 			outputDir, _ := utils.TempDir(fs, "", "output")
