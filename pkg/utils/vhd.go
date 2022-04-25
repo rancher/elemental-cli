@@ -44,7 +44,7 @@ type VHDHeader struct {
 	DiskGeometry       [4]byte   // This field stores the cylinder, heads, and sectors per track value for the hard disk.
 	DiskType           [4]byte   // Fixed = 2, Dynamic = 3, Differencing = 4
 	Checksum           [4]byte   // This field holds a basic checksum of the hard disk footer. It is just a one’s complement of the sum of all the bytes in the footer without the checksum field.
-	UniqueId           [16]byte  // This is a 128-bit universally unique identifier (UUID).
+	UniqueID           [16]byte  // This is a 128-bit universally unique identifier (UUID).
 	SavedState         [1]byte   // This field holds a one-byte flag that describes whether the system is in saved state. If the hard disk is in the saved state the value is set to 1
 	Reserved           [427]byte // This field contains zeroes.
 }
@@ -69,7 +69,7 @@ func newVHDFixed(size uint64) VHDHeader {
 	hexToField("00000002", header.DiskType[:]) // Fixed 0x00000002
 	hexToField("00000000", header.Checksum[:])
 	uuid := uuidPkg.Generate()
-	copy(header.UniqueId[:], uuid.String())
+	copy(header.UniqueID[:], uuid.String())
 	generateChecksum(header)
 	return header
 }
@@ -145,7 +145,7 @@ func chsCalculation(sectors uint64) chs {
 	}
 }
 
-// RawDiskToFixedVhd will write the proper header to a give os.File to convert it from a simple raw disk to a Fixed VHD
+// RawDiskToFixedVhd will write the proper header to a given os.File to convert it from a simple raw disk to a Fixed VHD
 // RawDiskToFixedVhd makes no effort into opening/closing/checking if the file exists
 func RawDiskToFixedVhd(diskFile *os.File) {
 	info, _ := diskFile.Stat()

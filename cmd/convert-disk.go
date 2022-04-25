@@ -18,10 +18,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/rancher-sandbox/elemental/pkg/action"
 	"strings"
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
+	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
