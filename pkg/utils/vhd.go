@@ -56,8 +56,8 @@ func newVHDFixed(size uint64) VHDHeader {
 	hexToField("ffffffffffffffff", header.DataOffset[:])
 	t := uint32(time.Now().Unix() - 946684800)
 	binary.BigEndian.PutUint32(header.Timestamp[:], t)
-	hexToField("656C656D656E74616C", header.CreatorApplication[:]) // Cos
-	hexToField("73757365", header.CreatorHostOS[:])                // SUSE
+	hexToField("656c656d", header.CreatorApplication[:]) // Cos
+	hexToField("73757365", header.CreatorHostOS[:])      // SUSE
 	binary.BigEndian.PutUint64(header.OriginalSize[:], size)
 	binary.BigEndian.PutUint64(header.CurrentSize[:], size)
 	// Divide size into 512 to get the total sectors
@@ -70,13 +70,13 @@ func newVHDFixed(size uint64) VHDHeader {
 	hexToField("00000000", header.Checksum[:])
 	uuid := uuidPkg.Generate()
 	copy(header.UniqueID[:], uuid.String())
-	generateChecksum(header)
+	generateChecksum(&header)
 	return header
 }
 
 // generateChecksum generates the checksum of the vhd header
 // Lifted from the official VHD Format Spec
-func generateChecksum(header VHDHeader) {
+func generateChecksum(header *VHDHeader) {
 	buffer := new(bytes.Buffer)
 	_ = binary.Write(buffer, binary.BigEndian, header)
 	checksum := 0
