@@ -268,7 +268,7 @@ var _ = Describe("Runtime Actions", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 		})
-		It("Transforms raw image into GCE image", func() {
+		It("Transforms raw image into GCE image", Label("gce"), func() {
 			tmpDir, err := utils.TempDir(fs, "", "")
 			defer fs.RemoveAll(tmpDir)
 			Expect(err).ToNot(HaveOccurred())
@@ -283,9 +283,10 @@ var _ = Describe("Runtime Actions", func() {
 			// Log should have the rounded size (1Gb)
 			Expect(memLog.String()).To(ContainSubstring(strconv.Itoa(1 * 1024 * 1024 * 1024)))
 			// Should be a tar file
-			Expect(dockerArchive.IsArchivePath(filepath.Join(tmpDir, "disk.raw.tar.gz"))).To(BeTrue())
+			realPath, _ := fs.RawPath(tmpDir)
+			Expect(dockerArchive.IsArchivePath(filepath.Join(realPath, "disk.raw.tar.gz"))).To(BeTrue())
 		})
-		It("Transforms raw image into Azure image", Label("test"), func() {
+		It("Transforms raw image into Azure image", func() {
 			tmpDir, err := utils.TempDir(fs, "", "")
 			defer fs.RemoveAll(tmpDir)
 			Expect(err).ToNot(HaveOccurred())
@@ -318,7 +319,7 @@ var _ = Describe("Runtime Actions", func() {
 			Expect(hex.EncodeToString(header.Features[:])).To(Equal("00000002"))
 			Expect(hex.EncodeToString(header.DataOffset[:])).To(Equal("ffffffffffffffff"))
 		})
-		It("Transforms raw image into Azure image (really small image)", Label("test"), func() {
+		It("Transforms raw image into Azure image (really small image)", func() {
 			// This tests that the resize works for extreme small images
 			// Not sure if we ever will enconuter them (less than 1 Mb images?) but just in case
 			tmpDir, err := utils.TempDir(fs, "", "")

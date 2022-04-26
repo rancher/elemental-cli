@@ -164,7 +164,7 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 	// The RAW image file must have a size in an increment of 1 GB. For example, the file must be either 10 GB or 11 GB but not 10.5 GB.
 	// The disk image filename must be disk.raw.
 	// The compressed file must be a .tar.gz file that uses gzip compression and the --format=oldgnu option for the tar utility.
-	logger.Info("Transforming raw image into azure format")
+	logger.Info("Transforming raw image into gce format")
 	actImg, err := fs.Open(source)
 	if err != nil {
 		return err
