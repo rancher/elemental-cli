@@ -58,10 +58,12 @@ func BuildISORun(cfg *v1.BuildConfig) (err error) {
 		return err
 	}
 
-	err = utils.MkdirAll(cfg.Fs, cfg.OutDir, constants.DirPerm)
-	if err != nil {
-		cfg.Logger.Errorf("Failed creating output folder: %s", cfg.OutDir)
-		return err
+	if cfg.OutDir != "" {
+		err = utils.MkdirAll(cfg.Fs, cfg.OutDir, constants.DirPerm)
+		if err != nil {
+			cfg.Logger.Errorf("Failed creating output folder: %s", cfg.OutDir)
+			return err
+		}
 	}
 
 	cfg.Logger.Infof("Preparing squashfs root...")
