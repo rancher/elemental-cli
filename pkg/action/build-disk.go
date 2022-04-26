@@ -185,7 +185,8 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 	// Tar gz the image
 	logger.Infof("Compressing raw image into a tar.gz")
 	// Create destination file
-	file, err := os.Create(fmt.Sprintf("%s.tar.gz", source))
+	file, err := fs.Create(fmt.Sprintf("%s.tar.gz", source))
+	logger.Debugf(fmt.Sprintf("destination: %s.tar.gz", source))
 	if err != nil {
 		return err
 	}
@@ -232,27 +233,27 @@ func Raw2Azure(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) err
 	// All VHDs on Azure must have a virtual size aligned to 1 MB (1024 × 1024 bytes)
 	// The Hyper-V virtual hard disk (VHDX) format isn't supported in Azure, only fixed VHD
 	logger.Info("Transforming raw image into azure format")
-	actImg, err := fs.Open(source)
-	if err != nil {
-		return err
-	}
-	info, _ := actImg.Stat()
-	actualSize := info.Size()
-	finalSizeBytes := ((actualSize + MB - 1) / MB) * MB
-	logger.Infof("Resizing img from %d to %d", actualSize, finalSizeBytes)
-	// REMEMBER TO SEEK!
-	_, _ = actImg.Seek(0, io.SeekEnd)
-	_ = actImg.Truncate(finalSizeBytes)
-	_ = actImg.Close()
 	// Copy raw to new image with VHD appended
-	err = utils.CopyFile(fs, source, fmt.Sprintf("%s.vhd", source))
+	err := utils.CopyFile(fs, source, fmt.Sprintf("%s.vhd", source))
 	if err != nil {
 		return err
 	}
 	// Open it
-	vhdFile, err := fs.OpenFile(fmt.Sprintf("%s.vhd", source), os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
+	vhdFile, _ := fs.OpenFile(fmt.Sprintf("%s.vhd", source), os.O_APPEND|os.O_WRONLY, 0600)
+	// Calculate rounded size
+	info, _ := vhdFile.Stat()
+	actualSize := info.Size()
+	finalSizeBytes := ((actualSize + MB - 1) / MB) * MB
+	// Don't forget to remove 512 bytes for the header that we are going to add afterwards!
+	finalSizeBytes = finalSizeBytes - 512
+	// For smaller than 1 MB images, this calculation doesn't work, so we round up to 1 MB
+	if finalSizeBytes == 0 {
+		finalSizeBytes = 1*1024*1024 - 512
+	}
+	if actualSize != finalSizeBytes {
+		logger.Infof("Resizing img from %d to %d", actualSize, finalSizeBytes+512)
+		_, _ = vhdFile.Seek(0, io.SeekEnd)
+		_ = vhdFile.Truncate(finalSizeBytes)
 	}
 	// Transform it to VHD
 	utils.RawDiskToFixedVhd(vhdFile)
