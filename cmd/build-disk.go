@@ -52,7 +52,7 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				configDir = "."
 			}
 
-			cfg, err := config.ReadConfigBuild(configDir, mounter, false)
+			cfg, err := config.ReadConfigBuild(configDir, mounter)
 			if err != nil {
 				return err
 			}
