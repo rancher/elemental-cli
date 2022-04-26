@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
