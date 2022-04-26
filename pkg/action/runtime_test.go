@@ -356,7 +356,6 @@ var _ = Describe("Runtime Actions", func() {
 		})
 
 	})
-
 	Describe("Install Action", Label("install"), func() {
 		var device, cmdFail string
 		var err error
