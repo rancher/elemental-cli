@@ -113,8 +113,6 @@ const (
 
 	// Eject script
 	EjectScript = "#!/bin/sh\n/usr/bin/eject -rmF"
-
-	BuildDiskDefaultRepo = "quay.io/costoolkit/releases-green"
 )
 
 func GetCloudInitPaths() []string {

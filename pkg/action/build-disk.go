@@ -49,7 +49,7 @@ func BuildDiskRun(cfg *v1.BuildConfig, imgType string, arch string, oemLabel str
 	}
 
 	if len(cfg.Config.Repos) == 0 {
-		msg := fmt.Sprintf("no varepositories configured for arch %s", arch)
+		msg := fmt.Sprintf("no repositories configured for arch %s", arch)
 		cfg.Logger.Error(msg)
 		return errors.New(msg)
 	}
