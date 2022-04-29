@@ -18,12 +18,10 @@ package action
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
-	"github.com/rancher-sandbox/elemental/pkg/partitioner"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 )
@@ -140,12 +138,12 @@ func InstallRun(config *v1.RunConfig) (err error) { //nolint:gocyclo
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
 
-	disk := partitioner.NewDisk(
+	/*disk := partitioner.NewDisk(
 		config.Target,
 		partitioner.WithRunner(config.Runner),
 		partitioner.WithFS(config.Fs),
 		partitioner.WithLogger(config.Logger),
-	)
+	)*/
 
 	err = installHook(config, cnst.BeforeInstallHook, false)
 	if err != nil {
@@ -164,10 +162,10 @@ func InstallRun(config *v1.RunConfig) (err error) { //nolint:gocyclo
 	}
 
 	// Check device valid
-	if !disk.Exists() {
+	/*if !disk.Exists() {
 		config.Logger.Errorf("Disk %s does not exist", config.Target)
 		return fmt.Errorf("disk %s does not exist", config.Target)
-	}
+	}*/
 
 	// Check no-format flag
 	if config.NoFormat {

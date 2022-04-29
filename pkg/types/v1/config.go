@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"k8s.io/mount-utils"
@@ -101,9 +102,6 @@ type RunConfigNew struct {
 	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
 	PowerOff       bool     `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
 	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-	//GrubDefEntry   string `yaml:"GRUB_ENTRY_NAME,omitempty" mapstructure:"GRUB_ENTRY_NAME"`
-
-	Tty string `yaml:"tty,omitempty" mapstructure:"tty"`
 
 	Meta map[string]interface{} `mapstructure:",remain"`
 	Config
@@ -111,17 +109,20 @@ type RunConfigNew struct {
 
 // InstallSpec struct represents all the installation action details
 type InstallSpec struct {
-	Target      string       `yaml:"target,omitempty" mapstructure:"target"`
-	Firmware    string       `yaml:"firmware,omitempty" mapstructure:"firmware"`
-	PartTable   string       `yaml:"partition-table,omitempty" mapstructure:"partition-table"`
-	Partitions  PartitionMap `yaml:"partitions,omitempty" mapstructure:"partitions"`
-	NoFormat    bool         `yaml:"no-format,omitempty" mapstructure:"no-format"`
-	Force       bool         `yaml:"force,omitempty" mapstructure:"force"`
-	CloudInit   string       `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
-	Iso         string       `yaml:"iso,omitempty" mapstructure:"iso"`
-	ActiveImg   Image        `yaml:"system,omitempty" mapstructure:"system"`
-	RecoveryImg Image        `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	PassiveImg  Image
+	Target       string       `yaml:"target,omitempty" mapstructure:"target"`
+	Firmware     string       `yaml:"firmware,omitempty" mapstructure:"firmware"`
+	PartTable    string       `yaml:"partition-table,omitempty" mapstructure:"partition-table"`
+	Partitions   PartitionMap `yaml:"partitions,omitempty" mapstructure:"partitions"`
+	NoFormat     bool         `yaml:"no-format,omitempty" mapstructure:"no-format"`
+	Force        bool         `yaml:"force,omitempty" mapstructure:"force"`
+	CloudInit    string       `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
+	Iso          string       `yaml:"iso,omitempty" mapstructure:"iso"`
+	GrubDefEntry string       `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
+	GrubTty      string       `yaml:"grub-tty,omitempty" mapstructure:"grub-tty"`
+	ActiveImg    Image        `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg  Image        `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	PassiveImg   Image
+	GrubConf     string
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB
@@ -137,6 +138,16 @@ type Partition struct {
 }
 
 type PartitionList []*Partition
+
+// Gets a partitions by its name from the PartitionList
+func (pl PartitionList) GetByName(name string) *Partition {
+	for _, p := range pl {
+		if p.Name == name {
+			return p
+		}
+	}
+	return nil
+}
 
 type PartitionMap map[string]*Partition
 
@@ -165,7 +176,8 @@ func (pm PartitionMap) CustomUnmarshal(data interface{}) (bool, error) {
 	return true, nil
 }
 
-func (pm PartitionMap) OrderedPartitions() PartitionList {
+// OrderedByLayoutPartitions sorts partitions according to the default layout
+func (pm PartitionMap) OrderedByLayoutPartitions() PartitionList {
 	var part *Partition
 	var present bool
 
@@ -174,6 +186,32 @@ func (pm PartitionMap) OrderedPartitions() PartitionList {
 		if part, present = pm[name]; present {
 			partitions = append(partitions, part)
 		}
+	}
+	return partitions
+}
+
+// OrderedByMountPointPartitions sorts partitions according to its mountpoint, ignores partitions
+// with an empty mountpoint, these are excluded
+func (pm PartitionMap) OrderedByMountPointPartitions(descending bool) PartitionList {
+	mountPointKeys := map[string]string{}
+	mountPoints := []string{}
+	partitions := PartitionList{}
+
+	for k, v := range pm {
+		if v.MountPoint != "" {
+			mountPointKeys[v.MountPoint] = k
+			mountPoints = append(mountPoints, v.MountPoint)
+		}
+	}
+
+	if descending {
+		sort.Sort(sort.Reverse(sort.StringSlice(mountPoints)))
+	} else {
+		sort.Strings(mountPoints)
+	}
+
+	for _, mnt := range mountPoints {
+		partitions = append(partitions, pm[mountPointKeys[mnt]])
 	}
 	return partitions
 }
@@ -215,15 +253,6 @@ func (im ImageMap) GetPassive() *Image {
 
 func (im ImageMap) GetRecovery() *Image {
 	return im[constants.RecoveryImgName]
-}
-
-func (pl PartitionList) GetByName(name string) *Partition {
-	for _, p := range pl {
-		if p.Name == name {
-			return p
-		}
-	}
-	return nil
 }
 
 // LiveISO represents the configurations needed for a live ISO image
