@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/rancher-sandbox/elemental/pkg/cloudinit"
@@ -241,13 +242,47 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 	}
 
 	return &v1.InstallSpec{
-		Firmware:    firmware,
-		PartTable:   v1.GPT,
-		Partitions:  NewInstallParitionMap(),
-		ActiveImg:   activeImg,
-		RecoveryImg: recoveryImg,
-		PassiveImg:  passiveImg,
+		Firmware:     firmware,
+		PartTable:    v1.GPT,
+		Partitions:   NewInstallParitionMap(),
+		GrubDefEntry: constants.GrubDefEntry,
+		GrubConf:     constants.GrubConf,
+		ActiveImg:    activeImg,
+		RecoveryImg:  recoveryImg,
+		PassiveImg:   passiveImg,
 	}
+}
+
+func AddFirmwarePartitions(i *v1.InstallSpec) error {
+	if i.Partitions == nil {
+		return fmt.Errorf("nil partitions map")
+	}
+	if i.Firmware == v1.EFI && i.PartTable == v1.GPT {
+		i.Partitions[constants.EfiPartName] = &v1.Partition{
+			Label:      constants.EfiLabel,
+			Size:       constants.EfiSize,
+			Name:       constants.EfiPartName,
+			FS:         constants.EfiFs,
+			MountPoint: constants.EfiDir,
+			Flags:      []string{v1.ESP},
+		}
+	} else if i.Firmware == v1.BIOS && i.PartTable == v1.GPT {
+		i.Partitions[constants.BiosPartName] = &v1.Partition{
+			Label:      "",
+			Size:       constants.BiosSize,
+			Name:       constants.BiosPartName,
+			FS:         "",
+			MountPoint: "",
+			Flags:      []string{v1.BIOS},
+		}
+	} else {
+		statePart, ok := i.Partitions[constants.StatePartName]
+		if !ok {
+			return fmt.Errorf("nil state partition")
+		}
+		statePart.Flags = []string{v1.BOOT}
+	}
+	return nil
 }
 
 func NewInstallParitionMap() v1.PartitionMap {

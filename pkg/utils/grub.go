@@ -29,10 +29,10 @@ import (
 
 // Grub is the struct that will allow us to install grub to the target device
 type Grub struct {
-	config *v1.RunConfig
+	config v1.Config
 }
 
-func NewGrub(config *v1.RunConfig) *Grub {
+func NewGrub(config v1.Config) *Grub {
 	g := &Grub{
 		config: config,
 	}
@@ -41,7 +41,7 @@ func NewGrub(config *v1.RunConfig) *Grub {
 }
 
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install() (err error) { // nolint:gocyclo
+func (g Grub) Install(i *v1.InstallSpec) (err error) { // nolint:gocyclo
 	var grubargs []string
 	var arch, grubdir, tty, finalContent string
 
@@ -53,7 +53,7 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 	}
 	g.config.Logger.Info("Installing GRUB..")
 
-	if g.config.Tty == "" {
+	if i.GrubTty == "" {
 		// Get current tty and remove /dev/ from its name
 		out, err := g.config.Runner.Run("tty")
 		tty = strings.TrimPrefix(strings.TrimSpace(string(out)), "/dev/")
@@ -61,12 +61,10 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 			return err
 		}
 	} else {
-		tty = g.config.Tty
+		tty = i.GrubTty
 	}
 
-	efiExists, _ := Exists(g.config.Fs, cnst.EfiDevice)
-
-	if g.config.ForceEfi || efiExists {
+	if i.Firmware == v1.EFI {
 		g.config.Logger.Infof("Installing grub efi for arch %s", arch)
 		grubargs = append(
 			grubargs,
@@ -75,18 +73,18 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 		)
 	}
 
-	statePart := g.config.Partitions.GetByName(cnst.StatePartName)
-	activeImg := g.config.Images.GetActive()
-	if statePart == nil || activeImg == nil {
+	statePart := i.Partitions[cnst.StatePartName]
+	activeMountPoint := i.ActiveImg.MountPoint
+	if statePart == nil || activeMountPoint == "" || statePart.MountPoint == "" {
 		g.config.Logger.Errorf("State partition and/or Active image configuration is missing")
 		return errors.New("Failed setting grub arguments")
 	}
 
 	grubargs = append(
 		grubargs,
-		fmt.Sprintf("--root-directory=%s", activeImg.MountPoint),
+		fmt.Sprintf("--root-directory=%s", activeMountPoint),
 		fmt.Sprintf("--boot-directory=%s", statePart.MountPoint),
-		"--removable", g.config.Target,
+		"--removable", i.Target,
 	)
 
 	g.config.Logger.Debugf("Running grub with the following args: %s", grubargs)
@@ -108,9 +106,9 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 	}
 	g.config.Logger.Infof("Found grub config dir %s", grubdir)
 
-	grubConf, err := g.config.Fs.ReadFile(filepath.Join(activeImg.MountPoint, g.config.GrubConf))
+	grubConf, err := g.config.Fs.ReadFile(filepath.Join(activeMountPoint, i.GrubConf))
 	if err != nil {
-		g.config.Logger.Errorf("Failed reading grub config file: %s", filepath.Join(activeImg.MountPoint, g.config.GrubConf))
+		g.config.Logger.Errorf("Failed reading grub config file: %s", filepath.Join(activeMountPoint, i.GrubConf))
 		return err
 	}
 
@@ -132,13 +130,13 @@ func (g Grub) Install() (err error) { // nolint:gocyclo
 		finalContent = string(grubConf)
 	}
 
-	g.config.Logger.Infof("Copying grub contents from %s to %s", g.config.GrubConf, fmt.Sprintf("%s/grub.cfg", grubdir))
+	g.config.Logger.Infof("Copying grub contents from %s to %s", i.GrubConf, fmt.Sprintf("%s/grub.cfg", grubdir))
 	_, err = grubConfTarget.WriteString(finalContent)
 	if err != nil {
 		return err
 	}
 
-	g.config.Logger.Infof("Grub install to device %s complete", g.config.Target)
+	g.config.Logger.Infof("Grub install to device %s complete", i.Target)
 	return nil
 }
 
