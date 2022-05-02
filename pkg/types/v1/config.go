@@ -97,13 +97,12 @@ type RunConfig struct {
 }
 
 type RunConfigNew struct {
-	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
-	NoVerify       bool     `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
-	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
-	PowerOff       bool     `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
-	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-
-	Meta map[string]interface{} `mapstructure:",remain"`
+	Strict         bool        `yaml:"strict,omitempty" mapstructure:"strict"`
+	NoVerify       bool        `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	Reboot         bool        `yaml:"reboot,omitempty" mapstructure:"reboot"`
+	PowerOff       bool        `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
+	CloudInitPaths []string    `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	EjectCD        bool        `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
 	Config
 }
 
@@ -123,6 +122,19 @@ type InstallSpec struct {
 	RecoveryImg  Image        `yaml:"recovery,omitempty" mapstructure:"recovery"`
 	PassiveImg   Image
 	GrubConf     string
+}
+
+// ResetSpec struct represents all the reset action details
+type ResetSpec struct {
+	FormatPersistent bool   `yaml:"format,omitempty" mapstructure:"format"`
+	GrubDefEntry     string `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
+	GrubTty          string `yaml:"grub-tty,omitempty" mapstructure:"grub-tty"`
+	ActiveImg        Image  `yaml:"system,omitempty" mapstructure:"system"`
+	PassiveImg       Image
+	Partitions       PartitionMap
+	Target           string
+	Efi              bool
+	GrubConf         string
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB

@@ -325,6 +325,100 @@ func NewInstallParitionMap() v1.PartitionMap {
 	return partitions
 }
 
+// NewResetSpec returns a ResetSpec struct all based on defaults and basic and current host state
+func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
+	imgSource := v1.NewEmptySrc()
+	partitions := v1.PartitionMap{}
+
+	//TODO find a way to pre-load current state values such as labels
+	if !utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) &&
+		!utils.BootedFrom(cfg.Runner, constants.SystemLabel) {
+		return nil, fmt.Errorf("reset can only be called from the recovery system")
+	}
+
+	efiExists, _ := utils.Exists(cfg.Fs, constants.EfiDevice)
+
+	if efiExists {
+		partEfi, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.EfiLabel, 1)
+		if err != nil {
+			cfg.Logger.Errorf("EFI partition not found!")
+			return nil, err
+		}
+		if partEfi.MountPoint == "" {
+			partEfi.MountPoint = constants.EfiDir
+		}
+		partEfi.Name = constants.EfiPartName
+		partitions[constants.EfiPartName] = partEfi
+	}
+
+	//TODO find a way to preload state label
+	partState, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.StateLabel, 1)
+	if err != nil {
+		cfg.Logger.Errorf("state partition '%s' not found", constants.StateLabel)
+		return nil, err
+	}
+	if partState.MountPoint == "" {
+		partState.MountPoint = constants.StateDir
+	}
+	partState.Name = constants.StatePartName
+	partitions[constants.StatePartName] = partState
+	target := partState.Disk
+
+	//TODO find a way to preload OEMLabel
+	// Only add it if it exists, not a hard requirement
+	partOEM, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.OEMLabel, 1)
+	if err == nil {
+		if partOEM.MountPoint == "" {
+			partOEM.MountPoint = constants.OEMDir
+		}
+		partOEM.Name = constants.OEMPartName
+		partitions[constants.OEMPartName] = partOEM
+	} else {
+		cfg.Logger.Warnf("no OEM partition found")
+	}
+
+	//TODO find a way to preload PersistentLabel
+	// Only add it if it exists, not a hard requirement
+	partPersistent, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.PersistentLabel, 1)
+	if err == nil {
+		if partPersistent.MountPoint == "" {
+			partPersistent.MountPoint = constants.PersistentDir
+		}
+		partPersistent.Name = constants.PersistentPartName
+		partitions[constants.PersistentPartName] = partPersistent
+	} else {
+		cfg.Logger.Warnf("no Persistent partition found")
+	}
+
+	if utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) {
+		imgSource = v1.NewDirSrc(constants.IsoBaseTree)
+	} else {
+		imgSource = v1.NewFileSrc(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+	}
+	activeFile := filepath.Join(partState.MountPoint, "cOS", constants.ActiveImgFile)
+	return &v1.ResetSpec{
+		Target:       target,
+		Partitions:   partitions,
+		Efi:          efiExists,
+		GrubDefEntry: constants.GrubDefEntry,
+		GrubConf:     constants.GrubConf,
+		ActiveImg: v1.Image{
+			Label:      constants.ActiveLabel,
+			Size:       constants.ImgSize,
+			File:       activeFile,
+			FS:         constants.LinuxImgFs,
+			Source:     imgSource,
+			MountPoint: constants.ActiveDir,
+		},
+		PassiveImg: v1.Image{
+			File:   filepath.Join(partState.MountPoint, "cOS", constants.PassiveImgFile),
+			Label:  constants.PassiveLabel,
+			Source: v1.NewFileSrc(activeFile),
+			FS:     constants.LinuxImgFs,
+		},
+	}, nil
+}
+
 func NewISO() *v1.LiveISO {
 	return &v1.LiveISO{
 		Label:       constants.ISOLabel,
