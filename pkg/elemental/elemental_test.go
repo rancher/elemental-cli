@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	conf "github.com/rancher-sandbox/elemental/pkg/config"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
@@ -86,7 +87,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			for _, part := range parts {
 				part.Path = "/some/device"
 			}
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 		})
 
 		It("Mounts disk partitions", func() {
@@ -121,7 +122,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			for _, part := range parts {
 				part.Path = "/some/device"
 			}
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 			err = el.MountPartitions(parts.OrderedByMountPointPartitions(false))
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -142,7 +143,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		var el *elemental.Elemental
 		var img *v1.Image
 		BeforeEach(func() {
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 			img = &v1.Image{MountPoint: "/some/mountpoint"}
 		})
 
@@ -171,7 +172,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		var img *v1.Image
 		BeforeEach(func() {
 			runner.ReturnValue = []byte("/dev/loop")
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 			img = &v1.Image{MountPoint: "/some/mountpoint"}
 			Expect(el.MountImage(img)).To(BeNil())
 			Expect(img.LoopDevice).To(Equal("/dev/loop"))
@@ -206,7 +207,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 				Source:     v1.NewDirSrc(cnst.IsoBaseTree),
 			}
 			_ = utils.MkdirAll(fs, cnst.IsoBaseTree, cnst.DirPerm)
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 		})
 
 		It("Creates a new file system image", func() {
@@ -232,7 +233,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 
 	Describe("FormatPartition", Label("FormatPartition", "partition", "format"), func() {
 		It("Reformats an already existing partition", func() {
-			el := elemental.NewElemental(*config)
+			el := elemental.NewElemental(config)
 			part := &v1.Partition{
 				Path:  "/dev/device1",
 				FS:    "ext4",
@@ -253,7 +254,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		BeforeEach(func() {
 			cInit = &v1mock.FakeCloudInitRunner{ExecStages: []string{}, Error: false}
 			config.CloudInitRunner = cInit
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 			install = conf.NewInstallSpec(*config)
 			install.Target = "/some/device"
 
@@ -404,9 +405,9 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			destDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).ShouldNot(HaveOccurred())
 			cmdFail = ""
-			el = elemental.NewElemental(*config)
+			el = elemental.NewElemental(config)
 			img = &v1.Image{
-				FS:         "ext2",
+				FS:         constants.LinuxImgFs,
 				Size:       16,
 				Source:     v1.NewDirSrc(sourceDir),
 				MountPoint: destDir,
@@ -431,6 +432,16 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		It("Deploys an image from a directory and leaves it unmounted", func() {
 			Expect(el.DeployImage(img, false)).To(BeNil())
 		})
+		It("Deploys an squashfs image from a directory", func() {
+			img.FS = constants.SquashFs
+			Expect(el.DeployImage(img, true)).To(BeNil())
+			Expect(runner.MatchMilestones([][]string{
+				{
+					"mksquashfs", "/tmp/elemental-tmp", "/tmp/elemental/image.img",
+					"-b", "1024k", "-comp", "xz", "-Xbcj", "x86",
+				},
+			}))
+		})
 		It("Deploys a file image and mounts it", func() {
 			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
@@ -452,6 +463,28 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			mounter.ErrorOnMount = true
 			Expect(el.DeployImage(img, true)).NotTo(BeNil())
 		})
+		It("Deploys a file image and fails to label it", func() {
+			sourceImg := "/source.img"
+			_, err := fs.Create(sourceImg)
+			Expect(err).To(BeNil())
+			destDir, err := utils.TempDir(fs, "", "elemental")
+			Expect(err).To(BeNil())
+			img.Source = v1.NewFileSrc(sourceImg)
+			img.MountPoint = destDir
+			cmdFail = "tune2fs"
+			Expect(el.DeployImage(img, true)).NotTo(BeNil())
+		})
+		It("Fails creating the squashfs filesystem", func() {
+			cmdFail = "mksquashfs"
+			img.FS = constants.SquashFs
+			Expect(el.DeployImage(img, true)).NotTo(BeNil())
+			Expect(runner.MatchMilestones([][]string{
+				{
+					"mksquashfs", "/tmp/elemental-tmp", "/tmp/elemental/image.img",
+					"-b", "1024k", "-comp", "xz", "-Xbcj", "x86",
+				},
+			}))
+		})
 		It("Fails formatting the image", func() {
 			cmdFail = "mkfs.ext2"
 			Expect(el.DeployImage(img, true)).NotTo(BeNil())
@@ -469,115 +502,68 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			Expect(el.DeployImage(img, false)).NotTo(BeNil())
 		})
 	})
-	Describe("CopyImage", Label("CopyImage"), func() {
-		var img *v1.Image
+	Describe("DumpSource", Label("dump"), func() {
+		var e *elemental.Elemental
+		var destDir string
+		var luet *v1mock.FakeLuet
 		BeforeEach(func() {
-			img = &v1.Image{}
+			var err error
+			luet = v1mock.NewFakeLuet()
+			config.Luet = luet
+			e = elemental.NewElemental(config)
+			destDir, err = utils.TempDir(fs, "", "elemental")
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 		It("Copies files from a directory source", func() {
 			sourceDir, err := utils.TempDir(fs, "", "elemental")
 			Expect(err).ShouldNot(HaveOccurred())
-			destDir, err := utils.TempDir(fs, "", "elemental")
-			Expect(err).ShouldNot(HaveOccurred())
-			img.Source = v1.NewDirSrc(sourceDir)
-			img.MountPoint = destDir
-			c := elemental.NewElemental(*config)
-			Expect(c.CopyImage(img)).To(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDirSrc(sourceDir))).To(BeNil())
 		})
 		It("Fails if source directory does not exist", func() {
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewDirSrc("/welp")
-			Expect(c.CopyImage(img)).ToNot(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDirSrc("/welp"))).ToNot(BeNil())
 		})
 		It("Unpacks a docker image to target", Label("docker"), func() {
-			luet := v1mock.NewFakeLuet()
-			config.Luet = luet
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewDockerSrc("docker/image:latest")
-			Expect(c.CopyImage(img)).To(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDockerSrc("docker/image:latest"))).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Unpacks a docker image to target with cosign validation", Label("docker", "cosign"), func() {
 			config.Cosign = true
-			luet := v1mock.NewFakeLuet()
-			config.Luet = luet
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewDockerSrc("docker/image:latest")
-			Expect(c.CopyImage(img)).To(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDockerSrc("docker/image:latest"))).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 			Expect(runner.CmdsMatch([][]string{{"cosign", "verify", "docker/image:latest"}}))
 		})
 		It("Fails cosign validation", Label("cosign"), func() {
 			runner.ReturnError = errors.New("cosign error")
 			config.Cosign = true
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewDockerSrc("docker/image:latest")
-			Expect(c.CopyImage(img)).NotTo(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDockerSrc("docker/image:latest"))).NotTo(BeNil())
 			Expect(runner.CmdsMatch([][]string{{"cosign", "verify", "docker/image:latest"}}))
 		})
 		It("Fails to unpack a docker image to target", Label("docker"), func() {
-			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
-			config.Luet = luet
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewDockerSrc("docker/image:latest")
-			Expect(c.CopyImage(img)).NotTo(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewDockerSrc("docker/image:latest"))).NotTo(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Copies image file to target", func() {
 			sourceImg := "/source.img"
 			_, err := fs.Create(sourceImg)
 			Expect(err).To(BeNil())
-			destDir, err := utils.TempDir(fs, "", "elemental")
-			Expect(err).To(BeNil())
-			img.Source = v1.NewFileSrc(sourceImg)
-			img.MountPoint = destDir
-			img.File = filepath.Join(destDir, "active.img")
-			c := elemental.NewElemental(*config)
-			_, err = fs.Stat(img.File)
+			destFile := filepath.Join(destDir, "active.img")
+			_, err = fs.Stat(destFile)
 			Expect(err).NotTo(BeNil())
-			Expect(c.CopyImage(img)).To(BeNil())
-			_, err = fs.Stat(img.File)
+			Expect(e.DumpSource(destFile, v1.NewFileSrc(sourceImg))).To(BeNil())
+			_, err = fs.Stat(destFile)
 			Expect(err).To(BeNil())
 		})
 		It("Fails to copy, source file is not present", func() {
-			sourceImg := "/source.img"
-			destDir := "whatever"
-			img.Source = v1.NewFileSrc(sourceImg)
-			img.MountPoint = destDir
-			c := elemental.NewElemental(*config)
-			Expect(c.CopyImage(img)).NotTo(BeNil())
-		})
-		It("Fails to set the label", Label("fails"), func() {
-			runner.ReturnError = errors.New("run error")
-			sourceImg := "/source.img"
-			_, err := fs.Create(sourceImg)
-			Expect(err).To(BeNil())
-			destDir, err := utils.TempDir(fs, "", "elemental")
-			Expect(err).To(BeNil())
-			img.Source = v1.NewFileSrc(sourceImg)
-			img.MountPoint = destDir
-			img.Label = "some_label"
-			img.FS = cnst.LinuxFs
-			img.File = filepath.Join(destDir, "active.img")
-			el := elemental.NewElemental(*config)
-			Expect(el.CopyImage(img)).NotTo(BeNil())
+			Expect(e.DumpSource("whatever", v1.NewFileSrc("/source.img"))).NotTo(BeNil())
 		})
 		It("Unpacks from channel to target", func() {
-			luet := v1mock.NewFakeLuet()
-			config.Luet = luet
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewChannelSrc("somechannel")
-			Expect(c.CopyImage(img)).To(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewChannelSrc("some/package"))).To(BeNil())
 			Expect(luet.UnpackChannelCalled()).To(BeTrue())
 		})
 		It("Fails to unpack from channel to target", func() {
-			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackFromChannelError = true
-			config.Luet = luet
-			c := elemental.NewElemental(*config)
-			img.Source = v1.NewChannelSrc("somechannel")
-			Expect(c.CopyImage(img)).NotTo(BeNil())
+			Expect(e.DumpSource(destDir, v1.NewChannelSrc("some/package"))).NotTo(BeNil())
 			Expect(luet.UnpackChannelCalled()).To(BeTrue())
 		})
 	})
@@ -599,19 +585,19 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 					cnst.ActiveLabel,
 				),
 			)
-			e := elemental.NewElemental(*config)
+			e := elemental.NewElemental(config)
 			Expect(e.CheckActiveDeployment([]string{cnst.ActiveLabel, cnst.PassiveLabel})).To(BeTrue())
 		})
 
 		It("Should not error out", func() {
 			runner.ReturnValue = []byte("")
-			e := elemental.NewElemental(*config)
+			e := elemental.NewElemental(config)
 			Expect(e.CheckActiveDeployment([]string{cnst.ActiveLabel, cnst.PassiveLabel})).To(BeFalse())
 		})
 	})
 	Describe("SelinuxRelabel", Label("SelinuxRelabel", "selinux"), func() {
 		It("Works", func() {
-			c := elemental.NewElemental(*config)
+			c := elemental.NewElemental(config)
 			// This is actually failing but not sure we should return an error
 			Expect(c.SelinuxRelabel("/", true)).ToNot(BeNil())
 			fs, cleanup, _ = vfst.NewTestFS(nil)
@@ -622,7 +608,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 	Describe("GetIso", Label("GetIso", "iso"), func() {
 		var e *elemental.Elemental
 		BeforeEach(func() {
-			e = elemental.NewElemental(*config)
+			e = elemental.NewElemental(config)
 		})
 		It("Gets the iso and returns the temporary where it is stored", func() {
 			tmpDir, err := utils.TempDir(fs, "", "elemental-test")
@@ -637,7 +623,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 		It("Fails if it cant find the iso", func() {
 			iso := "whatever"
-			e := elemental.NewElemental(*config)
+			e := elemental.NewElemental(config)
 			_, err := e.GetIso(iso)
 			Expect(err).ToNot(BeNil())
 		})
@@ -658,7 +644,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		var activeImg, recoveryImg *v1.Image
 		BeforeEach(func() {
 			activeImg, recoveryImg = nil, nil
-			e = elemental.NewElemental(*config)
+			e = elemental.NewElemental(config)
 		})
 		It("updates active image", func() {
 			activeImg = &v1.Image{}
@@ -702,7 +688,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 	Describe("CloudConfig", Label("CloudConfig", "cloud-config"), func() {
 		var e *elemental.Elemental
 		BeforeEach(func() {
-			e = elemental.NewElemental(*config)
+			e = elemental.NewElemental(config)
 		})
 		It("Copies the cloud config file", func() {
 			testString := "In a galaxy far far away..."
@@ -724,12 +710,12 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 	})
 	Describe("SetDefaultGrubEntry", Label("SetDefaultGrubEntry", "grub"), func() {
 		It("Sets the default grub entry without issues", func() {
-			el := elemental.NewElemental(*config)
+			el := elemental.NewElemental(config)
 			Expect(el.SetDefaultGrubEntry("/mountpoint", "default_entry")).To(BeNil())
 		})
 		It("Fails setting grubenv", func() {
 			runner.ReturnError = errors.New("failure")
-			el := elemental.NewElemental(*config)
+			el := elemental.NewElemental(config)
 			Expect(el.SetDefaultGrubEntry("/mountpoint", "default_entry")).NotTo(BeNil())
 		})
 	})
