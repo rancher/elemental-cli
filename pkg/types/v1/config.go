@@ -105,7 +105,7 @@ type RunConfigNew struct {
 
 	Tty string `yaml:"tty,omitempty" mapstructure:"tty"`
 
-	Install InstallSpec
+	Meta map[string]interface{} `mapstructure:",remain"`
 	Config
 }
 

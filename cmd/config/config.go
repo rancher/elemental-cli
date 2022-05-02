@@ -227,6 +227,39 @@ func ReadConfigRunNew(configDir string, mounter mount.Interface) (*v1.RunConfigN
 	return cfg, nil
 }
 
+func newMetaDecoder(result interface{}) (*mapstructure.Decoder, error) {
+	decoConfig := &mapstructure.DecoderConfig{}
+	decoConfig.DecodeHook = mapstructure.ComposeDecodeHookFunc(
+		UnmarshalerHook(),
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+	)
+	decoConfig.ZeroFields = true
+	decoConfig.Result = result
+	deco, err := mapstructure.NewDecoder(decoConfig)
+	return deco, err
+}
+
+func readNestedSpec(r *v1.RunConfigNew, nestedSpec interface{}, nestedTag string) error {
+	nested, ok := r.Meta[nestedTag]
+	if !ok {
+		// nothing to decode
+		return nil
+	}
+	deco, err := newMetaDecoder(nestedSpec)
+	if err != nil {
+		return fmt.Errorf("could not initialize metadata decoder: %v", err)
+	}
+	err = deco.Decode(nested)
+	return err
+}
+
+func ReadInstallSpec(r *v1.RunConfigNew) (*v1.InstallSpec, error) {
+	install := config.NewInstallSpec(r.Config)
+	err := readNestedSpec(r, install, "install")
+	return install, err
+}
+
 func configLogger(log v1.Logger, vfs v1.FS) {
 	// Set debug level
 	if viper.GetBool("debug") {

@@ -187,8 +187,7 @@ func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
 func NewRunConfigNew(opts ...GenericOptions) *v1.RunConfigNew {
 	config := NewConfig(opts...)
 	r := &v1.RunConfigNew{
-		Config:  *config,
-		Install: *NewInstallSpec(*config),
+		Config: *config,
 	}
 	return r
 }

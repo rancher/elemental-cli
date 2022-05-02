@@ -54,24 +54,27 @@ func NewInstallNewCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
 
+			spec, err := config.ReadInstallSpec(cfg)
+
 			// Override target installation device with arguments from cli
 			// TODO: this needs proper validation, see https://github.com/rancher-sandbox/elemental/issues/33
 			if len(args) == 1 {
-				cfg.Install.Target = args[0]
+				spec.Target = args[0]
 			}
 
-			if cfg.Install.Target == "" {
+			if spec.Target == "" {
 				return errors.New("at least a target device must be supplied")
 			}
 
 			cmd.SilenceUsage = true
 
-			cfg.Logger.Infof("Loaded config: %+v", cfg)
-			for _, part := range cfg.Install.Partitions {
+			cfg.Logger.Infof("Loaded run config: %+v", cfg)
+			cfg.Logger.Infof("Loaded spec config: %+v", spec)
+			for _, part := range spec.Partitions {
 				cfg.Logger.Infof("Loaded part: %+v", part)
 			}
-			cfg.Logger.Infof("Loaded system source: %+v", cfg.Install.ActiveImg.Source)
-			cfg.Logger.Infof("Loaded recovery source: %+v", cfg.Install.RecoveryImg.Source)
+			cfg.Logger.Infof("Loaded system source: %+v", spec.ActiveImg.Source)
+			cfg.Logger.Infof("Loaded recovery source: %+v", spec.RecoveryImg.Source)
 			return nil
 		},
 	}
