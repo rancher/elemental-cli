@@ -17,12 +17,15 @@ require (
 	github.com/jaypipes/ghw v0.9.1-0.20220404152016-2ea05cb6c17c
 	github.com/joho/godotenv v1.4.0
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mholt/archiver/v3 v3.5.1
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
 	github.com/mudler/luet v0.0.0-20220127164253-6f77fa2b3a72
 	github.com/mudler/yip v0.0.0-20220321143540-2617d71ea02a
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.0
+	github.com/otiai10/copy v1.2.1-0.20200916181228-26f84a0b1578
 	github.com/packethost/packngo v0.21.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
