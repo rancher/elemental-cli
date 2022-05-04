@@ -53,7 +53,7 @@ func NewInstallAction(cfg *v1.RunConfigNew, spec *v1.InstallSpec) *InstallAction
 
 // InstallRun will install the system from a given configuration
 func (i InstallAction) InstallRun() (err error) { //nolint:gocyclo
-	e := elemental.NewElemental(i.cfg.Config)
+	e := elemental.NewElemental(&i.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
 
@@ -108,7 +108,7 @@ func (i InstallAction) InstallRun() (err error) { //nolint:gocyclo
 		return err
 	}
 	// Install grub
-	grub := utils.NewGrub(i.cfg.Config)
+	grub := utils.NewGrub(&i.cfg.Config)
 	err = grub.Install(
 		i.spec.Target,
 		i.spec.ActiveImg.MountPoint,

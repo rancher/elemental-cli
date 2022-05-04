@@ -262,6 +262,15 @@ func ReadInstallSpec(r *v1.RunConfigNew) (*v1.InstallSpec, error) {
 	return install, err
 }
 
+func ReadResetSpec(r *v1.RunConfigNew) (*v1.ResetSpec, error) {
+	reset, err := config.NewResetSpec(r.Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed initializing reset spec: %v", err)
+	}
+	err = readNestedSpec(r, reset, "reset")
+	return reset, err
+}
+
 func configLogger(log v1.Logger, vfs v1.FS) {
 	// Set debug level
 	if viper.GetBool("debug") {

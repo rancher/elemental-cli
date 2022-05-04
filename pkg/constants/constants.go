@@ -65,6 +65,7 @@ const (
 	OEMDir                 = "/run/cos/oem"
 	PersistentDir          = "/run/cos/persistent"
 	ActiveDir              = "/run/cos/active"
+	TransitionDir          = "/run/cos/transition"
 	EfiDir                 = "/run/cos/efi"
 	RecoverySquashFile     = "recovery.squashfs"
 	IsoRootFile            = "rootfs.squashfs"
@@ -188,6 +189,18 @@ func GetBuildDiskDefaultPackages() map[string]string {
 	}
 }
 
+// GetPartitionDefaultLabels returns a map of default labels accible by partition name
+func GetPartitionDefaultLabels() map[string]string {
+	return map[string]string{
+		EfiPartName:        EfiLabel,
+		OEMPartName:        OEMLabel,
+		RecoveryPartName:   RecoveryLabel,
+		StatePartName:      StateLabel,
+		PersistentPartName: PersistentLabel,
+	}
+}
+
+// GetPartitionsOrder returns a slice of ordered partition names
 func GetPartitionsOrder() []string {
 	return []string{
 		BiosPartName,
@@ -199,6 +212,7 @@ func GetPartitionsOrder() []string {
 	}
 }
 
+// GetCustomizablePartitions returns a slice of configurable partition names
 func GetCustomizablePartitions() []string {
 	return []string{
 		OEMPartName,

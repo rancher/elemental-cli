@@ -88,7 +88,7 @@ var _ = Describe("Install action tests", func() {
 			_, err = fs.Create(device)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			spec = &config.Install
+			spec = conf.NewInstallSpec(config.Config)
 
 			partNum := 0
 			partedOut := printOutput

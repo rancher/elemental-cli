@@ -29,6 +29,7 @@ import (
 
 	"github.com/distribution/distribution/reference"
 	"github.com/joho/godotenv"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/twpayne/go-vfs"
@@ -254,21 +255,66 @@ func LoadEnvFile(fs v1.FS, file string) (map[string]string, error) {
 	return envMap, err
 }
 
-// GetUpgradeTempDir returns the dir for storing upgrade related temporal files
-// It will respect TMPDIR and use that if exists, fallback to try the persistent partition if its mounted
-// and finally the default /tmp/ dir
-func GetUpgradeTempDir(config *v1.RunConfig) string {
+func IsMounted(config *v1.Config, part *v1.Partition) (bool, error) {
+	if part.MountPoint == "" {
+		return false, nil
+	}
+	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
+	// for bind mounts here
+	notMnt, err := config.Mounter.IsLikelyNotMountPoint(part.MountPoint)
+	if err != nil {
+		return false, err
+	}
+	return !notMnt, nil
+}
+
+// HasSquashedRecovery returns true if a squashed recovery image is found in the system
+func HasSquashedRecovery(config *v1.Config, recovery *v1.Partition) (squashed bool, err error) {
+	if mnt, _ := IsMounted(config, recovery); !mnt {
+		tmpMountDir, err := TempDir(config.Fs, "", "elemental")
+		if err != nil {
+			config.Logger.Errorf("failed creating temporary dir: %v", err)
+			return false, err
+		}
+		defer config.Fs.RemoveAll(tmpMountDir)
+		err = config.Mounter.Mount(recovery.Path, tmpMountDir, "auto", []string{})
+		if err != nil {
+			config.Logger.Errorf("failed mounting recovery partition: %v", err)
+			return false, err
+		}
+		defer func() {
+			err = config.Mounter.Unmount(tmpMountDir)
+			if err != nil {
+				squashed = false
+			}
+		}()
+	}
+	return Exists(config.Fs, filepath.Join(cnst.UpgradeRecoveryDir, "cOS", cnst.RecoverySquashFile))
+}
+
+// GetElementalTempDir returns the dir for storing temporary files. It will respect TMPDIR and use
+// that if exists, fallback to persistent partition if mounted and finally the default /tmp/ dir.
+// This is specially useful when big temporary areas are required, such as creating squashfs images.
+func GetElementalTempDir(config *v1.Config) string {
+	fallback := filepath.Join("/", "tmp", "elemental-tmp")
 	// if we got a TMPDIR var, respect and use that
 	dir := os.Getenv("TMPDIR")
 	if dir != "" {
-		return filepath.Join(dir, "elemental-upgrade")
+		return filepath.Join(dir, "elemental-tmp")
+	}
+	parts, err := GetAllPartitions()
+	if err != nil {
+		return fallback
 	}
 	// Check persistent and if its mounted
-	persistent, err := GetFullDeviceByLabel(config.Runner, config.PersistentLabel, 5)
-	if err == nil && persistent.MountPoint != "" {
-		return filepath.Join(persistent.MountPoint, "elemental-upgrade")
+	pm := parts.GetPartitionMap()
+	persistent, ok := pm[constants.PersistentPartName]
+	if ok {
+		if mnt, _ := IsMounted(config, persistent); mnt {
+			return filepath.Join(persistent.MountPoint, "elemental-tmp")
+		}
 	}
-	return filepath.Join("/", "tmp", "elemental-upgrade")
+	return fallback
 }
 
 // IsLocalURI returns true if the uri has "file" scheme or no scheme and URI is
@@ -307,7 +353,7 @@ func IsHTTPURI(uri string) (bool, error) {
 
 // GetSource copies given source to destination, if source is a local path it simply
 // copies files, if source is a remote URL it tries to download URL to destination.
-func GetSource(config v1.Config, source string, destination string) error {
+func GetSource(config *v1.Config, source string, destination string) error {
 	local, err := IsLocalURI(source)
 	if err != nil {
 		config.Logger.Errorf("Not a valid url: %s", source)

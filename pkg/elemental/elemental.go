@@ -30,10 +30,10 @@ import (
 
 // Elemental is the struct meant to self-contain most utils and actions related to Elemental, like installing or applying selinux
 type Elemental struct {
-	config v1.Config
+	config *v1.Config
 }
 
-func NewElemental(config v1.Config) *Elemental {
+func NewElemental(config *v1.Config) *Elemental {
 	return &Elemental{
 		config: config,
 	}
@@ -181,9 +181,7 @@ func (e Elemental) MountPartition(part *v1.Partition, opts ...string) error {
 
 // UnmountPartition unmounts the given partition or does nothing if not mounted
 func (e Elemental) UnmountPartition(part *v1.Partition) error {
-	// Using IsLikelyNotMountPoint seams to be safe as we are not checking
-	// for bind mounts here
-	if notMnt, _ := e.config.Mounter.IsLikelyNotMountPoint(part.MountPoint); notMnt {
+	if mnt, _ := utils.IsMounted(e.config, part); !mnt {
 		e.config.Logger.Debugf("Not unmounting partition, %s doesn't look like mountpoint", part.MountPoint)
 		return nil
 	}
@@ -269,22 +267,51 @@ func (e Elemental) CreateFileSystemImage(img *v1.Image) error {
 func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 	var err error
 
+	target := img.MountPoint
 	if !img.Source.IsFile() {
-		//TODO add support for squashfs images
-		err = e.CreateFileSystemImage(img)
-		if err != nil {
-			return err
-		}
+		if img.FS != cnst.SquashFs {
+			err = e.CreateFileSystemImage(img)
+			if err != nil {
+				return err
+			}
 
-		err = e.MountImage(img, "rw")
-		if err != nil {
-			return err
+			err = e.MountImage(img, "rw")
+			if err != nil {
+				return err
+			}
+		} else {
+			//TODO set target as in upgrade?
+			target = utils.GetElementalTempDir(e.config)
+			err := utils.MkdirAll(e.config.Fs, target, cnst.DirPerm)
+			if err != nil {
+				return err
+			}
+			defer e.config.Fs.RemoveAll(target)
 		}
 	}
-	err = e.CopyImage(img)
+	err = e.DumpSource(target, img.Source)
 	if err != nil {
 		_ = e.UnmountImage(img)
 		return err
+	}
+	if !img.Source.IsFile() {
+		err = utils.CreateDirStructure(e.config.Fs, target)
+		if err != nil {
+			return err
+		}
+		if img.FS == cnst.SquashFs {
+			err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, target, img.File, cnst.GetDefaultSquashfsOptions())
+			if err != nil {
+				return err
+			}
+		}
+	} else if img.Label != "" && img.FS != cnst.SquashFs {
+		_, err = e.config.Runner.Run("tune2fs", "-L", img.Label, img.File)
+		if err != nil {
+			e.config.Logger.Errorf("Failed to apply label %s to $s", img.Label, img.File)
+			_ = e.config.Fs.Remove(img.File)
+			return err
+		}
 	}
 	if leaveMounted && img.Source.IsFile() {
 		err = e.MountImage(img, "rw")
@@ -301,16 +328,16 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 	return nil
 }
 
-// CopyImage sets the image data according to the image source type
-func (e *Elemental) CopyImage(img *v1.Image) error { // nolint:gocyclo
-	e.config.Logger.Infof("Copying %s image...", img.Label)
+// DumpSource sets the image data according to the image source type
+func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { // nolint:gocyclo
+	e.config.Logger.Infof("Copying %s source...", imgSrc.Value())
 	var err error
 
-	if img.Source.IsDocker() {
+	if imgSrc.IsDocker() {
 		if e.config.Cosign {
-			e.config.Logger.Infof("Running cosing verification for %s", img.Source.Value())
+			e.config.Logger.Infof("Running cosing verification for %s", imgSrc.Value())
 			out, err := utils.CosignVerify(
-				e.config.Fs, e.config.Runner, img.Source.Value(),
+				e.config.Fs, e.config.Runner, imgSrc.Value(),
 				e.config.CosignPubKey, v1.IsDebugLevel(e.config.Logger),
 			)
 			if err != nil {
@@ -318,48 +345,32 @@ func (e *Elemental) CopyImage(img *v1.Image) error { // nolint:gocyclo
 				return err
 			}
 		}
-		err = e.config.Luet.Unpack(img.MountPoint, img.Source.Value(), false)
+		err = e.config.Luet.Unpack(target, imgSrc.Value(), false)
 		if err != nil {
 			return err
 		}
-	} else if img.Source.IsDir() {
+	} else if imgSrc.IsDir() {
 		excludes := []string{"/mnt", "/proc", "/sys", "/dev", "/tmp", "/host", "/run"}
-		err = utils.SyncData(e.config.Fs, img.Source.Value(), img.MountPoint, excludes...)
+		err = utils.SyncData(e.config.Fs, imgSrc.Value(), target, excludes...)
 		if err != nil {
 			return err
 		}
-	} else if img.Source.IsChannel() {
-		err = e.config.Luet.UnpackFromChannel(img.MountPoint, img.Source.Value())
+	} else if imgSrc.IsChannel() {
+		err = e.config.Luet.UnpackFromChannel(target, imgSrc.Value())
+		if err != nil {
+			return err
+		}
+	} else if imgSrc.IsFile() {
+		err := utils.MkdirAll(e.config.Fs, filepath.Dir(target), cnst.DirPerm)
+		if err != nil {
+			return err
+		}
+		err = utils.CopyFile(e.config.Fs, imgSrc.Value(), target)
 		if err != nil {
 			return err
 		}
 	}
-
-	if img.Source.IsFile() {
-		err := utils.MkdirAll(e.config.Fs, filepath.Dir(img.File), cnst.DirPerm)
-		if err != nil {
-			return err
-		}
-		err = utils.CopyFile(e.config.Fs, img.Source.Value(), img.File)
-		if err != nil {
-			return err
-		}
-		if img.Label != "" && img.FS != cnst.SquashFs {
-			_, err = e.config.Runner.Run("tune2fs", "-L", img.Label, img.File)
-			if err != nil {
-				e.config.Logger.Errorf("Failed to apply label %s to $s", img.Label, img.File)
-				_ = e.config.Fs.Remove(img.File)
-				return err
-			}
-		}
-	} else {
-		err = utils.CreateDirStructure(e.config.Fs, img.MountPoint)
-		if err != nil {
-			fmt.Println("failed creating dir structure")
-			return err
-		}
-	}
-	e.config.Logger.Infof("Finished copying %s...", img.Label)
+	e.config.Logger.Infof("Finished copying %s into %s", imgSrc.Value(), target)
 	return nil
 }
 

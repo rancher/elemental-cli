@@ -97,12 +97,13 @@ type RunConfig struct {
 }
 
 type RunConfigNew struct {
-	Strict         bool        `yaml:"strict,omitempty" mapstructure:"strict"`
-	NoVerify       bool        `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
-	Reboot         bool        `yaml:"reboot,omitempty" mapstructure:"reboot"`
-	PowerOff       bool        `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
-	CloudInitPaths []string    `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-	EjectCD        bool        `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
+	Strict         bool                   `yaml:"strict,omitempty" mapstructure:"strict"`
+	NoVerify       bool                   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	Reboot         bool                   `yaml:"reboot,omitempty" mapstructure:"reboot"`
+	PowerOff       bool                   `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
+	CloudInitPaths []string               `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	EjectCD        bool                   `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
+	Meta           map[string]interface{} `mapstructure:",remain"`
 	Config
 }
 
@@ -137,6 +138,15 @@ type ResetSpec struct {
 	GrubConf         string
 }
 
+type UpgradeSpec struct {
+	RecoveryUpgrade    bool  `yaml:"recovery-upgrade,omitempty" mapstructure:"recovery-upgrade"`
+	ActiveImg          Image `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg        Image `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	Partitions         PartitionMap
+	BootedFromRecovery bool
+	SquashedRecovery   bool
+}
+
 // Partition struct represents a partition with its commonly configurable values, size in MiB
 type Partition struct {
 	Name       string
@@ -151,10 +161,37 @@ type Partition struct {
 
 type PartitionList []*Partition
 
-// Gets a partitions by its name from the PartitionList
+// GetPartitionMap gets a partition map mapped by partition name. Partitions
+// without a default name and not matching any default label are ignored.
+func (pl PartitionList) GetPartitionMap() PartitionMap {
+	pm := PartitionMap{}
+	for _, part := range pl {
+		if part == nil {
+			continue
+		}
+		for k, v := range constants.GetPartitionDefaultLabels() {
+			if part.Name == k || part.Label == v {
+				pm[k] = part
+			}
+		}
+	}
+	return pm
+}
+
+// GetByName gets a partitions by its name from the PartitionList
 func (pl PartitionList) GetByName(name string) *Partition {
 	for _, p := range pl {
 		if p.Name == name {
+			return p
+		}
+	}
+	return nil
+}
+
+// GetByLabel gets a partition by its label from the PartitionList
+func (pl PartitionList) GetByLabel(label string) *Partition {
+	for _, p := range pl {
+		if p.Label == label {
 			return p
 		}
 	}

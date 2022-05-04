@@ -325,10 +325,73 @@ func NewInstallParitionMap() v1.PartitionMap {
 	return partitions
 }
 
-// NewResetSpec returns a ResetSpec struct all based on defaults and basic and current host state
+// NewUpgradeSpec returns an UpgradeSpec struct all based on defaults and current host state
+func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
+	var recLabel, recFs, recMnt string
+
+	parts, err := utils.GetAllPartitions()
+	if err != nil {
+		return nil, fmt.Errorf("could not read host partitions")
+	}
+	partitionMap := parts.GetPartitionMap()
+
+	recPart, ok := partitionMap[constants.RecoveryPartName]
+	if !ok {
+		return nil, fmt.Errorf("recovery partition not found")
+	} else if recPart.MountPoint == "" {
+		recPart.MountPoint = constants.RecoveryDir
+	}
+
+	statePart, ok := partitionMap[constants.StatePartName]
+	if !ok {
+		return nil, fmt.Errorf("state partition not found")
+	} else if statePart.MountPoint == "" {
+		statePart.MountPoint = constants.StateDir
+	}
+
+	// TODO find a way to pre-load current state values such as SystemLabel
+	bootedRec := utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) || utils.BootedFrom(cfg.Runner, constants.SystemLabel)
+	squashedRec, err := utils.HasSquashedRecovery(&cfg, partitionMap[constants.RecoveryPartName])
+	if err != nil {
+		return nil, fmt.Errorf("failed checking for squashed recovery")
+	}
+
+	active := v1.Image{
+		File:       filepath.Join(statePart.MountPoint, "cOS", constants.TransitionImgFile),
+		Size:       constants.ImgSize,
+		Label:      constants.ActiveLabel,
+		FS:         constants.LinuxImgFs,
+		MountPoint: constants.TransitionDir,
+		Source:     v1.NewEmptySrc(), // if source is a dir it will copy from here, if it's a docker img it uses Config.DockerImg IN THAT ORDER!
+	}
+
+	if squashedRec {
+		recFs = constants.SquashFs
+	} else {
+		recLabel = constants.SystemLabel
+		recFs = constants.LinuxImgFs
+		recMnt = constants.TransitionDir
+	}
+	recovery := v1.Image{
+		File:       filepath.Join(recPart.MountPoint, "cOS", constants.TransitionImgFile),
+		Size:       constants.ImgSize,
+		Label:      recLabel,
+		FS:         recFs,
+		MountPoint: recMnt,
+		Source:     v1.NewEmptySrc(), // if source is a dir it will copy from here, if it's a docker img it uses Config.DockerImg IN THAT ORDER!
+	}
+
+	return &v1.UpgradeSpec{
+		BootedFromRecovery: bootedRec,
+		SquashedRecovery:   squashedRec,
+		ActiveImg:          active,
+		RecoveryImg:        recovery,
+	}, nil
+}
+
+// NewResetSpec returns a ResetSpec struct all based on defaults and current host state
 func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	imgSource := v1.NewEmptySrc()
-	partitions := v1.PartitionMap{}
 
 	//TODO find a way to pre-load current state values such as labels
 	if !utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) &&
@@ -338,9 +401,15 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 
 	efiExists, _ := utils.Exists(cfg.Fs, constants.EfiDevice)
 
+	parts, err := utils.GetAllPartitions()
+	if err != nil {
+		return nil, fmt.Errorf("could not read host partitions")
+	}
+	partitions := parts.GetPartitionMap()
+
 	if efiExists {
-		partEfi, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.EfiLabel, 1)
-		if err != nil {
+		partEfi, ok := partitions[constants.EfiPartName]
+		if !ok {
 			cfg.Logger.Errorf("EFI partition not found!")
 			return nil, err
 		}
@@ -348,44 +417,37 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 			partEfi.MountPoint = constants.EfiDir
 		}
 		partEfi.Name = constants.EfiPartName
-		partitions[constants.EfiPartName] = partEfi
 	}
 
-	//TODO find a way to preload state label
-	partState, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.StateLabel, 1)
-	if err != nil {
-		cfg.Logger.Errorf("state partition '%s' not found", constants.StateLabel)
+	partState, ok := partitions[constants.StatePartName]
+	if !ok {
+		cfg.Logger.Error("state partition not found")
 		return nil, err
 	}
 	if partState.MountPoint == "" {
 		partState.MountPoint = constants.StateDir
 	}
 	partState.Name = constants.StatePartName
-	partitions[constants.StatePartName] = partState
 	target := partState.Disk
 
-	//TODO find a way to preload OEMLabel
-	// Only add it if it exists, not a hard requirement
-	partOEM, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.OEMLabel, 1)
-	if err == nil {
+	// OEM partition is not a hard requirement
+	partOEM, ok := partitions[constants.OEMPartName]
+	if ok {
 		if partOEM.MountPoint == "" {
 			partOEM.MountPoint = constants.OEMDir
 		}
 		partOEM.Name = constants.OEMPartName
-		partitions[constants.OEMPartName] = partOEM
 	} else {
 		cfg.Logger.Warnf("no OEM partition found")
 	}
 
-	//TODO find a way to preload PersistentLabel
-	// Only add it if it exists, not a hard requirement
-	partPersistent, err := utils.GetFullDeviceByLabel(cfg.Runner, constants.PersistentLabel, 1)
-	if err == nil {
+	// Persistent partition is not a hard requirement
+	partPersistent, ok := partitions[constants.PersistentPartName]
+	if ok {
 		if partPersistent.MountPoint == "" {
 			partPersistent.MountPoint = constants.PersistentDir
 		}
 		partPersistent.Name = constants.PersistentPartName
-		partitions[constants.PersistentPartName] = partPersistent
 	} else {
 		cfg.Logger.Warnf("no Persistent partition found")
 	}

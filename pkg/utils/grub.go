@@ -28,10 +28,10 @@ import (
 
 // Grub is the struct that will allow us to install grub to the target device
 type Grub struct {
-	config v1.Config
+	config *v1.Config
 }
 
-func NewGrub(config v1.Config) *Grub {
+func NewGrub(config *v1.Config) *Grub {
 	g := &Grub{
 		config: config,
 	}

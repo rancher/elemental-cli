@@ -24,20 +24,20 @@ import (
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 )
 
-func (i *ResetAction) resetHook(hook string, chroot bool) error {
+func (r *ResetAction) resetHook(hook string, chroot bool) error {
 	if chroot {
 		extraMounts := map[string]string{}
-		persistent, ok := i.spec.Partitions[cnst.PersistentPartName]
-		if ok {
+		persistent, ok := r.spec.Partitions[cnst.PersistentPartName]
+		if ok && persistent.MountPoint != "" {
 			extraMounts[persistent.MountPoint] = "/usr/local"
 		}
-		oem, ok := i.spec.Partitions[cnst.OEMPartName]
-		if ok {
+		oem, ok := r.spec.Partitions[cnst.OEMPartName]
+		if ok && oem.MountPoint != "" {
 			extraMounts[oem.MountPoint] = "/oem"
 		}
-		return ChrootHook(i.cfg.Config, hook, i.cfg.Strict, i.spec.ActiveImg.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
+		return ChrootHook(r.cfg.Config, hook, r.cfg.Strict, r.spec.ActiveImg.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
 	}
-	return Hook(i.cfg.Config, hook, i.cfg.Strict, i.cfg.CloudInitPaths...)
+	return Hook(r.cfg.Config, hook, r.cfg.Strict, r.cfg.CloudInitPaths...)
 }
 
 type ResetAction struct {
@@ -50,8 +50,8 @@ func NewResetAction(cfg *v1.RunConfigNew, spec *v1.ResetSpec) *ResetAction {
 }
 
 // ResetRun will reset the cos system to by following several steps
-func (r ResetAction) ResetRun(config *v1.RunConfig) (err error) { // nolint:gocyclo
-	e := elemental.NewElemental(r.cfg.Config)
+func (r ResetAction) ResetRun() (err error) { // nolint:gocyclo
+	e := elemental.NewElemental(&r.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
 
@@ -99,14 +99,14 @@ func (r ResetAction) ResetRun(config *v1.RunConfig) (err error) { // nolint:gocy
 	})
 
 	// Deploy active image
-	err = e.DeployImage(config.Images.GetActive(), true)
+	err = e.DeployImage(&r.spec.ActiveImg, true)
 	if err != nil {
 		return err
 	}
-	cleanup.Push(func() error { return e.UnmountImage(config.Images.GetActive()) })
+	cleanup.Push(func() error { return e.UnmountImage(&r.spec.ActiveImg) })
 
 	// install grub
-	grub := utils.NewGrub(r.cfg.Config)
+	grub := utils.NewGrub(&r.cfg.Config)
 	err = grub.Install(
 		r.spec.Target,
 		r.spec.ActiveImg.MountPoint,
@@ -156,12 +156,12 @@ func (r ResetAction) ResetRun(config *v1.RunConfig) (err error) { // nolint:gocy
 	}
 
 	// Reboot, poweroff or nothing
-	if config.Reboot {
-		config.Logger.Infof("Rebooting in 5 seconds")
-		return utils.Reboot(config.Runner, 5)
-	} else if config.PowerOff {
-		config.Logger.Infof("Shutting down in 5 seconds")
-		return utils.Shutdown(config.Runner, 5)
+	if r.cfg.Reboot {
+		r.cfg.Logger.Infof("Rebooting in 5 seconds")
+		return utils.Reboot(r.cfg.Runner, 5)
+	} else if r.cfg.PowerOff {
+		r.cfg.Logger.Infof("Shutting down in 5 seconds")
+		return utils.Shutdown(r.cfg.Runner, 5)
 	}
 	return err
 }

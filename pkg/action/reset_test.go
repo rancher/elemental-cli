@@ -21,8 +21,6 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/jaypipes/ghw/pkg/block"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rancher-sandbox/elemental/pkg/action"
@@ -46,7 +44,7 @@ var _ = Describe("Install action tests", func() {
 	var cloudInit *v1mock.FakeCloudInitRunner
 	var cleanup func()
 	var memLog *bytes.Buffer
-	var ghwTest v1mock.GhwMock
+	//var ghwTest v1mock.GhwMock
 
 	BeforeEach(func() {
 		runner = v1mock.NewFakeRunner()
@@ -73,7 +71,7 @@ var _ = Describe("Install action tests", func() {
 
 	AfterEach(func() { cleanup() })
 
-	Describe("Reset Setup", Label("resetsetup"), func() {
+	/*Describe("Reset Setup", Label("resetsetup"), func() {
 		var bootedFrom, cmdFail string
 		BeforeEach(func() {
 			cmdFail = ""
@@ -148,12 +146,16 @@ var _ = Describe("Install action tests", func() {
 			ghwTest.RemoveDisk("device")
 			Expect(action.ResetSetup(config)).NotTo(BeNil())
 		})
-	})
+	})*/
 	Describe("Reset Action", Label("reset"), func() {
 		var statePart, persistentPart, oemPart *v1.Partition
+		var spec *v1.ResetSpec
+		var reset *action.ResetAction
 		var cmdFail string
 		var err error
 		BeforeEach(func() {
+			spec, err = conf.NewResetSpec(config.Config)
+			Expect(err).ShouldNot(HaveOccurred())
 			cmdFail = ""
 			recoveryImg := filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile)
 			err = utils.MkdirAll(fs, filepath.Dir(recoveryImg), constants.DirPerm)
@@ -185,13 +187,14 @@ var _ = Describe("Install action tests", func() {
 				Name:       constants.PersistentPartName,
 				MountPoint: constants.OEMDir,
 			}
-			config.Partitions = append(config.Partitions, statePart, oemPart, persistentPart)
+			spec.Partitions[constants.PersistentPartName] = persistentPart
+			spec.Partitions[constants.StatePartName] = statePart
+			spec.Partitions[constants.OEMPartName] = oemPart
 
-			action.ResetImagesSetup(config)
-			config.Images.GetActive().Size = 16
-			config.Target = statePart.Disk
+			spec.ActiveImg.Size = 16
+			spec.Target = statePart.Disk
 
-			grubCfg := filepath.Join(config.Images.GetActive().MountPoint, constants.GrubConf)
+			grubCfg := filepath.Join(spec.ActiveImg.MountPoint, spec.GrubConf)
 			err = utils.MkdirAll(fs, filepath.Dir(grubCfg), constants.DirPerm)
 			Expect(err).To(BeNil())
 			_, err = fs.Create(grubCfg)
@@ -203,60 +206,61 @@ var _ = Describe("Install action tests", func() {
 				}
 				return []byte{}, nil
 			}
+			reset = action.NewResetAction(config, spec)
 		})
 		It("Successfully resets on non-squashfs recovery", func() {
 			config.Reboot = true
-			Expect(action.ResetRun(config)).To(BeNil())
+			Expect(reset.ResetRun()).To(BeNil())
 		})
 		It("Successfully resets on non-squashfs recovery including persistent data", func() {
-			config.ResetPersistent = true
-			Expect(action.ResetRun(config)).To(BeNil())
+			spec.FormatPersistent = true
+			Expect(reset.ResetRun()).To(BeNil())
 		})
 		It("Successfully resets on squashfs recovery", Label("squashfs"), func() {
 			config.PowerOff = true
-			Expect(action.ResetRun(config)).To(BeNil())
+			Expect(reset.ResetRun()).To(BeNil())
 		})
 		It("Successfully resets despite having errors on hooks", func() {
 			cloudInit.Error = true
-			Expect(action.ResetRun(config)).To(BeNil())
+			Expect(reset.ResetRun()).To(BeNil())
 		})
 		It("Successfully resets from a docker image", Label("docker"), func() {
-			config.Images.GetActive().Source = v1.NewDockerSrc("my/image:latest")
+			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
-			Expect(action.ResetRun(config)).To(BeNil())
+			Expect(reset.ResetRun()).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Fails installing grub", func() {
 			cmdFail = "grub2-install"
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails formatting state partition", func() {
 			cmdFail = "mkfs.ext4"
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails setting the active label on non-squashfs recovery", func() {
 			cmdFail = "tune2fs"
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails setting the passive label on squashfs recovery", func() {
 			cmdFail = "tune2fs"
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails mounting partitions", func() {
 			mounter.ErrorOnMount = true
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails unmounting partitions", func() {
 			mounter.ErrorOnUnmount = true
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 		})
 		It("Fails unpacking docker image ", func() {
-			config.Images.GetActive().Source = v1.NewDockerSrc("my/image:latest")
+			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
 			config.Luet = luet
-			Expect(action.ResetRun(config)).NotTo(BeNil())
+			Expect(reset.ResetRun()).NotTo(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 	})
