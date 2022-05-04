@@ -288,6 +288,8 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 			}
 			defer e.config.Fs.RemoveAll(target)
 		}
+	} else {
+		target = img.File
 	}
 	err = e.DumpSource(target, img.Source)
 	if err != nil {
@@ -369,6 +371,8 @@ func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { //
 		if err != nil {
 			return err
 		}
+	} else {
+		return fmt.Errorf("unknown image source type")
 	}
 	e.config.Logger.Infof("Finished copying %s into %s", imgSrc.Value(), target)
 	return nil

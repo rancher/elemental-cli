@@ -224,14 +224,15 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 		activeImg.Source = v1.NewEmptySrc()
 	}
 
-	recoveryImg.File = filepath.Join(constants.RecoveryDir, "cOS", constants.RecoverySquashFile)
 	if recoveryExists {
 		recoveryImg.Source = v1.NewFileSrc(recoveryImgFile)
 		recoveryImg.FS = constants.SquashFs
+		recoveryImg.File = filepath.Join(constants.RecoveryDir, "cOS", constants.RecoverySquashFile)
 	} else {
 		recoveryImg.Source = v1.NewFileSrc(activeImg.File)
 		recoveryImg.FS = constants.LinuxImgFs
 		recoveryImg.Label = constants.SystemLabel
+		recoveryImg.File = filepath.Join(constants.RecoveryDir, "cOS", constants.RecoveryImgFile)
 	}
 
 	passiveImg = v1.Image{
