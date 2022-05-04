@@ -84,7 +84,11 @@ func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
 			return fmt.Errorf("unset recovery partition")
 		}
 		upgradeImg = u.spec.RecoveryImg
-		finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoveryImgFile)
+		if upgradeImg.FS == constants.SquashFs {
+			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoverySquashFile)
+		} else {
+			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoveryImgFile)
+		}
 	} else {
 		mountPart, ok := u.spec.Partitions[constants.StatePartName]
 		if !ok || mountPart.MountPoint == "" {

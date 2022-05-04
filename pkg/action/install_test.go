@@ -56,6 +56,7 @@ var _ = Describe("Install action tests", func() {
 		client = &v1mock.FakeHTTPClient{}
 		memLog = &bytes.Buffer{}
 		logger = v1.NewBufferLogger(memLog)
+		//logger.SetLevel(v1.DebugLevel())
 		var err error
 		fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 		Expect(err).Should(BeNil())
@@ -72,7 +73,9 @@ var _ = Describe("Install action tests", func() {
 		)
 	})
 
-	AfterEach(func() { cleanup() })
+	AfterEach(func() {
+		cleanup()
+	})
 
 	Describe("Install Action", Label("install"), func() {
 		var device, cmdFail string
@@ -87,8 +90,6 @@ var _ = Describe("Install action tests", func() {
 			Expect(err).To(BeNil())
 			_, err = fs.Create(device)
 			Expect(err).ShouldNot(HaveOccurred())
-
-			spec = conf.NewInstallSpec(config.Config)
 
 			partNum := 0
 			partedOut := printOutput
@@ -136,6 +137,7 @@ var _ = Describe("Install action tests", func() {
 			err = utils.MkdirAll(fs, constants.IsoBaseTree, constants.DirPerm)
 			Expect(err).To(BeNil())
 
+			spec = conf.NewInstallSpec(config.Config)
 			spec.ActiveImg.Size = 16
 
 			grubCfg := filepath.Join(spec.ActiveImg.MountPoint, constants.GrubConf)
@@ -312,6 +314,7 @@ var _ = Describe("Install action tests", func() {
 			spec.Target = device
 			cmdFail = "parted"
 			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(runner.MatchMilestones([][]string{{"parted"}}))
 		})
 
 		It("Fails to unmount partitions", Label("disk", "partitions"), func() {
@@ -348,18 +351,21 @@ var _ = Describe("Install action tests", func() {
 			spec.Target = device
 			cmdFail = "grub2-install"
 			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(runner.MatchMilestones([][]string{{"grub2-install"}}))
 		})
 
 		It("Fails copying Passive image", Label("copy", "active"), func() {
 			spec.Target = device
 			cmdFail = "tune2fs"
 			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(runner.MatchMilestones([][]string{{"tune2fs", "-L", constants.PassiveLabel}}))
 		})
 
 		It("Fails setting the grub default entry", Label("grub"), func() {
 			spec.Target = device
 			cmdFail = "grub2-editenv"
 			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(runner.MatchMilestones([][]string{{"grub2-editenv", filepath.Join(constants.StateDir, constants.GrubOEMEnv)}}))
 		})
 	})
 })

@@ -16,33 +16,19 @@
 
 package action_test
 
-import (
-	"bytes"
-	"fmt"
-	"path/filepath"
-
-	"github.com/jaypipes/ghw/pkg/block"
-
+/*import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/rancher-sandbox/elemental/pkg/action"
-	conf "github.com/rancher-sandbox/elemental/pkg/config"
-	"github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
-	"github.com/rancher-sandbox/elemental/pkg/utils"
 	v1mock "github.com/rancher-sandbox/elemental/tests/mocks"
-	"github.com/sirupsen/logrus"
-	"github.com/twpayne/go-vfs"
-	"github.com/twpayne/go-vfs/vfst"
-	"k8s.io/mount-utils"
-)
+)*/
 
 const printOutput = `BYT;
 /dev/loop0:50593792s:loopback:512:512:gpt:Loopback device:;`
 const partTmpl = `
 %d:%ss:%ss:2048s:ext4::type=83;`
 
-var _ = Describe("Runtime Actions", func() {
+/*var _ = Describe("Runtime Actions", func() {
 	var config *v1.RunConfig
 	var runner *v1mock.FakeRunner
 	var fs vfs.FS
@@ -699,4 +685,4 @@ var _ = Describe("Runtime Actions", func() {
 			})
 		})
 	})
-})
+})*/
