@@ -198,7 +198,7 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 	var firmware string
 	var recoveryImg, activeImg, passiveImg v1.Image
 
-	recoveryImgFile := filepath.Join(constants.IsoMnt, constants.RecoverySquashFile)
+	recoveryImgFile := filepath.Join(constants.LiveDir, constants.RecoverySquashFile)
 
 	// Check if current host has EFI firmware
 	efiExists, _ := utils.Exists(cfg.Fs, constants.EfiDevice)
@@ -363,7 +363,7 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		Label:      constants.ActiveLabel,
 		FS:         constants.LinuxImgFs,
 		MountPoint: constants.TransitionDir,
-		Source:     v1.NewEmptySrc(), // if source is a dir it will copy from here, if it's a docker img it uses Config.DockerImg IN THAT ORDER!
+		Source:     v1.NewEmptySrc(), //TODO apply defaults if any
 	}
 
 	if squashedRec {
@@ -379,7 +379,7 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		Label:      recLabel,
 		FS:         recFs,
 		MountPoint: recMnt,
-		Source:     v1.NewEmptySrc(), // if source is a dir it will copy from here, if it's a docker img it uses Config.DockerImg IN THAT ORDER!
+		Source:     v1.NewEmptySrc(), //TODO apply defaults if any
 	}
 
 	return &v1.UpgradeSpec{
@@ -387,6 +387,7 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		SquashedRecovery:   squashedRec,
 		ActiveImg:          active,
 		RecoveryImg:        recovery,
+		Partitions:         partitionMap,
 	}, nil
 }
 

@@ -59,7 +59,7 @@ const (
 	ImgSize                = uint(3072)
 	HTTPTimeout            = 60
 	PartStage              = "partitioning"
-	IsoMnt                 = "/run/initramfs/live"
+	LiveDir                = "/run/initramfs/live"
 	RecoveryDir            = "/run/cos/recovery"
 	StateDir               = "/run/cos/state"
 	OEMDir                 = "/run/cos/oem"
@@ -89,15 +89,15 @@ const (
 	UpgradeActive          = "active"
 	UpgradeRecovery        = "recovery"
 	ChannelSource          = "system/cos"
-	UpgradeRecoveryDir     = "/run/initramfs/live"
-	TransitionImgFile      = "transition.img"
-	TransitionSquashFile   = "transition.squashfs"
-	RunningStateDir        = "/run/initramfs/cos-state" // TODO: converge this constant with StateDir/RecoveryDir in dracut module from cos-toolkit
-	ActiveImgName          = "active"
-	PassiveImgName         = "passive"
-	RecoveryImgName        = "recovery"
-	GPT                    = "gpt"
-	BuildImgName           = "elemental"
+	//UpgradeRecoveryDir     = "/run/initramfs/live"
+	TransitionImgFile    = "transition.img"
+	TransitionSquashFile = "transition.squashfs"
+	RunningStateDir      = "/run/initramfs/cos-state" // TODO: converge this constant with StateDir/RecoveryDir in dracut module from cos-toolkit
+	ActiveImgName        = "active"
+	PassiveImgName       = "passive"
+	RecoveryImgName      = "recovery"
+	GPT                  = "gpt"
+	BuildImgName         = "elemental"
 
 	//TODO these paths are abitrary, coupled to package live/grub2 and assuming xz
 	// I'd suggest using `/boot/kernel` and `/boot/initrd`

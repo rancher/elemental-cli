@@ -70,6 +70,7 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 
 func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
 	var mountPart *v1.Partition
+	var ok bool
 	var upgradeImg v1.Image
 	var finalImageFile string
 
@@ -79,7 +80,7 @@ func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
 	e := elemental.NewElemental(&u.config.Config)
 
 	if u.spec.RecoveryUpgrade {
-		mountPart, ok := u.spec.Partitions[constants.RecoveryPartName]
+		mountPart, ok = u.spec.Partitions[constants.RecoveryPartName]
 		if !ok || mountPart.MountPoint == "" {
 			return fmt.Errorf("unset recovery partition")
 		}
@@ -90,7 +91,7 @@ func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
 			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoveryImgFile)
 		}
 	} else {
-		mountPart, ok := u.spec.Partitions[constants.StatePartName]
+		mountPart, ok = u.spec.Partitions[constants.StatePartName]
 		if !ok || mountPart.MountPoint == "" {
 			return fmt.Errorf("unset state partition")
 		}

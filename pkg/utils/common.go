@@ -289,7 +289,7 @@ func HasSquashedRecovery(config *v1.Config, recovery *v1.Partition) (squashed bo
 			}
 		}()
 	}
-	return Exists(config.Fs, filepath.Join(cnst.UpgradeRecoveryDir, "cOS", cnst.RecoverySquashFile))
+	return Exists(config.Fs, filepath.Join(cnst.LiveDir, "cOS", cnst.RecoverySquashFile))
 }
 
 // GetElementalTempDir returns the dir for storing temporary files. It will respect TMPDIR and use

@@ -34,7 +34,7 @@ import (
 	"github.com/twpayne/go-vfs/vfst"
 )
 
-var _ = Describe("Install action tests", func() {
+var _ = Describe("Reset action tests", func() {
 	var config *v1.RunConfigNew
 	var runner *v1mock.FakeRunner
 	var fs vfs.FS

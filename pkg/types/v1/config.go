@@ -97,13 +97,15 @@ type RunConfig struct {
 }
 
 type RunConfigNew struct {
-	Strict         bool                   `yaml:"strict,omitempty" mapstructure:"strict"`
-	NoVerify       bool                   `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
-	Reboot         bool                   `yaml:"reboot,omitempty" mapstructure:"reboot"`
-	PowerOff       bool                   `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
-	CloudInitPaths []string               `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-	EjectCD        bool                   `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
-	Meta           map[string]interface{} `mapstructure:",remain"`
+	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
+	NoVerify       bool     `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
+	PowerOff       bool     `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
+	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	EjectCD        bool     `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
+
+	// Meta is holding data remaining config data which will be used in the context of action spec initialization
+	Meta map[string]interface{} `mapstructure:",remain"`
 	Config
 }
 
