@@ -37,9 +37,9 @@ func (i *InstallAction) installHook(hook string, chroot bool) error {
 		if ok {
 			extraMounts[oem.MountPoint] = "/oem"
 		}
-		return ChrootHook(i.cfg.Config, hook, i.cfg.Strict, i.spec.ActiveImg.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
+		return ChrootHook(&i.cfg.Config, hook, i.cfg.Strict, i.spec.ActiveImg.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
 	}
-	return Hook(i.cfg.Config, hook, i.cfg.Strict, i.cfg.CloudInitPaths...)
+	return Hook(&i.cfg.Config, hook, i.cfg.Strict, i.cfg.CloudInitPaths...)
 }
 
 type InstallAction struct {

@@ -43,7 +43,7 @@ func onlyYAMLPartialErrors(er error) bool {
 	return true
 }
 
-func checkYAMLError(cfg v1.Config, allErrors, err error) error {
+func checkYAMLError(cfg *v1.Config, allErrors, err error) error {
 	if !onlyYAMLPartialErrors(err) {
 		// here we absorb errors only if are related to YAML unmarshalling
 		// As cmdline is parsed out as a yaml file
@@ -57,7 +57,7 @@ func checkYAMLError(cfg v1.Config, allErrors, err error) error {
 }
 
 // RunStage will run yip
-func RunStage(cfg v1.Config, stage string, strict bool, cloudInitPaths ...string) error {
+func RunStage(cfg *v1.Config, stage string, strict bool, cloudInitPaths ...string) error {
 	var cmdLineYipURI string
 	var allErrors error
 

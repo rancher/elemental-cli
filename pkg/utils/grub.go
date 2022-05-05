@@ -19,7 +19,6 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
@@ -42,14 +41,8 @@ func NewGrub(config *v1.Config) *Grub {
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
 func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) (err error) { // nolint:gocyclo
 	var grubargs []string
-	var arch, grubdir, finalContent string
+	var grubdir, finalContent string
 
-	switch runtime.GOARCH {
-	case "arm64":
-		arch = "arm64"
-	default:
-		arch = "x86_64"
-	}
 	g.config.Logger.Info("Installing GRUB..")
 
 	if tty == "" {
@@ -62,15 +55,13 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 	}
 
 	if efi {
-		g.config.Logger.Infof("Installing grub efi for arch %s", arch)
+		g.config.Logger.Infof("Installing grub efi for arch %s", g.config.Arch)
 		grubargs = append(
 			grubargs,
-			fmt.Sprintf("--target=%s-efi", arch),
+			fmt.Sprintf("--target=%s-efi", g.config.Arch),
 			fmt.Sprintf("--efi-directory=%s", cnst.EfiDir),
 		)
 	}
-
-	//TODO check rootDir and bootDir existance?
 
 	grubargs = append(
 		grubargs,

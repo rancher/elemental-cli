@@ -42,7 +42,7 @@ import (
 
 func TestElementalSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Actions test suite")
+	RunSpecs(t, "Luet test suite")
 }
 
 var _ = Describe("Types", Label("luet", "types"), func() {
