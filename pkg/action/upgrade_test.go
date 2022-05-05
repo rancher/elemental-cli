@@ -19,6 +19,7 @@ package action_test
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 
 	"github.com/jaypipes/ghw/pkg/block"
 	. "github.com/onsi/ginkgo/v2"
@@ -143,6 +144,16 @@ var _ = Describe("Runtime Actions", func() {
 				spec.ActiveImg.Source = v1.NewChannelSrc("system/cos-config")
 				spec.ActiveImg.Size = 16
 
+				err = utils.MkdirAll(config.Fs, filepath.Join(constants.RunningStateDir, "etc"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = fs.WriteFile(
+					filepath.Join(constants.RunningStateDir, "etc", "os-release"),
+					[]byte("GRUB_ENTRY_NAME=TESTOS"),
+					constants.FilePerm,
+				)
+				Expect(err).ShouldNot(HaveOccurred())
+
 				runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 					if command == "cat" && args[0] == "/proc/cmdline" {
 						return []byte(constants.ActiveLabel), nil
@@ -191,11 +202,11 @@ var _ = Describe("Runtime Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
+				// Check luet was called to unpack a docker image
 				Expect(l.UnpackCalled()).To(BeTrue())
 
-				//TODO
 				// Check that the rebrand worked with our os-release value
-				//Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{
@@ -240,9 +251,8 @@ var _ = Describe("Runtime Actions", func() {
 				err = upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
-				//TODO
 				// Check that the rebrand worked with our os-release value
-				//Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
@@ -273,9 +283,8 @@ var _ = Describe("Runtime Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
-				// TODO
 				// Check that the rebrand worked with our os-release value
-				//Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Not much that we can create here as the dir copy was done on the real os, but we do the rest of the ops on a mem one
 				// This should be the new image
@@ -314,6 +323,16 @@ var _ = Describe("Runtime Actions", func() {
 				spec.ActiveImg.Source = v1.NewChannelSrc("system/cos-config")
 				spec.ActiveImg.Size = 16
 
+				err = utils.MkdirAll(config.Fs, filepath.Join(constants.RunningStateDir, "etc"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				err = fs.WriteFile(
+					filepath.Join(constants.RunningStateDir, "etc", "os-release"),
+					[]byte("GRUB_ENTRY_NAME=TESTOS"),
+					constants.FilePerm,
+				)
+				Expect(err).ShouldNot(HaveOccurred())
+
 				runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 					if command == "cat" && args[0] == "/proc/cmdline" {
 						return []byte(constants.PassiveLabel), nil
@@ -341,9 +360,8 @@ var _ = Describe("Runtime Actions", func() {
 				err := upgrade.Run()
 				Expect(err).ToNot(HaveOccurred())
 
-				//TODO
 				// Check that the rebrand worked with our os-release value
-				//Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
+				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
 
 				// Expect cos-state to have been mounted with our fake lsblk values
 				fakeMounted := mount.MountPoint{

@@ -63,9 +63,9 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 			mountPoints[persistentDevice.MountPoint] = "/usr/local"
 		}
 
-		return ChrootHook(u.config.Config, hook, u.config.Strict, u.spec.ActiveImg.MountPoint, mountPoints, u.config.CloudInitPaths...)
+		return ChrootHook(&u.config.Config, hook, u.config.Strict, u.spec.ActiveImg.MountPoint, mountPoints, u.config.CloudInitPaths...)
 	}
-	return Hook(u.config.Config, hook, u.config.Strict, u.config.CloudInitPaths...)
+	return Hook(&u.config.Config, hook, u.config.Strict, u.config.CloudInitPaths...)
 }
 
 func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo

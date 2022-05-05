@@ -35,9 +35,9 @@ func (r *ResetAction) resetHook(hook string, chroot bool) error {
 		if ok && oem.MountPoint != "" {
 			extraMounts[oem.MountPoint] = "/oem"
 		}
-		return ChrootHook(r.cfg.Config, hook, r.cfg.Strict, r.spec.ActiveImg.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
+		return ChrootHook(&r.cfg.Config, hook, r.cfg.Strict, r.spec.ActiveImg.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
 	}
-	return Hook(r.cfg.Config, hook, r.cfg.Strict, r.cfg.CloudInitPaths...)
+	return Hook(&r.cfg.Config, hook, r.cfg.Strict, r.cfg.CloudInitPaths...)
 }
 
 type ResetAction struct {

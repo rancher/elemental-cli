@@ -287,7 +287,7 @@ func burnISO(c *v1.BuildConfig, root string) error {
 func applySources(c v1.Config, target string, sources ...string) error {
 	var err error
 	for _, src := range sources {
-		err = applySource(c, target, utils.NewSrcGuessingType(c, src))
+		err = applySource(c, target, utils.NewSrcGuessingType(&c, src))
 		if err != nil {
 			return err
 		}
