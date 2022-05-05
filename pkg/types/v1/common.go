@@ -56,6 +56,16 @@ func (i ImageSource) IsFile() bool {
 	return i.srcType == file
 }
 
+func (i ImageSource) IsEmpty() bool {
+	if i.srcType == "" {
+		return true
+	}
+	if i.source == "" {
+		return true
+	}
+	return false
+}
+
 func (i *ImageSource) CustomUnmarshal(data interface{}) (bool, error) {
 	src, ok := data.(string)
 	if !ok {
