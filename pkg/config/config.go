@@ -453,11 +453,15 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 		cfg.Logger.Warnf("no Persistent partition found")
 	}
 
-	if utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) {
+	recoveryImg := filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile)
+	if exists, _ := utils.Exists(cfg.Fs, recoveryImg); exists {
+		imgSource = v1.NewFileSrc(recoveryImg)
+	} else if exists, _ = utils.Exists(cfg.Fs, constants.IsoBaseTree); exists {
 		imgSource = v1.NewDirSrc(constants.IsoBaseTree)
 	} else {
-		imgSource = v1.NewFileSrc(filepath.Join(constants.RunningStateDir, "cOS", constants.RecoveryImgFile))
+		imgSource = v1.NewEmptySrc()
 	}
+
 	activeFile := filepath.Join(partState.MountPoint, "cOS", constants.ActiveImgFile)
 	return &v1.ResetSpec{
 		Target:       target,
