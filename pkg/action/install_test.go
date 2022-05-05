@@ -36,6 +36,11 @@ import (
 	"github.com/twpayne/go-vfs/vfst"
 )
 
+const printOutput = `BYT;
+/dev/loop0:50593792s:loopback:512:512:gpt:Loopback device:;`
+const partTmpl = `
+%d:%ss:%ss:2048s:ext4::type=83;`
+
 var _ = Describe("Install action tests", func() {
 	var config *v1.RunConfigNew
 	var runner *v1mock.FakeRunner

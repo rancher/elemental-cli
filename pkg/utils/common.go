@@ -296,7 +296,7 @@ func HasSquashedRecovery(config *v1.Config, recovery *v1.Partition) (squashed bo
 			}
 		}()
 	}
-	return Exists(config.Fs, filepath.Join(cnst.UpgradeRecoveryDir, "cOS", cnst.RecoverySquashFile))
+	return Exists(config.Fs, filepath.Join(cnst.LiveDir, "cOS", cnst.RecoverySquashFile))
 }
 
 // GetTempDir returns the dir for storing related temporal files
