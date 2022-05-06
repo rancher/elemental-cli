@@ -40,13 +40,36 @@ func addPowerFlags(cmd *cobra.Command) {
 
 // addSharedInstallUpgradeFlags add flags shared between install, upgrade and reset
 func addSharedInstallUpgradeFlags(cmd *cobra.Command) {
+	addResetFlags(cmd)
+	cmd.Flags().String("recovery-system", "", "Sets the recovery image source and its type (e.g. 'docker:registry.org/image:tag')")
+}
+
+// addResetFlags add flags shared between reset, install and upgrade
+func addResetFlags(cmd *cobra.Command) {
 	cmd.Flags().String("directory", "", "Use directory as source to install from")
+	cmd.Flags().MarkDeprecated("directory", "'directory' is deprecated please use 'system' instead")
+
 	cmd.Flags().StringP("docker-image", "d", "", "Install a specified container image")
+	cmd.Flags().MarkDeprecated("docker-image", "'docker-image' is deprecated please use 'system' instead")
+
+	cmd.Flags().String("system", "", "Sets the system image source and its type (e.g. 'docker:registry.org/image:tag')")
 	cmd.Flags().BoolP("no-verify", "", false, "Disable mtree checksum verification (requires images manifests generated with mtree separately)")
 	cmd.Flags().BoolP("strict", "", false, "Enable strict check of hooks (They need to exit with 0)")
 
 	addCosignFlags(cmd)
 	addPowerFlags(cmd)
+}
+
+func adaptDockerImageAndDirectoryFlagsToSystem() {
+	systemFlag := "system"
+	doc := viper.GetString("docker-image")
+	if doc != "" {
+		viper.Set(systemFlag, fmt.Sprintf("docker:%s", doc))
+	}
+	dir := viper.GetString("directory")
+	if dir != "" {
+		viper.Set(systemFlag, fmt.Sprintf("dir:%s", dir))
+	}
 }
 
 func validateCosignFlags(log v1.Logger) error {
@@ -61,9 +84,12 @@ func validateCosignFlags(log v1.Logger) error {
 }
 
 func validateSourceFlags(log v1.Logger) error {
-	// docker-image and directory are mutually exclusive. Can't have your cake and eat it too.
-	if viper.GetString("docker-image") != "" && viper.GetString("directory") != "" {
-		msg := "flags docker-image and directory are mutually exclusive, please only set one of them"
+	msg := "flags docker-image, directory and system are mutually exclusive, please only set one of them"
+	// docker-image, directory and system are mutually exclusive. Can't have your cake and eat it too.
+	if viper.GetString("system") != "" && (viper.GetString("directory") != "" || viper.GetString("docker-image") != "") {
+		return errors.New(msg)
+	}
+	if viper.GetString("directory") != "" && viper.GetString("docker-image") != "" {
 		return errors.New(msg)
 	}
 	return nil

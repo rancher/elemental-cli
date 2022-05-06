@@ -17,7 +17,7 @@ require (
 	github.com/jaypipes/ghw v0.9.1-0.20220404152016-2ea05cb6c17c
 	github.com/joho/godotenv v1.4.0
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
 	github.com/mudler/luet v0.0.0-20220127164253-6f77fa2b3a72
 	github.com/mudler/yip v0.0.0-20220321143540-2617d71ea02a
@@ -28,6 +28,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.0
 	github.com/twpayne/go-vfs v1.7.2
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect

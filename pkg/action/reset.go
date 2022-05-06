@@ -50,7 +50,7 @@ func NewResetAction(cfg *v1.RunConfigNew, spec *v1.ResetSpec) *ResetAction {
 }
 
 // ResetRun will reset the cos system to by following several steps
-func (r ResetAction) ResetRun() (err error) { // nolint:gocyclo
+func (r ResetAction) Run() (err error) { // nolint:gocyclo
 	e := elemental.NewElemental(&r.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
@@ -71,6 +71,7 @@ func (r ResetAction) ResetRun() (err error) { // nolint:gocyclo
 	if err != nil {
 		return err
 	}
+
 	// Reformat persistent partitions
 	if r.spec.FormatPersistent {
 		persistent, ok := r.spec.Partitions[cnst.PersistentPartName]

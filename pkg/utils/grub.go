@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 )
@@ -50,7 +51,8 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 		out, err := g.config.Runner.Run("tty")
 		tty = strings.TrimPrefix(strings.TrimSpace(string(out)), "/dev/")
 		if err != nil {
-			return err
+			g.config.Logger.Warnf("failed to find current tty, leaving it unset")
+			tty = ""
 		}
 	}
 
@@ -61,6 +63,10 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 			fmt.Sprintf("--target=%s-efi", g.config.Arch),
 			fmt.Sprintf("--efi-directory=%s", cnst.EfiDir),
 		)
+	} else {
+		if g.config.Arch == "x86_64" {
+			grubargs = append(grubargs, "--target=i386-pc")
+		}
 	}
 
 	grubargs = append(
@@ -104,10 +110,11 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 
 	ttyExists, _ := Exists(g.config.Fs, fmt.Sprintf("/dev/%s", tty))
 
-	if ttyExists && tty != "" && tty != "console" && tty != "tty1" {
+	if ttyExists && tty != "" && tty != "console" && tty != constants.GrubTty {
 		// We need to add a tty to the grub file
 		g.config.Logger.Infof("Adding extra tty (%s) to grub.cfg", tty)
-		finalContent = strings.Replace(string(grubCfg), "console=tty1", fmt.Sprintf("console=tty1 console=%s", tty), -1)
+		defConsole := fmt.Sprintf("console=%s", constants.GrubTty)
+		finalContent = strings.Replace(string(grubCfg), defConsole, fmt.Sprintf("%s console=%s", defConsole, tty), -1)
 	} else {
 		// We don't add anything, just read the file
 		finalContent = string(grubCfg)

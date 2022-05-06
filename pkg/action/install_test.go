@@ -208,7 +208,7 @@ var _ = Describe("Install action tests", func() {
 		It("Successfully installs", func() {
 			spec.Target = device
 			config.Reboot = true
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"reboot", "-f"}}))
 		})
 
@@ -222,7 +222,7 @@ var _ = Describe("Install action tests", func() {
 			}
 			spec.Target = device
 			config.EjectCD = true
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			_, err = fs.Stat("/usr/lib/systemd/system-shutdown/eject")
 			Expect(err).ToNot(HaveOccurred())
 			file, err := fs.ReadFile("/usr/lib/systemd/system-shutdown/eject")
@@ -236,7 +236,7 @@ var _ = Describe("Install action tests", func() {
 			Expect(err).To(HaveOccurred())
 			spec.Target = device
 			config.EjectCD = true
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			_, err = fs.Stat("/usr/lib/systemd/system-shutdown/eject")
 			Expect(err).To(HaveOccurred())
 		})
@@ -245,7 +245,7 @@ var _ = Describe("Install action tests", func() {
 			cloudInit.Error = true
 			spec.Target = device
 			config.PowerOff = true
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"poweroff", "-f"}}))
 		})
 
@@ -253,7 +253,7 @@ var _ = Describe("Install action tests", func() {
 			spec.NoFormat = true
 			spec.Force = true
 			spec.Target = device
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 		})
 
 		It("Successfully installs a docker image", Label("docker"), func() {
@@ -261,7 +261,7 @@ var _ = Describe("Install action tests", func() {
 			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 
@@ -271,33 +271,33 @@ var _ = Describe("Install action tests", func() {
 			utils.MkdirAll(fs, constants.OEMDir, constants.DirPerm)
 			_, err := fs.Create(filepath.Join(constants.OEMDir, "99_custom.yaml"))
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(installer.InstallRun()).To(BeNil())
+			Expect(installer.Run()).To(BeNil())
 			Expect(client.WasGetCalledWith("http://my.config.org")).To(BeTrue())
 		})
 
 		It("Fails if disk doesn't exist", Label("disk"), func() {
 			spec.Target = "nonexistingdisk"
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails if some hook fails and strict is set", Label("strict"), func() {
 			spec.Target = device
 			config.Strict = true
 			cloudInit.Error = true
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails to install from ISO if the ISO is not found", Label("iso"), func() {
 			spec.Iso = "nonexistingiso"
 			spec.Target = device
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails to install from ISO as rsync can't find the temporary root tree", Label("iso"), func() {
 			fs.Create("cOS.iso")
 			spec.Iso = "cOS.iso"
 			spec.Target = device
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(spec.ActiveImg.Source.Value()).To(ContainSubstring("/rootfs"))
 			Expect(spec.ActiveImg.Source.IsDir()).To(BeTrue())
 		})
@@ -306,32 +306,32 @@ var _ = Describe("Install action tests", func() {
 			spec.NoFormat = true
 			spec.Force = false
 			spec.Target = device
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails to mount partitions", Label("disk", "mount"), func() {
 			spec.Target = device
 			mounter.ErrorOnMount = true
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails on parted errors", Label("disk", "partitions"), func() {
 			spec.Target = device
 			cmdFail = "parted"
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(runner.MatchMilestones([][]string{{"parted"}}))
 		})
 
 		It("Fails to unmount partitions", Label("disk", "partitions"), func() {
 			spec.Target = device
 			mounter.ErrorOnUnmount = true
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails to create a filesystem image", Label("disk", "image"), func() {
 			spec.Target = device
 			config.Fs = vfs.NewReadOnlyFS(fs)
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 		})
 
 		It("Fails if luet fails to unpack image", Label("image", "luet", "unpack"), func() {
@@ -340,7 +340,7 @@ var _ = Describe("Install action tests", func() {
 			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
 			config.Luet = luet
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 
@@ -348,28 +348,28 @@ var _ = Describe("Install action tests", func() {
 			spec.Target = device
 			spec.CloudInit = "http://my.config.org"
 			client.Error = true
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(client.WasGetCalledWith("http://my.config.org")).To(BeTrue())
 		})
 
 		It("Fails on grub2-install errors", Label("grub"), func() {
 			spec.Target = device
 			cmdFail = "grub2-install"
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(runner.MatchMilestones([][]string{{"grub2-install"}}))
 		})
 
 		It("Fails copying Passive image", Label("copy", "active"), func() {
 			spec.Target = device
 			cmdFail = "tune2fs"
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(runner.MatchMilestones([][]string{{"tune2fs", "-L", constants.PassiveLabel}}))
 		})
 
 		It("Fails setting the grub default entry", Label("grub"), func() {
 			spec.Target = device
 			cmdFail = "grub2-editenv"
-			Expect(installer.InstallRun()).NotTo(BeNil())
+			Expect(installer.Run()).NotTo(BeNil())
 			Expect(runner.MatchMilestones([][]string{{"grub2-editenv", filepath.Join(constants.StateDir, constants.GrubOEMEnv)}}))
 		})
 	})

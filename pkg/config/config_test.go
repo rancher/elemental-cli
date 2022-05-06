@@ -41,7 +41,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				logger := v1.NewNullLogger()
 				ci := &v1mock.FakeCloudInitRunner{}
 				luet := &v1mock.FakeLuet{}
-				c := config.NewRunConfig(
+				c := config.NewRunConfigNew(
 					config.WithFs(fs),
 					config.WithMounter(mounter),
 					config.WithRunner(runner),
@@ -65,7 +65,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				defer cleanup()
 				Expect(err).ToNot(HaveOccurred())
 				mounter := mount.NewFakeMounter([]mount.MountPoint{})
-				c := config.NewRunConfig(
+				c := config.NewRunConfigNew(
 					config.WithFs(fs),
 					config.WithMounter(mounter),
 				)
@@ -79,7 +79,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				runner := v1mock.NewFakeRunner()
 				sysc := &v1mock.FakeSyscall{}
 				logger := v1.NewNullLogger()
-				c := config.NewRunConfig(
+				c := config.NewRunConfigNew(
 					config.WithRunner(runner),
 					config.WithSyscall(sysc),
 					config.WithLogger(logger),

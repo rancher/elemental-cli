@@ -23,10 +23,17 @@ import (
 	"github.com/rancher-sandbox/elemental/pkg/cloudinit"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/http"
+	"github.com/rancher-sandbox/elemental/pkg/luet"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/rancher-sandbox/elemental/pkg/utils"
 	"github.com/twpayne/go-vfs"
 	"k8s.io/mount-utils"
+)
+
+const (
+	ESP  = "esp"
+	BIOS = "bios_grub"
+	BOOT = "boot"
 )
 
 type GenericOptions func(a *v1.Config) error
@@ -96,6 +103,7 @@ func WithArch(arch string) func(r *v1.Config) error {
 
 func NewConfig(opts ...GenericOptions) *v1.Config {
 	log := v1.NewLogger()
+	//TODO set arch dynamically to the current arch
 	c := &v1.Config{
 		Fs:      vfs.OSFS,
 		Logger:  log,
@@ -132,57 +140,11 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 	if c.Mounter == nil {
 		c.Mounter = mount.New(constants.MountBinary)
 	}
+
+	if c.Luet == nil {
+		c.Luet = luet.NewLuet(luet.WithFs(c.Fs), luet.WithLogger(log))
+	}
 	return c
-}
-
-func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
-	r := &v1.RunConfig{
-		Config: *NewConfig(opts...),
-	}
-	// Set defaults if empty
-	if r.GrubConf == "" {
-		r.GrubConf = constants.GrubConf
-	}
-
-	if r.ActiveLabel == "" {
-		r.ActiveLabel = constants.ActiveLabel
-	}
-
-	if r.PassiveLabel == "" {
-		r.PassiveLabel = constants.PassiveLabel
-	}
-
-	if r.SystemLabel == "" {
-		r.SystemLabel = constants.SystemLabel
-	}
-
-	if r.RecoveryLabel == "" {
-		r.RecoveryLabel = constants.RecoveryLabel
-	}
-
-	if r.PersistentLabel == "" {
-		r.PersistentLabel = constants.PersistentLabel
-	}
-
-	if r.OEMLabel == "" {
-		r.OEMLabel = constants.OEMLabel
-	}
-
-	if r.StateLabel == "" {
-		r.StateLabel = constants.StateLabel
-	}
-
-	r.Partitions = v1.PartitionList{}
-	r.Images = v1.ImageMap{}
-
-	if r.GrubDefEntry == "" {
-		r.GrubDefEntry = constants.GrubDefEntry
-	}
-
-	if r.ImgSize == 0 {
-		r.ImgSize = constants.ImgSize
-	}
-	return r
 }
 
 func NewRunConfigNew(opts ...GenericOptions) *v1.RunConfigNew {
@@ -248,6 +210,7 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 		Partitions:   NewInstallParitionMap(),
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
+		GrubTty:      constants.GrubTty,
 		ActiveImg:    activeImg,
 		RecoveryImg:  recoveryImg,
 		PassiveImg:   passiveImg,
@@ -265,7 +228,7 @@ func AddFirmwarePartitions(i *v1.InstallSpec) error {
 			Name:       constants.EfiPartName,
 			FS:         constants.EfiFs,
 			MountPoint: constants.EfiDir,
-			Flags:      []string{v1.ESP},
+			Flags:      []string{ESP},
 		}
 	} else if i.Firmware == v1.BIOS && i.PartTable == v1.GPT {
 		i.Partitions[constants.BiosPartName] = &v1.Partition{
@@ -274,14 +237,14 @@ func AddFirmwarePartitions(i *v1.InstallSpec) error {
 			Name:       constants.BiosPartName,
 			FS:         "",
 			MountPoint: "",
-			Flags:      []string{v1.BIOS},
+			Flags:      []string{BIOS},
 		}
 	} else {
 		statePart, ok := i.Partitions[constants.StatePartName]
 		if !ok {
 			return fmt.Errorf("nil state partition")
 		}
-		statePart.Flags = []string{v1.BOOT}
+		statePart.Flags = []string{BOOT}
 	}
 	return nil
 }
@@ -409,6 +372,10 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	}
 	partitions := parts.GetPartitionMap()
 
+	// We won't do anything with the recovery partition
+	// removing it so we can easily loop to mount and unmount
+	delete(partitions, constants.RecoveryPartName)
+
 	if efiExists {
 		partEfi, ok := partitions[constants.EfiPartName]
 		if !ok {
@@ -470,6 +437,7 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 		Efi:          efiExists,
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
+		GrubTty:      constants.GrubTty,
 		ActiveImg: v1.Image{
 			Label:      constants.ActiveLabel,
 			Size:       constants.ImgSize,
