@@ -28,6 +28,7 @@ const (
 	GrubConf               = "/etc/cos/grub.cfg"
 	GrubOEMEnv             = "grub_oem_env"
 	GrubDefEntry           = "cOs"
+	GrubTty                = "tty1"
 	BiosPartName           = "bios"
 	EfiLabel               = "COS_GRUB"
 	EfiPartName            = "efi"

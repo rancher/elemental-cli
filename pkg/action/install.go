@@ -52,7 +52,7 @@ func NewInstallAction(cfg *v1.RunConfigNew, spec *v1.InstallSpec) *InstallAction
 }
 
 // InstallRun will install the system from a given configuration
-func (i InstallAction) InstallRun() (err error) { //nolint:gocyclo
+func (i InstallAction) Run() (err error) { //nolint:gocyclo
 	e := elemental.NewElemental(&i.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()

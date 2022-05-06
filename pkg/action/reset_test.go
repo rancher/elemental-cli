@@ -152,72 +152,72 @@ var _ = Describe("Reset action tests", func() {
 
 		It("Successfully resets on non-squashfs recovery", func() {
 			config.Reboot = true
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"reboot", "-f"}}))
 		})
 		It("Successfully resets on non-squashfs recovery including persistent data", func() {
 			config.PowerOff = true
 			spec.FormatPersistent = true
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"poweroff", "-f"}}))
 		})
 		It("Successfully resets from a squashfs recovery image", Label("channel"), func() {
 			err := utils.MkdirAll(config.Fs, constants.IsoBaseTree, constants.DirPerm)
 			Expect(err).ShouldNot(HaveOccurred())
 			spec.ActiveImg.Source = v1.NewDirSrc(constants.IsoBaseTree)
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 		})
 		It("Successfully resets despite having errors on hooks", func() {
 			cloudInit.Error = true
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 		})
 		It("Successfully resets from a docker image", Label("docker"), func() {
 			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Successfully resets from a channel package", Label("channel"), func() {
 			spec.ActiveImg.Source = v1.NewChannelSrc("system/cos")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
-			Expect(reset.ResetRun()).To(BeNil())
+			Expect(reset.Run()).To(BeNil())
 			Expect(luet.UnpackChannelCalled()).To(BeTrue())
 		})
 		It("Fails installing grub", func() {
 			cmdFail = "grub2-install"
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"grub2-install"}}))
 		})
 		It("Fails formatting state partition", func() {
 			cmdFail = "mkfs.ext4"
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"mkfs.ext4"}}))
 		})
 		It("Fails setting the active label on non-squashfs recovery", func() {
 			cmdFail = "tune2fs"
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 		})
 		It("Fails setting the passive label on squashfs recovery", func() {
 			cmdFail = "tune2fs"
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"tune2fs"}}))
 		})
 		It("Fails mounting partitions", func() {
 			mounter.ErrorOnMount = true
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 		})
 		It("Fails unmounting partitions", func() {
 			mounter.ErrorOnUnmount = true
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 		})
 		It("Fails unpacking docker image ", func() {
 			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
 			config.Luet = luet
-			Expect(reset.ResetRun()).NotTo(BeNil())
+			Expect(reset.Run()).NotTo(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 	})
