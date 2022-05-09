@@ -59,7 +59,7 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Maps flags or env vars to the sub install structure so viper
 			//also unmarshals them
 			keyRemap := map[string]string{
-				"tty":              "grub-tty",
+				"tty":              "tty",
 				"reset-persistent": "reset-persistent",
 				"system":           "system.uri",
 				"recovery-system":  "recovery-system.uri",

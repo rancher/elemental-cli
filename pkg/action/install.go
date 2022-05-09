@@ -117,7 +117,7 @@ func (i InstallAction) Run() (err error) {
 		i.spec.ActiveImg.MountPoint,
 		i.spec.Partitions[constants.StatePartName].MountPoint,
 		i.spec.GrubConf,
-		i.spec.GrubTty,
+		i.spec.Tty,
 		i.spec.Firmware == v1.EFI,
 	)
 	if err != nil {

@@ -110,10 +110,10 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 
 	ttyExists, _ := Exists(g.config.Fs, fmt.Sprintf("/dev/%s", tty))
 
-	if ttyExists && tty != "" && tty != "console" && tty != constants.GrubTty {
+	if ttyExists && tty != "" && tty != "console" && tty != constants.DefaultTty {
 		// We need to add a tty to the grub file
 		g.config.Logger.Infof("Adding extra tty (%s) to grub.cfg", tty)
-		defConsole := fmt.Sprintf("console=%s", constants.GrubTty)
+		defConsole := fmt.Sprintf("console=%s", constants.DefaultTty)
 		finalContent = strings.Replace(string(grubCfg), defConsole, fmt.Sprintf("%s console=%s", defConsole, tty), -1)
 	} else {
 		// We don't add anything, just read the file

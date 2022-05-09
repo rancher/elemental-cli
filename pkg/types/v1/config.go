@@ -72,7 +72,7 @@ type InstallSpec struct {
 	CloudInit    string       `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
 	Iso          string       `yaml:"iso,omitempty" mapstructure:"iso"`
 	GrubDefEntry string       `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
-	GrubTty      string       `yaml:"grub-tty,omitempty" mapstructure:"grub-tty"`
+	Tty          string       `yaml:"tty,omitempty" mapstructure:"tty"`
 	ActiveImg    Image        `yaml:"system,omitempty" mapstructure:"system"`
 	RecoveryImg  Image        `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
 	PassiveImg   Image
@@ -110,7 +110,7 @@ func (i *InstallSpec) CustomUnmarshal(data interface{}) (bool, error) {
 type ResetSpec struct {
 	FormatPersistent bool   `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
 	GrubDefEntry     string `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
-	GrubTty          string `yaml:"grub-tty,omitempty" mapstructure:"grub-tty"`
+	Tty              string `yaml:"tty,omitempty" mapstructure:"tty"`
 	ActiveImg        Image  `yaml:"system,omitempty" mapstructure:"system"`
 	PassiveImg       Image
 	Partitions       PartitionMap

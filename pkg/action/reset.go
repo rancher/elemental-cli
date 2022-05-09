@@ -113,7 +113,7 @@ func (r ResetAction) Run() (err error) {
 		r.spec.ActiveImg.MountPoint,
 		r.spec.Partitions[constants.StatePartName].MountPoint,
 		r.spec.GrubConf,
-		r.spec.GrubTty,
+		r.spec.Tty,
 		r.spec.Efi,
 	)
 	if err != nil {

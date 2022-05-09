@@ -82,7 +82,7 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				"no-format":       "no-format",
 				"part-table":      "part-table",
 				"firmware":        "firmware",
-				"tty":             "grub-tty",
+				"tty":             "tty",
 				"force":           "force",
 				"system":          "system.uri",
 				"recovery-system": "recovery-system.uri",
