@@ -120,7 +120,7 @@ func (l *Luet) SetPlugins(plugins ...string) {
 	l.plugins = plugins
 }
 
-func (l *Luet) initPlugins() {
+func (l *Luet) InitPlugins() {
 	if len(l.plugins) > 0 {
 		bus.Manager.Initialize(l.context, l.plugins...)
 		l.log.Infof("Enabled plugins:")
@@ -132,7 +132,7 @@ func (l *Luet) initPlugins() {
 
 func (l Luet) Unpack(target string, image string, local bool) error {
 	l.log.Infof("Unpacking docker image: %s", image)
-	l.initPlugins()
+	l.InitPlugins()
 	if !local {
 		info, err := docker.DownloadAndExtractDockerImage(l.context, image, target, l.auth, l.VerifyImageUnpack)
 		if err != nil {
@@ -193,7 +193,7 @@ func (l Luet) initLuetRepository(repo v1.Repository) (luetTypes.LuetRepository, 
 // luet install action to install to a local dir
 func (l Luet) UnpackFromChannel(target string, pkg string, repositories ...v1.Repository) error {
 	var toInstall luetTypes.Packages
-	l.initPlugins()
+	l.InitPlugins()
 
 	toInstall = append(toInstall, l.parsePackage(pkg))
 

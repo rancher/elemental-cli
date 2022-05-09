@@ -103,7 +103,10 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				return errors.New("at least a target device must be supplied")
 			}
 
-			conf.AddFirmwarePartitions(spec)
+			err = conf.AddFirmwarePartitions(spec)
+			if err != nil {
+				return err
+			}
 
 			cfg.Logger.Infof("Install called")
 			install := action.NewInstallAction(cfg, spec)
