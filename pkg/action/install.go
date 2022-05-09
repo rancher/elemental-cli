@@ -69,7 +69,10 @@ func (i InstallAction) Run() (err error) { //nolint:gocyclo
 			return err
 		}
 		cleanup.Push(func() error { return i.cfg.Fs.RemoveAll(tmpDir) })
-		e.UpdateSourcesFormDownloadedISO(tmpDir, &i.spec.ActiveImg, &i.spec.RecoveryImg)
+		err = e.UpdateSourcesFormDownloadedISO(tmpDir, &i.spec.ActiveImg, &i.spec.RecoveryImg)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Check no-format flag
