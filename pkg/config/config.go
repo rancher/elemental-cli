@@ -147,9 +147,9 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 	return c
 }
 
-func NewRunConfigNew(opts ...GenericOptions) *v1.RunConfigNew {
+func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
 	config := NewConfig(opts...)
-	r := &v1.RunConfigNew{
+	r := &v1.RunConfig{
 		Config: *config,
 	}
 	return r

@@ -48,7 +48,7 @@ type Config struct {
 	Arch            string       `yaml:"arch,omitempty" mapstructure:"arch"`
 }
 
-type RunConfigNew struct {
+type RunConfig struct {
 	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
 	NoVerify       bool     `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
 	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
@@ -56,8 +56,6 @@ type RunConfigNew struct {
 	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
 	EjectCD        bool     `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
 
-	// Meta is holding data remaining config data which will be used in the context of action spec initialization
-	//Meta map[string]interface{} `mapstructure:",remain"`
 	Config
 }
 
@@ -79,20 +77,28 @@ type InstallSpec struct {
 	GrubConf     string
 }
 
-// Manually unmarshals passive-label to PassiveImg.Label
-func (i *InstallSpec) CustomUnmarshal(data interface{}) (bool, error) {
+func passiveLabel(data interface{}) (string, error) {
 	m, ok := data.(map[string]interface{})
 	if !ok {
-		return true, fmt.Errorf("cannot unmarshal to InstallSpec, unexpected format %+v", data)
+		return "", fmt.Errorf("cannot unmarshal, unexpected format %+v", data)
 	}
 	raw, ok := m["passive-label"]
 	if !ok {
 		// No passive-label tag, continue decoding
-		return true, nil
+		return "", nil
 	}
 	label, ok := raw.(string)
 	if !ok {
-		return true, fmt.Errorf("invalid 'passive-label' type, unexpected format")
+		return "", fmt.Errorf("invalid 'passive-label' type, unexpected format")
+	}
+	return label, nil
+}
+
+// Manually unmarshals passive-label to PassiveImg.Label
+func (i *InstallSpec) CustomUnmarshal(data interface{}) (bool, error) {
+	label, err := passiveLabel(data)
+	if err != nil {
+		return true, err
 	}
 	i.PassiveImg.Label = label
 	return true, nil
@@ -111,10 +117,21 @@ type ResetSpec struct {
 	GrubConf         string
 }
 
+// Manually unmarshals passive-label to PassiveImg.Label
+func (r *ResetSpec) CustomUnmarshal(data interface{}) (bool, error) {
+	label, err := passiveLabel(data)
+	if err != nil {
+		return true, err
+	}
+	r.PassiveImg.Label = label
+	return true, nil
+}
+
 type UpgradeSpec struct {
-	RecoveryUpgrade    bool  `yaml:"upgrade-recovery,omitempty" mapstructure:"upgrade-recovery"`
-	ActiveImg          Image `yaml:"system,omitempty" mapstructure:"system"`
-	RecoveryImg        Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	RecoveryUpgrade    bool   `yaml:"upgrade-recovery,omitempty" mapstructure:"upgrade-recovery"`
+	ActiveImg          Image  `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg        Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	PassiveLabel       string `yaml:"passive-label,omitempty" mapstructure:"passive-label"`
 	Partitions         PartitionMap
 	BootedFromRecovery bool
 	SquashedRecovery   bool
