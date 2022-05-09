@@ -124,15 +124,15 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	c.Flags().StringP("cloud-init", "c", "", "Cloud-init config file")
 	c.Flags().StringP("iso", "i", "", "Performs an installation from the ISO url")
 	c.Flags().StringP("partition-layout", "p", "", "Partitioning layout file")
-	c.Flags().MarkDeprecated("partition-layout", "'partition-layout' is deprecated and ignored please use a config file instead")
+	_ = c.Flags().MarkDeprecated("partition-layout", "'partition-layout' is deprecated and ignored please use a config file instead")
 	c.Flags().BoolP("no-format", "", false, "Don’t format disks. It is implied that COS_STATE, COS_RECOVERY, COS_PERSISTENT, COS_OEM are already existing")
 
 	c.Flags().BoolP("force-efi", "", false, "Forces an EFI installation")
-	c.Flags().MarkDeprecated("force-efi", "'force-efi' is deprecated please use 'firmware' instead")
+	_ = c.Flags().MarkDeprecated("force-efi", "'force-efi' is deprecated please use 'firmware' instead")
 	c.Flags().Var(firmType, "firmware", "Firmware to install for ('esp' or 'bios_grub')")
 
 	c.Flags().BoolP("force-gpt", "", false, "Forces a GPT partition table")
-	c.Flags().MarkDeprecated("force-gpt", "'force-gpt' is deprecated please use 'part-table' instead")
+	_ = c.Flags().MarkDeprecated("force-gpt", "'force-gpt' is deprecated please use 'part-table' instead")
 	c.Flags().Var(pTableType, "part-table", "Partition table type to use")
 
 	c.Flags().BoolP("tty", "", false, "Add named tty to grub")

@@ -356,7 +356,7 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 
 // NewResetSpec returns a ResetSpec struct all based on defaults and current host state
 func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
-	imgSource := v1.NewEmptySrc()
+	var imgSource *v1.ImageSource
 
 	//TODO find a way to pre-load current state values such as labels
 	if !utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) &&

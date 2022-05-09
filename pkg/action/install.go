@@ -31,11 +31,11 @@ func (i *InstallAction) installHook(hook string, chroot bool) error {
 		extraMounts := map[string]string{}
 		persistent, ok := i.spec.Partitions[cnst.PersistentPartName]
 		if ok {
-			extraMounts[persistent.MountPoint] = "/usr/local"
+			extraMounts[persistent.MountPoint] = "/usr/local" //nolint:goconst
 		}
 		oem, ok := i.spec.Partitions[cnst.OEMPartName]
 		if ok {
-			extraMounts[oem.MountPoint] = "/oem"
+			extraMounts[oem.MountPoint] = "/oem" //nolint:goconst
 		}
 		return ChrootHook(&i.cfg.Config, hook, i.cfg.Strict, i.spec.ActiveImg.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
 	}
@@ -52,7 +52,7 @@ func NewInstallAction(cfg *v1.RunConfig, spec *v1.InstallSpec) *InstallAction {
 }
 
 // InstallRun will install the system from a given configuration
-func (i InstallAction) Run() (err error) { //nolint:gocyclo
+func (i InstallAction) Run() (err error) {
 	e := elemental.NewElemental(&i.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()

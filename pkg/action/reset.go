@@ -29,11 +29,11 @@ func (r *ResetAction) resetHook(hook string, chroot bool) error {
 		extraMounts := map[string]string{}
 		persistent, ok := r.spec.Partitions[cnst.PersistentPartName]
 		if ok && persistent.MountPoint != "" {
-			extraMounts[persistent.MountPoint] = "/usr/local"
+			extraMounts[persistent.MountPoint] = "/usr/local" // nolint:goconst
 		}
 		oem, ok := r.spec.Partitions[cnst.OEMPartName]
 		if ok && oem.MountPoint != "" {
-			extraMounts[oem.MountPoint] = "/oem"
+			extraMounts[oem.MountPoint] = "/oem" // nolint:goconst
 		}
 		return ChrootHook(&r.cfg.Config, hook, r.cfg.Strict, r.spec.ActiveImg.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
 	}
@@ -50,7 +50,7 @@ func NewResetAction(cfg *v1.RunConfig, spec *v1.ResetSpec) *ResetAction {
 }
 
 // ResetRun will reset the cos system to by following several steps
-func (r ResetAction) Run() (err error) { // nolint:gocyclo
+func (r ResetAction) Run() (err error) {
 	e := elemental.NewElemental(&r.cfg.Config)
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
@@ -82,7 +82,7 @@ func (r ResetAction) Run() (err error) { // nolint:gocyclo
 			}
 		}
 		oem, ok := r.spec.Partitions[cnst.OEMPartName]
-		if oem != nil {
+		if ok {
 			err = e.FormatPartition(oem)
 			if err != nil {
 				return err

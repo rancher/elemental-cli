@@ -283,7 +283,7 @@ func HasSquashedRecovery(config *v1.Config, recovery *v1.Partition) (squashed bo
 			config.Logger.Errorf("failed creating temporary dir: %v", err)
 			return false, err
 		}
-		defer config.Fs.RemoveAll(tmpMountDir)
+		defer config.Fs.RemoveAll(tmpMountDir) // nolint:errcheck
 		err = config.Mounter.Mount(recovery.Path, tmpMountDir, "auto", []string{})
 		if err != nil {
 			config.Logger.Errorf("failed mounting recovery partition: %v", err)

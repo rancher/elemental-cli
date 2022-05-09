@@ -55,12 +55,12 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 
 		oemDevice, ok := u.spec.Partitions[constants.OEMPartName]
 		if ok && oemDevice.MountPoint != "" {
-			mountPoints[oemDevice.MountPoint] = "/oem"
+			mountPoints[oemDevice.MountPoint] = "/oem" //nolint:goconst
 		}
 
 		persistentDevice, ok := u.spec.Partitions[constants.PersistentPartName]
 		if ok && persistentDevice.MountPoint != "" {
-			mountPoints[persistentDevice.MountPoint] = "/usr/local"
+			mountPoints[persistentDevice.MountPoint] = "/usr/local" //nolint:goconst
 		}
 
 		return ChrootHook(&u.config.Config, hook, u.config.Strict, u.spec.ActiveImg.MountPoint, mountPoints, u.config.CloudInitPaths...)
@@ -68,7 +68,7 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 	return Hook(&u.config.Config, hook, u.config.Strict, u.config.CloudInitPaths...)
 }
 
-func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
+func (u *UpgradeAction) Run() (err error) {
 	var mountPart *v1.Partition
 	var ok bool
 	var upgradeImg v1.Image
