@@ -103,9 +103,9 @@ func (e *Elemental) createAndFormatPartition(disk *partitioner.Disk, part *v1.Pa
 	return nil
 }
 
-func (c *Elemental) createPartitions(disk *partitioner.Disk, parts v1.PartitionList) error {
+func (e *Elemental) createPartitions(disk *partitioner.Disk, parts v1.PartitionList) error {
 	for _, part := range parts {
-		err := c.createAndFormatPartition(disk, part)
+		err := e.createAndFormatPartition(disk, part)
 		if err != nil {
 			return err
 		}
@@ -507,8 +507,8 @@ func (e Elemental) UpdateSourcesFormDownloadedISO(workDir string, activeImg *v1.
 
 // Sets the default_meny_entry value in RunConfig.GrubOEMEnv file at in
 // State partition mountpoint.
-func (c Elemental) SetDefaultGrubEntry(mountPoint string, defaultEntry string) error {
-	grub := utils.NewGrub(c.config)
+func (e Elemental) SetDefaultGrubEntry(mountPoint string, defaultEntry string) error {
+	grub := utils.NewGrub(e.config)
 	return grub.SetPersistentVariables(
 		filepath.Join(mountPoint, cnst.GrubOEMEnv),
 		map[string]string{"default_menu_entry": defaultEntry},

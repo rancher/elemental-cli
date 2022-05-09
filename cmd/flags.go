@@ -47,10 +47,10 @@ func addSharedInstallUpgradeFlags(cmd *cobra.Command) {
 // addResetFlags add flags shared between reset, install and upgrade
 func addResetFlags(cmd *cobra.Command) {
 	cmd.Flags().String("directory", "", "Use directory as source to install from")
-	cmd.Flags().MarkDeprecated("directory", "'directory' is deprecated please use 'system' instead")
+	_ = cmd.Flags().MarkDeprecated("directory", "'directory' is deprecated please use 'system' instead")
 
 	cmd.Flags().StringP("docker-image", "d", "", "Install a specified container image")
-	cmd.Flags().MarkDeprecated("docker-image", "'docker-image' is deprecated please use 'system' instead")
+	_ = cmd.Flags().MarkDeprecated("docker-image", "'docker-image' is deprecated please use 'system' instead")
 
 	cmd.Flags().String("system", "", "Sets the system image source and its type (e.g. 'docker:registry.org/image:tag')")
 	cmd.Flags().BoolP("no-verify", "", false, "Disable mtree checksum verification (requires images manifests generated with mtree separately)")
