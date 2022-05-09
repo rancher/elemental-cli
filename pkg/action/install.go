@@ -43,11 +43,11 @@ func (i *InstallAction) installHook(hook string, chroot bool) error {
 }
 
 type InstallAction struct {
-	cfg  *v1.RunConfigNew
+	cfg  *v1.RunConfig
 	spec *v1.InstallSpec
 }
 
-func NewInstallAction(cfg *v1.RunConfigNew, spec *v1.InstallSpec) *InstallAction {
+func NewInstallAction(cfg *v1.RunConfig, spec *v1.InstallSpec) *InstallAction {
 	return &InstallAction{cfg: cfg, spec: spec}
 }
 

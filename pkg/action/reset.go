@@ -41,11 +41,11 @@ func (r *ResetAction) resetHook(hook string, chroot bool) error {
 }
 
 type ResetAction struct {
-	cfg  *v1.RunConfigNew
+	cfg  *v1.RunConfig
 	spec *v1.ResetSpec
 }
 
-func NewResetAction(cfg *v1.RunConfigNew, spec *v1.ResetSpec) *ResetAction {
+func NewResetAction(cfg *v1.RunConfig, spec *v1.ResetSpec) *ResetAction {
 	return &ResetAction{cfg: cfg, spec: spec}
 }
 

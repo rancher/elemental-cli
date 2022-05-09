@@ -28,11 +28,11 @@ import (
 
 // UpgradeAction represents the struct that will run the upgrade from start to finish
 type UpgradeAction struct {
-	config *v1.RunConfigNew
+	config *v1.RunConfig
 	spec   *v1.UpgradeSpec
 }
 
-func NewUpgradeAction(config *v1.RunConfigNew, spec *v1.UpgradeSpec) *UpgradeAction {
+func NewUpgradeAction(config *v1.RunConfig, spec *v1.UpgradeSpec) *UpgradeAction {
 	return &UpgradeAction{config: config, spec: spec}
 }
 
@@ -204,8 +204,7 @@ func (u *UpgradeAction) Run() (err error) { // nolint:gocyclo
 		}
 		u.Info("Finished moving %s to %s", source, destination)
 		// Label the image to passive!
-		//TODO find a way to preload system status data such as PassiveLabel
-		out, err := u.config.Runner.Run("tune2fs", "-L", constants.PassiveLabel, destination)
+		out, err := u.config.Runner.Run("tune2fs", "-L", u.spec.PassiveLabel, destination)
 		if err != nil {
 			u.Error("Error while labeling the passive image %s: %s", destination, err)
 			u.Debug("Error while labeling the passive image %s, command output: %s", out)

@@ -87,13 +87,14 @@ func setDecoder(config *mapstructure.DecoderConfig) {
 }
 
 // BindGivenFlags binds to viper only passed flags, ignoring any non provided flag
-func bindGivenFlags(cmd *cobra.Command) {
-	set := cmd.Flags()
-	set.VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			_ = viper.BindPFlag(f.Name, f)
-		}
-	})
+func bindGivenFlags(flagSet *pflag.FlagSet) {
+	if flagSet != nil {
+		flagSet.VisitAll(func(f *pflag.Flag) {
+			if f.Changed {
+				_ = viper.BindPFlag(f.Name, f)
+			}
+		})
+	}
 }
 
 func ReadConfigBuild(configDir string, mounter mount.Interface) (*v1.BuildConfig, error) {
@@ -130,7 +131,7 @@ func ReadConfigBuild(configDir string, mounter mount.Interface) (*v1.BuildConfig
 	return cfg, nil
 }
 
-func ReadConfigRun(configDir string, mounter mount.Interface) (*v1.RunConfig, error) {
+func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*v1.RunConfig, error) {
 	cfg := config.NewRunConfig(
 		config.WithLogger(v1.NewLogger()),
 		config.WithMounter(mounter),
@@ -148,6 +149,7 @@ func ReadConfigRun(configDir string, mounter mount.Interface) (*v1.RunConfig, er
 		}
 	}
 
+	// Second, merge yaml config files on top
 	if configDir != "" {
 		if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
 			viper.AddConfigPath(configDir)
@@ -175,65 +177,8 @@ func ReadConfigRun(configDir string, mounter mount.Interface) (*v1.RunConfig, er
 		}
 	}
 
-	viperReadEnv()
-
-	// unmarshal all the vars into the config object
-	err := viper.Unmarshal(cfg, setDecoder)
-	if err != nil {
-		cfg.Logger.Warnf("error unmarshalling config: %s", err)
-	}
-
-	cfg.Logger.Debugf("Full config loaded: %+v", cfg)
-
-	return cfg, nil
-}
-
-func ReadConfigRunNew(configDir string, cmd *cobra.Command, mounter mount.Interface) (*v1.RunConfigNew, error) {
-	cfg := config.NewRunConfigNew(
-		config.WithLogger(v1.NewLogger()),
-		config.WithMounter(mounter),
-	)
-
-	configLogger(cfg.Logger, cfg.Fs)
-
-	cfgDefault := []string{"/etc/os-release", "/etc/cos/config", "/etc/cos-upgrade-image"}
-
-	// First, read env config files
-	for _, c := range cfgDefault {
-		if _, err := os.Stat(c); err == nil {
-			viper.SetConfigFile(c)
-			viper.SetConfigType("env")
-			cobra.CheckErr(viper.MergeInConfig())
-		}
-	}
-
-	// Second, merge yaml config files on top
-	if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
-		viper.AddConfigPath(configDir)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
-		// If a config file is found, read it in.
-		err := viper.MergeInConfig()
-		if err != nil {
-			cfg.Logger.Warnf("error merging config files: %s", err)
-		}
-	}
-
-	// Load extra config files on configdir/config.d/ so we can override config values
-	cfgExtra := fmt.Sprintf("%s/config.d/", strings.TrimSuffix(configDir, "/"))
-	if _, err := os.Stat(cfgExtra); err == nil {
-		viper.AddConfigPath(cfgExtra)
-		_ = filepath.WalkDir(cfgExtra, func(path string, d fs.DirEntry, err error) error {
-			if !d.IsDir() {
-				viper.SetConfigName(d.Name())
-				cobra.CheckErr(viper.MergeInConfig())
-			}
-			return nil
-		})
-	}
-
 	// Third, merge command client flags on top
-	bindGivenFlags(cmd)
+	bindGivenFlags(flags)
 
 	// Finally, merge environment variables on top
 	viperReadEnv()
@@ -249,37 +194,6 @@ func ReadConfigRunNew(configDir string, cmd *cobra.Command, mounter mount.Interf
 	return cfg, nil
 }
 
-/*func newMetaDecoder(result interface{}) (*mapstructure.Decoder, error) {
-	decoConfig := &mapstructure.DecoderConfig{}
-	decoConfig.DecodeHook = mapstructure.ComposeDecodeHookFunc(
-		UnmarshalerHook(),
-		mapstructure.StringToTimeDurationHookFunc(),
-		mapstructure.StringToSliceHookFunc(","),
-	)
-	decoConfig.ZeroFields = true
-	decoConfig.Result = result
-	deco, err := mapstructure.NewDecoder(decoConfig)
-	return deco, err
-}
-
-func readNestedRunConfigSpec(r *v1.RunConfigNew, nestedSpec interface{}, nestedTag string) error {
-	data, ok := r.Meta[nestedTag]
-	if !ok {
-		// nothing to decode
-		return nil
-	}
-
-	return decodeMapData(data, nestedSpec)
-}
-
-func decodeMapData(data interface{}, result interface{}) error {
-	deco, err := newMetaDecoder(result)
-	if err != nil {
-		return fmt.Errorf("could not initialize decoder: %v", err)
-	}
-	err = deco.Decode(data)
-	return err
-}*/
 func viperRemapKeys(vp *viper.Viper, keyRemap map[string]string) {
 	for formerKey, newKey := range keyRemap {
 		v := viper.Get(formerKey)
@@ -290,7 +204,7 @@ func viperRemapKeys(vp *viper.Viper, keyRemap map[string]string) {
 	}
 }
 
-func ReadInstallSpec(r *v1.RunConfigNew, keyRemap map[string]string) (*v1.InstallSpec, error) {
+func ReadInstallSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.InstallSpec, error) {
 	install := config.NewInstallSpec(r.Config)
 	vp := viper.Sub("install")
 	if vp == nil {
@@ -302,7 +216,7 @@ func ReadInstallSpec(r *v1.RunConfigNew, keyRemap map[string]string) (*v1.Instal
 	return install, err
 }
 
-func ReadResetSpec(r *v1.RunConfigNew, keyRemap map[string]string) (*v1.ResetSpec, error) {
+func ReadResetSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.ResetSpec, error) {
 	reset, err := config.NewResetSpec(r.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing reset spec: %v", err)
@@ -317,7 +231,7 @@ func ReadResetSpec(r *v1.RunConfigNew, keyRemap map[string]string) (*v1.ResetSpe
 	return reset, err
 }
 
-func ReadUpgradeSpec(r *v1.RunConfigNew, keyRemap map[string]string) (*v1.UpgradeSpec, error) {
+func ReadUpgradeSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.UpgradeSpec, error) {
 	upgrade, err := config.NewUpgradeSpec(r.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing upgrade spec: %v", err)

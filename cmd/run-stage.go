@@ -33,7 +33,7 @@ func NewRunStage(root *cobra.Command) *cobra.Command {
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.ReadConfigRunNew(viper.GetString("config-dir"), cmd, &mount.FakeMounter{})
+			cfg, err := config.ReadConfigRun(viper.GetString("config-dir"), cmd.Flags(), &mount.FakeMounter{})
 
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
