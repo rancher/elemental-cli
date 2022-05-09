@@ -105,12 +105,13 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 	log := v1.NewLogger()
 	//TODO set arch dynamically to the current arch
 	c := &v1.Config{
-		Fs:      vfs.OSFS,
-		Logger:  log,
-		Syscall: &v1.RealSyscall{},
-		Client:  http.NewClient(),
-		Repos:   []v1.Repository{},
-		Arch:    "x86_64",
+		Fs:                        vfs.OSFS,
+		Logger:                    log,
+		Syscall:                   &v1.RealSyscall{},
+		Client:                    http.NewClient(),
+		Repos:                     []v1.Repository{},
+		Arch:                      "x86_64",
+		SquashFsCompressionConfig: constants.GetDefaultSquashfsCompressionOptions(),
 	}
 	for _, o := range opts {
 		err := o(c)

@@ -280,7 +280,6 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 				return err
 			}
 		} else {
-			//TODO set target as in upgrade?
 			target = utils.GetElementalTempDir(e.config)
 			err := utils.MkdirAll(e.config.Fs, target, cnst.DirPerm)
 			if err != nil {
@@ -302,7 +301,8 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 			return err
 		}
 		if img.FS == cnst.SquashFs {
-			err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, target, img.File, cnst.GetDefaultSquashfsOptions())
+			opts := append(cnst.GetDefaultSquashfsOptions(), e.config.SquashFsCompressionConfig...)
+			err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, target, img.File, opts)
 			if err != nil {
 				return err
 			}

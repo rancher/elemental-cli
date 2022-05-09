@@ -47,7 +47,7 @@ type Config struct {
 	LocalImage                bool         `yaml:"local,omitempty" mapstructure:"local"`
 	Repos                     []Repository `yaml:"repositories,omitempty" mapstructure:"repositories"`
 	Arch                      string       `yaml:"arch,omitempty" mapstructure:"arch"`
-	SquashFsCompressionConfig []string     `yaml:"squash-compression,omitempty" mapstructure:"SquashFsCompressionConfig"`
+	SquashFsCompressionConfig []string     `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
 }
 
 type RunConfig struct {
