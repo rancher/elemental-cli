@@ -264,10 +264,13 @@ func LoadEnvFile(fs v1.FS, file string) (map[string]string, error) {
 // GetTempDir returns the dir for storing related temporal files
 // It will respect TMPDIR and use that if exists, fallback to try the persistent partition if its mounted
 // and finally the default /tmp/ dir
-func GetTempDir(config *v1.RunConfig) string {
+// suffix is what is appended to the dir name elemental-suffix. If empty it will randomly generate a number
+func GetTempDir(config *v1.RunConfig, suffix string) string {
 	// if we got a TMPDIR var, respect and use that
-	random.Seed(time.Now().UnixNano())
-	suffix := strconv.Itoa(int(random.Uint32()))
+	if suffix == "" {
+		random.Seed(time.Now().UnixNano())
+		suffix = strconv.Itoa(int(random.Uint32()))
+	}
 	elementalTmpDir := fmt.Sprintf("elemental-%s", suffix)
 	dir := os.Getenv("TMPDIR")
 	if dir != "" {
@@ -278,9 +281,7 @@ func GetTempDir(config *v1.RunConfig) string {
 	if err == nil && persistent.MountPoint != "" {
 		return filepath.Join(persistent.MountPoint, elementalTmpDir)
 	}
-	// We could be dealing with a test FS here, so get the proper rawpath for /
-	rawpath, _ := config.Fs.RawPath("/")
-	return filepath.Join(rawpath, "tmp", elementalTmpDir)
+	return filepath.Join("/", "tmp", elementalTmpDir)
 }
 
 // IsLocalURI returns true if the uri has "file" scheme or no scheme and URI is

@@ -56,7 +56,7 @@ func SetupLuet(config *v1.RunConfig) {
 			plugins = append(plugins, constants.LuetMtreePlugin)
 		}
 	}
-	tmpDir := utils.GetTempDir(config)
+	tmpDir := utils.GetTempDir(config, "")
 	config.Luet = luet.NewLuet(luet.WithLogger(config.Logger), luet.WithPlugins(plugins...), luet.WithLuetTempDir(tmpDir))
 }
 
