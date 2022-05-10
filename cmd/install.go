@@ -74,22 +74,12 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				viper.Set("part-table", v1.GPT)
 			}
 
-			// Maps flags or env vars to the sub install structure so viper
-			//also unmarshals them
-			keyRemap := map[string]string{
-				"cloud-init":      "cloud-init",
-				"iso":             "iso",
-				"no-format":       "no-format",
-				"part-table":      "part-table",
-				"firmware":        "firmware",
-				"tty":             "tty",
-				"force":           "force",
-				"system":          "system.uri",
-				"recovery-system": "recovery-system.uri",
-			}
+			// TODO
+			// Map environment variables to sub viper keys
+			keyEnvMap := map[string]string{}
 
 			cmd.SilenceUsage = true
-			spec, err := config.ReadInstallSpec(cfg, keyRemap)
+			spec, err := config.ReadInstallSpec(cfg, cmd.Flags(), keyEnvMap)
 			if err != nil {
 				cfg.Logger.Errorf("invalid install command setup %v", err)
 				return err

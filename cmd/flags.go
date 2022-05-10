@@ -41,7 +41,7 @@ func addPowerFlags(cmd *cobra.Command) {
 // addSharedInstallUpgradeFlags add flags shared between install, upgrade and reset
 func addSharedInstallUpgradeFlags(cmd *cobra.Command) {
 	addResetFlags(cmd)
-	cmd.Flags().String("recovery-system", "", "Sets the recovery image source and its type (e.g. 'docker:registry.org/image:tag')")
+	cmd.Flags().String("recovery-system.uri", "", "Sets the recovery image source and its type (e.g. 'docker:registry.org/image:tag')")
 }
 
 // addResetFlags add flags shared between reset, install and upgrade
@@ -52,7 +52,7 @@ func addResetFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("docker-image", "d", "", "Install a specified container image")
 	_ = cmd.Flags().MarkDeprecated("docker-image", "'docker-image' is deprecated please use 'system' instead")
 
-	cmd.Flags().String("system", "", "Sets the system image source and its type (e.g. 'docker:registry.org/image:tag')")
+	cmd.Flags().String("system.uri", "", "Sets the system image source and its type (e.g. 'docker:registry.org/image:tag')")
 	cmd.Flags().BoolP("no-verify", "", false, "Disable mtree checksum verification (requires images manifests generated with mtree separately)")
 	cmd.Flags().BoolP("strict", "", false, "Enable strict check of hooks (They need to exit with 0)")
 
@@ -66,7 +66,7 @@ func addLocalImageFlag(cmd *cobra.Command) {
 }
 
 func adaptDockerImageAndDirectoryFlagsToSystem() {
-	systemFlag := "system"
+	systemFlag := "system.uri"
 	doc := viper.GetString("docker-image")
 	if doc != "" {
 		viper.Set(systemFlag, fmt.Sprintf("docker:%s", doc))
@@ -91,7 +91,7 @@ func validateCosignFlags(log v1.Logger) error {
 func validateSourceFlags(log v1.Logger) error {
 	msg := "flags docker-image, directory and system are mutually exclusive, please only set one of them"
 	// docker-image, directory and system are mutually exclusive. Can't have your cake and eat it too.
-	if viper.GetString("system") != "" && (viper.GetString("directory") != "" || viper.GetString("docker-image") != "") {
+	if viper.GetString("system.uri") != "" && (viper.GetString("directory") != "" || viper.GetString("docker-image") != "") {
 		return errors.New(msg)
 	}
 	if viper.GetString("directory") != "" && viper.GetString("docker-image") != "" {

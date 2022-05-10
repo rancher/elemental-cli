@@ -56,17 +56,12 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem()
 
-			// Maps flags or env vars to the sub install structure so viper
-			//also unmarshals them
-			keyRemap := map[string]string{
-				"tty":              "tty",
-				"reset-persistent": "reset-persistent",
-				"system":           "system.uri",
-				"recovery-system":  "recovery-system.uri",
-			}
+			// TODO
+			// Map environment variables to sub viper keys
+			keyEnvMap := map[string]string{}
 
 			cmd.SilenceUsage = true
-			spec, err := config.ReadResetSpec(cfg, keyRemap)
+			spec, err := config.ReadResetSpec(cfg, cmd.Flags(), keyEnvMap)
 			if err != nil {
 				cfg.Logger.Errorf("invalid reset command setup %v", err)
 				return err

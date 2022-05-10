@@ -87,11 +87,11 @@ func setDecoder(config *mapstructure.DecoderConfig) {
 }
 
 // BindGivenFlags binds to viper only passed flags, ignoring any non provided flag
-func bindGivenFlags(flagSet *pflag.FlagSet) {
+func bindGivenFlags(vp *viper.Viper, flagSet *pflag.FlagSet) {
 	if flagSet != nil {
 		flagSet.VisitAll(func(f *pflag.Flag) {
 			if f.Changed {
-				_ = viper.BindPFlag(f.Name, f)
+				_ = vp.BindPFlag(f.Name, f)
 			}
 		})
 	}
@@ -118,7 +118,7 @@ func ReadConfigBuild(configDir string, mounter mount.Interface) (*v1.BuildConfig
 	viper.SetConfigName("manifest.yaml")
 	// If a config file is found, read it in.
 	_ = viper.MergeInConfig()
-	viperReadEnv()
+	viperReadEnv(viper.GetViper(), map[string]string{})
 
 	// unmarshal all the vars into the config object
 	err := viper.Unmarshal(cfg, setDecoder)
@@ -149,7 +149,7 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 		}
 	}
 
-	// Second, merge yaml config files on top
+	// merge yaml config files on top of default runconfig
 	if configDir != "" {
 		if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
 			viper.AddConfigPath(configDir)
@@ -177,11 +177,8 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 		}
 	}
 
-	// Third, merge command client flags on top
-	bindGivenFlags(flags)
-
-	// Finally, merge environment variables on top
-	viperReadEnv()
+	// merge environment variables on top for rootCmd
+	viperReadEnv(viper.GetViper(), map[string]string{})
 
 	// unmarshal all the vars into the config object
 	err := viper.Unmarshal(cfg, setDecoder, decodeHook)
@@ -194,29 +191,22 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	return cfg, nil
 }
 
-func viperRemapKeys(vp *viper.Viper, keyRemap map[string]string) {
-	for formerKey, newKey := range keyRemap {
-		v := viper.Get(formerKey)
-		if v == nil {
-			continue
-		}
-		vp.Set(newKey, v)
-	}
-}
-
-func ReadInstallSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.InstallSpec, error) {
+func ReadInstallSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]string) (*v1.InstallSpec, error) {
 	install := config.NewInstallSpec(r.Config)
 	vp := viper.Sub("install")
 	if vp == nil {
 		vp = viper.New()
 	}
-	viperRemapKeys(vp, keyRemap)
+	// Bind install cmd flags
+	bindGivenFlags(vp, flags)
+	// Bind install env vars
+	viperReadEnv(vp, keyRemap)
 	err := vp.Unmarshal(install, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded install spec: %+v", install)
 	return install, err
 }
 
-func ReadResetSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.ResetSpec, error) {
+func ReadResetSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]string) (*v1.ResetSpec, error) {
 	reset, err := config.NewResetSpec(r.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing reset spec: %v", err)
@@ -225,13 +215,16 @@ func ReadResetSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.ResetSpec, 
 	if vp == nil {
 		vp = viper.New()
 	}
-	viperRemapKeys(vp, keyRemap)
+	// Bind reset cmd flags
+	bindGivenFlags(vp, flags)
+	// Bind reset env vars
+	viperReadEnv(vp, keyRemap)
 	err = vp.Unmarshal(reset, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded reset spec: %+v", reset)
 	return reset, err
 }
 
-func ReadUpgradeSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.UpgradeSpec, error) {
+func ReadUpgradeSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]string) (*v1.UpgradeSpec, error) {
 	upgrade, err := config.NewUpgradeSpec(r.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing upgrade spec: %v", err)
@@ -240,7 +233,10 @@ func ReadUpgradeSpec(r *v1.RunConfig, keyRemap map[string]string) (*v1.UpgradeSp
 	if vp == nil {
 		vp = viper.New()
 	}
-	viperRemapKeys(vp, keyRemap)
+	// Bind upgrade cmd flags
+	bindGivenFlags(vp, flags)
+	// Bind upgrade env vars
+	viperReadEnv(vp, keyRemap)
 	err = vp.Unmarshal(upgrade, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded upgrade spec: %+v", upgrade)
 	return upgrade, err
@@ -287,17 +283,20 @@ func configLogger(log v1.Logger, vfs v1.FS) {
 	log.Infof("Starting elemental version %s", v.Version)
 }
 
-func viperReadEnv() {
+func viperReadEnv(vp *viper.Viper, keyMap map[string]string) {
 	// Set the prefix for vars so we get only the ones starting with ELEMENTAL
-	viper.SetEnvPrefix("ELEMENTAL")
+	vp.SetEnvPrefix("ELEMENTAL")
 
-	// If we expect to override complex keys in the config, i.e. configs that are nested, we probably need to manually do
-	// the env stuff ourselves, as this will only match keys in the config root
+	// If we expect to override complex keys in the config, i.e. configs
+	// that are nested, we probably need to manually do the env stuff
+	// ourselves, as this will only match keys in the config root
 	replacer := strings.NewReplacer("-", "_")
-	viper.SetEnvKeyReplacer(replacer)
+	vp.SetEnvKeyReplacer(replacer)
 
-	// Manually bind public key env variable as it uses a different name in config files or flags.
-	_ = viper.BindEnv("CosingPubKey", "COSIGN_PUBLIC_KEY_LOCATION")
+	// Manually bind keys to env variable if custom names are needed.
+	for k, v := range keyMap {
+		_ = vp.BindEnv(k, v)
+	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	vp.AutomaticEnv() // read in environment variables that match
 }

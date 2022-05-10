@@ -60,18 +60,15 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem()
 
-			// Maps flags or env vars to the sub install structure so viper
-			//also unmarshals them
-			keyRemap := map[string]string{
-				"recovery":        "upgrade-recovery",
-				"system":          "system.uri",
-				"recovery-system": "recovery-system.uri",
-			}
+			// TODO
+			// Map environment variables to sub viper keys
+			keyEnvMap := map[string]string{}
+
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			spec, err := config.ReadUpgradeSpec(cfg, keyRemap)
+			spec, err := config.ReadUpgradeSpec(cfg, cmd.Flags(), keyEnvMap)
 			if err != nil {
 				cfg.Logger.Errorf("invalid upgrade command setup %v", err)
 				return err
