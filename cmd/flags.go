@@ -66,15 +66,26 @@ func addLocalImageFlag(cmd *cobra.Command) {
 	cmd.Flags().Bool("local", false, "Use an image from local cache")
 }
 
-func adaptDockerImageAndDirectoryFlagsToSystem() {
+func adaptDockerImageAndDirectoryFlagsToSystem(flags *pflag.FlagSet) {
 	systemFlag := "system.uri"
-	doc := viper.GetString("docker-image")
+	doc, _ := flags.GetString("docker-image")
 	if doc != "" {
-		viper.Set(systemFlag, fmt.Sprintf("docker:%s", doc))
+		_ = flags.Set(systemFlag, fmt.Sprintf("docker:%s", doc))
 	}
-	dir := viper.GetString("directory")
+	dir, _ := flags.GetString("directory")
 	if dir != "" {
-		viper.Set(systemFlag, fmt.Sprintf("dir:%s", dir))
+		_ = flags.Set(systemFlag, fmt.Sprintf("dir:%s", dir))
+	}
+}
+
+func adaptEFIAndGPTFlags(flags *pflag.FlagSet) {
+	efi, _ := flags.GetBool("force-efi")
+	if efi {
+		_ = flags.Set("firmware", v1.EFI)
+	}
+	gpt, _ := flags.GetBool("force-gpt")
+	if gpt {
+		_ = flags.Set("part-table", v1.GPT)
 	}
 }
 

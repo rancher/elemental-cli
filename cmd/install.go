@@ -62,17 +62,10 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 
 			// Manage deprecated flags
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
-			adaptDockerImageAndDirectoryFlagsToSystem()
+			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
 			//Adapt 'force-efi' and 'force-gpt' to 'firmware' and 'part-table'
-			efi := viper.GetBool("force-efi")
-			if efi {
-				viper.Set("firmware", v1.EFI)
-			}
-			gpt := viper.GetBool("force-gpt")
-			if gpt {
-				viper.Set("part-table", v1.GPT)
-			}
+			adaptEFIAndGPTFlags(cmd.Flags())
 
 			// TODO
 			// Map environment variables to sub viper keys

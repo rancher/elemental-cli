@@ -54,7 +54,7 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			}
 
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
-			adaptDockerImageAndDirectoryFlagsToSystem()
+			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
 			// TODO
 			// Map environment variables to sub viper keys
