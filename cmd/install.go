@@ -56,7 +56,7 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
 
-			if err := validateInstallUpgradeFlags(cfg.Logger); err != nil {
+			if err := validateInstallUpgradeFlags(cfg.Logger, cmd.Flags()); err != nil {
 				return err
 			}
 

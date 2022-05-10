@@ -23,6 +23,7 @@ import (
 
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -77,45 +78,53 @@ func adaptDockerImageAndDirectoryFlagsToSystem() {
 	}
 }
 
-func validateCosignFlags(log v1.Logger) error {
-	if viper.GetString("cosign-key") != "" && !viper.GetBool("cosign") {
+func validateCosignFlags(log v1.Logger, flags *pflag.FlagSet) error {
+	cosignKey, _ := flags.GetString("cosign-key")
+	cosign, _ := flags.GetBool("cosign")
+
+	if cosignKey != "" && !cosign {
 		return errors.New("'cosign-key' requires 'cosign' option to be enabled")
 	}
 
-	if viper.GetBool("cosign") && viper.GetString("cosign-key") == "" {
+	if cosign && cosignKey == "" {
 		log.Warnf("No 'cosign-key' option set, keyless cosign verification is experimental")
 	}
 	return nil
 }
 
-func validateSourceFlags(log v1.Logger) error {
+func validateSourceFlags(log v1.Logger, flags *pflag.FlagSet) error {
 	msg := "flags docker-image, directory and system are mutually exclusive, please only set one of them"
+	system, _ := flags.GetString("system.uri")
+	directory, _ := flags.GetString("directory")
+	dockerImg, _ := flags.GetString("docker-image")
 	// docker-image, directory and system are mutually exclusive. Can't have your cake and eat it too.
-	if viper.GetString("system.uri") != "" && (viper.GetString("directory") != "" || viper.GetString("docker-image") != "") {
+	if system != "" && (directory != "" || dockerImg != "") {
 		return errors.New(msg)
 	}
-	if viper.GetString("directory") != "" && viper.GetString("docker-image") != "" {
+	if directory != "" && dockerImg != "" {
 		return errors.New(msg)
 	}
 	return nil
 }
 
-func validatePowerFlags(log v1.Logger) error {
-	if viper.GetBool("reboot") && viper.GetBool("poweroff") {
+func validatePowerFlags(log v1.Logger, flags *pflag.FlagSet) error {
+	reboot, _ := flags.GetBool("reboot")
+	poweroff, _ := flags.GetBool("poweroff")
+	if reboot && poweroff {
 		return errors.New("'reboot' and 'poweroff' are mutually exclusive options")
 	}
 	return nil
 }
 
 // validateUpgradeFlags is a helper call to check all the flags for the upgrade command
-func validateInstallUpgradeFlags(log v1.Logger) error {
-	if err := validateSourceFlags(log); err != nil {
+func validateInstallUpgradeFlags(log v1.Logger, flags *pflag.FlagSet) error {
+	if err := validateSourceFlags(log, flags); err != nil {
 		return err
 	}
-	if err := validateCosignFlags(log); err != nil {
+	if err := validateCosignFlags(log, flags); err != nil {
 		return err
 	}
-	if err := validatePowerFlags(log); err != nil {
+	if err := validatePowerFlags(log, flags); err != nil {
 		return err
 	}
 	return nil

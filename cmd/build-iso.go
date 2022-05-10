@@ -62,7 +62,7 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				cfg.ISO.RootFS = []string{args[0]}
 			}
 
-			err = validateCosignFlags(cfg.Logger)
+			err = validateCosignFlags(cfg.Logger, cmd.Flags())
 			if err != nil {
 				return err
 			}
