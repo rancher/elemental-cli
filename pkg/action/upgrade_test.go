@@ -33,7 +33,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/twpayne/go-vfs"
 	"github.com/twpayne/go-vfs/vfst"
-	"k8s.io/mount-utils"
 )
 
 var _ = Describe("Runtime Actions", func() {
@@ -176,6 +175,8 @@ var _ = Describe("Runtime Actions", func() {
 				// Create fake active/passive files
 				_ = fs.WriteFile(activeImg, []byte("active"), constants.FilePerm)
 				_ = fs.WriteFile(passiveImg, []byte("passive"), constants.FilePerm)
+				// Mount state partition as it is expected to be mounted when booting from active
+				mounter.Mount("device2", constants.RunningStateDir, "auto", []string{"ro"})
 			})
 			AfterEach(func() {
 				_ = fs.RemoveAll(activeImg)
@@ -207,14 +208,6 @@ var _ = Describe("Runtime Actions", func() {
 
 				// Check that the rebrand worked with our os-release value
 				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
-
-				// Expect cos-state to have been mounted with our fake lsblk values
-				fakeMounted := mount.MountPoint{
-					Device: "/dev/device2",
-					Path:   constants.RunningStateDir,
-					Type:   "auto",
-				}
-				Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 				// This should be the new image
 				info, err := fs.Stat(activeImg)
@@ -349,6 +342,8 @@ var _ = Describe("Runtime Actions", func() {
 				// Create fake active/passive files
 				_ = fs.WriteFile(activeImg, []byte("active"), constants.FilePerm)
 				_ = fs.WriteFile(passiveImg, []byte("passive"), constants.FilePerm)
+				// Mount state partition as it is expected to be mounted when booting from active
+				mounter.Mount("device2", constants.RunningStateDir, "auto", []string{"ro"})
 			})
 			AfterEach(func() {
 				_ = fs.RemoveAll(activeImg)
@@ -362,14 +357,6 @@ var _ = Describe("Runtime Actions", func() {
 
 				// Check that the rebrand worked with our os-release value
 				Expect(memLog).To(ContainSubstring("default_menu_entry=TESTOS"))
-
-				// Expect cos-state to have been mounted with our fake lsblk values
-				fakeMounted := mount.MountPoint{
-					Device: "/dev/device2",
-					Path:   constants.RunningStateDir,
-					Type:   "auto",
-				}
-				Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 				// This should be the new image
 				info, err := fs.Stat(activeImg)
@@ -413,7 +400,7 @@ var _ = Describe("Runtime Actions", func() {
 						if command == "cat" && args[0] == "/proc/cmdline" {
 							return []byte(constants.RecoveryLabel), nil
 						}
-						if command == "mksquashfs" && args[0] == "/tmp/upgrade" && args[1] == spec.RecoveryImg.File {
+						if command == "mksquashfs" && args[1] == spec.RecoveryImg.File {
 							// create the transition img for squash to fake it
 							_, _ = fs.Create(spec.RecoveryImg.File)
 						}
@@ -426,7 +413,8 @@ var _ = Describe("Runtime Actions", func() {
 						return []byte{}, nil
 					}
 					config.Runner = runner
-
+					// Mount recovery partition as it is expected to be mounted when booting from recovery
+					mounter.Mount("device5", constants.LiveDir, "auto", []string{"ro"})
 				})
 				It("Successfully upgrades recovery from docker image", Label("docker"), func() {
 					// This should be the old image
@@ -444,14 +432,6 @@ var _ = Describe("Runtime Actions", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(l.UnpackCalled()).To(BeTrue())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   constants.LiveDir,
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// This should be the new image
 					info, err = fs.Stat(recoveryImgSquash)
@@ -476,14 +456,6 @@ var _ = Describe("Runtime Actions", func() {
 					upgrade = action.NewUpgradeAction(config, spec)
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   constants.LiveDir,
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// This should be the new image
 					info, err := fs.Stat(recoveryImgSquash)
@@ -512,14 +484,6 @@ var _ = Describe("Runtime Actions", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(l.UnpackChannelCalled()).To(BeTrue())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   constants.LiveDir,
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// This should be the new image
 					info, err = fs.Stat(recoveryImgSquash)
@@ -563,7 +527,8 @@ var _ = Describe("Runtime Actions", func() {
 					}
 					config.Runner = runner
 					_ = fs.WriteFile(recoveryImg, []byte("recovery"), constants.FilePerm)
-
+					// Mount recovery partition as it is expected to be mounted when booting from recovery
+					mounter.Mount("device5", constants.LiveDir, "auto", []string{"ro"})
 				})
 				It("Successfully upgrades recovery from docker image", Label("docker"), func() {
 					// This should be the old image
@@ -583,14 +548,6 @@ var _ = Describe("Runtime Actions", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(l.UnpackCalled()).To(BeTrue())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   constants.LiveDir,
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// Should have created recovery image
 					info, err = fs.Stat(recoveryImg)
@@ -614,14 +571,6 @@ var _ = Describe("Runtime Actions", func() {
 					upgrade = action.NewUpgradeAction(config, spec)
 					err := upgrade.Run()
 					Expect(err).ToNot(HaveOccurred())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   constants.LiveDir,
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// This should be the new image
 					info, err := fs.Stat(recoveryImg)
@@ -650,14 +599,6 @@ var _ = Describe("Runtime Actions", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(l.UnpackChannelCalled()).To(BeTrue())
-
-					// Expect cos-state to have been remounted back on RO
-					fakeMounted := mount.MountPoint{
-						Device: "/dev/device5",
-						Path:   "/run/initramfs/live",
-						Type:   "auto",
-					}
-					Expect(mounter.List()).To(ContainElement(fakeMounted))
 
 					// Should have created recovery image
 					info, err = fs.Stat(recoveryImg)

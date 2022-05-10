@@ -31,7 +31,6 @@ import (
 
 	"github.com/distribution/distribution/reference"
 	"github.com/joho/godotenv"
-	"github.com/rancher-sandbox/elemental/pkg/constants"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/twpayne/go-vfs"
@@ -303,7 +302,7 @@ func HasSquashedRecovery(config *v1.Config, recovery *v1.Partition) (squashed bo
 // It will respect TMPDIR and use that if exists, fallback to try the persistent partition if its mounted
 // and finally the default /tmp/ dir
 // suffix is what is appended to the dir name elemental-suffix. If empty it will randomly generate a number
-func GetTempDir(config *v1.RunConfig, suffix string) string {
+func GetTempDir(config *v1.Config, suffix string) string {
 	// if we got a TMPDIR var, respect and use that
 	if suffix == "" {
 		random.Seed(time.Now().UnixNano())
@@ -320,7 +319,7 @@ func GetTempDir(config *v1.RunConfig, suffix string) string {
 	}
 	// Check persistent and if its mounted
 	pm := parts.GetPartitionMap()
-	persistent, ok := pm[constants.PersistentPartName]
+	persistent, ok := pm[cnst.PersistentPartName]
 	if ok {
 		if mnt, _ := IsMounted(config, persistent); mnt {
 			return filepath.Join(persistent.MountPoint, elementalTmpDir)

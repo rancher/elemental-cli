@@ -280,7 +280,7 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 				return err
 			}
 		} else {
-			target = utils.GetElementalTempDir(e.config)
+			target = utils.GetTempDir(e.config, "")
 			err := utils.MkdirAll(e.config.Fs, target, cnst.DirPerm)
 			if err != nil {
 				return err
