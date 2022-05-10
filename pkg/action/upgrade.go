@@ -106,13 +106,13 @@ func (u *UpgradeAction) Run() (err error) {
 			u.Error("failed mounting %s partition: %v", mountPart.Name, err)
 			return err
 		}
-		cleanup.Push(func() error { return e.UnmountPartition(mountPart) })
 	} else {
 		err = e.MountPartition(mountPart, "rw")
 		if err != nil {
 			u.Error("failed mounting %s partition: %v", mountPart.Name, err)
 			return err
 		}
+		cleanup.Push(func() error { return e.UnmountPartition(mountPart) })
 	}
 
 	// Cleanup transition image file before leaving
