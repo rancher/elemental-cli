@@ -20,10 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	random "math/rand"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -259,21 +261,26 @@ func LoadEnvFile(fs v1.FS, file string) (map[string]string, error) {
 	return envMap, err
 }
 
-// GetUpgradeTempDir returns the dir for storing upgrade related temporal files
+// GetTempDir returns the dir for storing related temporal files
 // It will respect TMPDIR and use that if exists, fallback to try the persistent partition if its mounted
 // and finally the default /tmp/ dir
-func GetUpgradeTempDir(config *v1.RunConfig) string {
+func GetTempDir(config *v1.RunConfig) string {
 	// if we got a TMPDIR var, respect and use that
+	random.Seed(time.Now().UnixNano())
+	suffix := strconv.Itoa(int(random.Uint32()))
+	elementalTmpDir := fmt.Sprintf("elemental-%s", suffix)
 	dir := os.Getenv("TMPDIR")
 	if dir != "" {
-		return filepath.Join(dir, "elemental-upgrade")
+		return filepath.Join(dir, elementalTmpDir)
 	}
 	// Check persistent and if its mounted
 	persistent, err := GetFullDeviceByLabel(config.Runner, config.PersistentLabel, 5)
 	if err == nil && persistent.MountPoint != "" {
-		return filepath.Join(persistent.MountPoint, "elemental-upgrade")
+		return filepath.Join(persistent.MountPoint, elementalTmpDir)
 	}
-	return filepath.Join("/", "tmp", "elemental-upgrade")
+	// We could be dealing with a test FS here, so get the proper rawpath for /
+	rawpath, _ := config.Fs.RawPath("/")
+	return filepath.Join(rawpath, "tmp", elementalTmpDir)
 }
 
 // IsLocalURI returns true if the uri has "file" scheme or no scheme and URI is
