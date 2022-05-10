@@ -18,10 +18,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/rancher-sandbox/elemental/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
-	"os"
 )
 
 func main() {
