@@ -56,9 +56,12 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
-			// TODO
-			// Map environment variables to sub viper keys
-			keyEnvMap := map[string]string{}
+			// Map install environment variables to sub viper keys
+			// without the ELEMENTAL_RESET prefix
+			keyEnvMap := map[string]string{
+				"target":     "TARGET",
+				"system.uri": "SYSTEM",
+			}
 
 			cmd.SilenceUsage = true
 			spec, err := config.ReadResetSpec(cfg, cmd.Flags(), keyEnvMap)

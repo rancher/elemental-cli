@@ -91,7 +91,7 @@ func bindGivenFlags(vp *viper.Viper, flagSet *pflag.FlagSet) {
 	if flagSet != nil {
 		flagSet.VisitAll(func(f *pflag.Flag) {
 			if f.Changed {
-				_ = vp.BindPFlag(f.Name, f)
+				vp.Set(f.Name, f.Value)
 			}
 		})
 	}
@@ -118,7 +118,7 @@ func ReadConfigBuild(configDir string, mounter mount.Interface) (*v1.BuildConfig
 	viper.SetConfigName("manifest.yaml")
 	// If a config file is found, read it in.
 	_ = viper.MergeInConfig()
-	viperReadEnv(viper.GetViper(), map[string]string{})
+	viperReadEnv(viper.GetViper(), "", map[string]string{})
 
 	// unmarshal all the vars into the config object
 	err := viper.Unmarshal(cfg, setDecoder)
@@ -139,10 +139,12 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 
 	configLogger(cfg.Logger, cfg.Fs)
 
-	cfgDefault := []string{"/etc/os-release", "/etc/cos/config", "/etc/cos-upgrade-image"}
-
+	// TODO: is this really needed? It feels quite wrong, shouldn't it be loaded
+	// as regular environment variables?
+	// IMHO loading os-release as env variables should be sufficient here
+	cfgDefault := []string{"/etc/os-release"}
 	for _, c := range cfgDefault {
-		if _, err := os.Stat(c); err == nil {
+		if exists, _ := utils.Exists(cfg.Fs, c); exists {
 			viper.SetConfigFile(c)
 			viper.SetConfigType("env")
 			cobra.CheckErr(viper.MergeInConfig())
@@ -150,40 +152,48 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	}
 
 	// merge yaml config files on top of default runconfig
-	if configDir != "" {
-		if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
-			viper.AddConfigPath(configDir)
-			viper.SetConfigType("yaml")
-			viper.SetConfigName("config")
-			// If a config file is found, read it in.
-			err := viper.MergeInConfig()
-			if err != nil {
-				cfg.Logger.Warnf("error merging config files: %s", err)
-			}
-		}
-
-		// Load extra config files on configdir/config.d/ so we can override config values
-		cfgExtra := fmt.Sprintf("%s/config.d/", strings.TrimSuffix(configDir, "/"))
-		if _, err := os.Stat(cfgExtra); err == nil {
-			viper.AddConfigPath(cfgExtra)
-			_ = filepath.WalkDir(cfgExtra, func(path string, d fs.DirEntry, err error) error {
-				if !d.IsDir() {
-					viper.SetConfigType("yaml")
-					viper.SetConfigName(d.Name())
-					cobra.CheckErr(viper.MergeInConfig())
-				}
-				return nil
-			})
+	if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
+		viper.AddConfigPath(configDir)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("config")
+		// If a config file is found, read it in.
+		err := viper.MergeInConfig()
+		if err != nil {
+			cfg.Logger.Warnf("error merging config files: %s", err)
 		}
 	}
 
+	// Load extra config files on configdir/config.d/ so we can override config values
+	cfgExtra := fmt.Sprintf("%s/config.d/", strings.TrimSuffix(configDir, "/"))
+	if exists, _ := utils.Exists(cfg.Fs, cfgExtra); exists {
+		viper.AddConfigPath(cfgExtra)
+		_ = filepath.WalkDir(cfgExtra, func(path string, d fs.DirEntry, err error) error {
+			if !d.IsDir() {
+				viper.SetConfigType("yaml")
+				viper.SetConfigName(d.Name())
+				cobra.CheckErr(viper.MergeInConfig())
+			}
+			return nil
+		})
+	}
+
+	// Bind runconfig flags
+	bindGivenFlags(viper.GetViper(), flags)
 	// merge environment variables on top for rootCmd
-	viperReadEnv(viper.GetViper(), map[string]string{})
+	viperReadEnv(viper.GetViper(), "", map[string]string{})
 
 	// unmarshal all the vars into the config object
-	err := viper.Unmarshal(cfg, setDecoder, decodeHook)
+	// extra call for v1.Config is needed as decorators from Config
+	// are not inherited in RunConfig type definition
+	err := viper.Unmarshal(&cfg.Config, setDecoder, decodeHook)
 	if err != nil {
-		cfg.Logger.Warnf("error unmarshalling config: %s", err)
+		cfg.Logger.Warnf("error unmarshalling Config: %s", err)
+	}
+
+	// unmarshal all the vars into the RunConfig object
+	err = viper.Unmarshal(cfg, setDecoder, decodeHook)
+	if err != nil {
+		cfg.Logger.Warnf("error unmarshalling RunConfig: %s", err)
 	}
 
 	cfg.Logger.Debugf("Full config loaded: %+v", cfg)
@@ -200,7 +210,7 @@ func ReadInstallSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]
 	// Bind install cmd flags
 	bindGivenFlags(vp, flags)
 	// Bind install env vars
-	viperReadEnv(vp, keyRemap)
+	viperReadEnv(vp, "INSTALL", keyRemap)
 	err := vp.Unmarshal(install, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded install spec: %+v", install)
 	return install, err
@@ -218,7 +228,7 @@ func ReadResetSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]st
 	// Bind reset cmd flags
 	bindGivenFlags(vp, flags)
 	// Bind reset env vars
-	viperReadEnv(vp, keyRemap)
+	viperReadEnv(vp, "RESET", keyRemap)
 	err = vp.Unmarshal(reset, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded reset spec: %+v", reset)
 	return reset, err
@@ -236,7 +246,7 @@ func ReadUpgradeSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]
 	// Bind upgrade cmd flags
 	bindGivenFlags(vp, flags)
 	// Bind upgrade env vars
-	viperReadEnv(vp, keyRemap)
+	viperReadEnv(vp, "UPGRADE", keyRemap)
 	err = vp.Unmarshal(upgrade, setDecoder, decodeHook)
 	r.Logger.Debugf("Loaded upgrade spec: %+v", upgrade)
 	return upgrade, err
@@ -283,20 +293,21 @@ func configLogger(log v1.Logger, vfs v1.FS) {
 	log.Infof("Starting elemental version %s", v.Version)
 }
 
-func viperReadEnv(vp *viper.Viper, keyMap map[string]string) {
-	// Set the prefix for vars so we get only the ones starting with ELEMENTAL
-	vp.SetEnvPrefix("ELEMENTAL")
-
+func viperReadEnv(vp *viper.Viper, prefix string, keyMap map[string]string) {
 	// If we expect to override complex keys in the config, i.e. configs
 	// that are nested, we probably need to manually do the env stuff
 	// ourselves, as this will only match keys in the config root
 	replacer := strings.NewReplacer("-", "_")
 	vp.SetEnvKeyReplacer(replacer)
 
-	// Manually bind keys to env variable if custom names are needed.
-	for k, v := range keyMap {
-		_ = vp.BindEnv(k, v)
+	if prefix == "" {
+		prefix = "ELEMENTAL"
+	} else {
+		prefix = fmt.Sprintf("ELEMENTAL_%s", prefix)
 	}
 
-	vp.AutomaticEnv() // read in environment variables that match
+	// Manually bind keys to env variable if custom names are needed.
+	for k, v := range keyMap {
+		_ = vp.BindEnv(k, fmt.Sprintf("%s_%s", prefix, v))
+	}
 }

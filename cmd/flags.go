@@ -29,14 +29,14 @@ import (
 
 // addCosignFlags adds flags related to cosign
 func addCosignFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolP("cosign", "", false, "Enable cosign verification (requires images with signatures)")
-	cmd.Flags().StringP("cosign-key", "", "", "Sets the URL of the public key to be used by cosign validation")
+	cmd.Flags().Bool("cosign", false, "Enable cosign verification (requires images with signatures)")
+	cmd.Flags().String("cosign-key", "", "Sets the URL of the public key to be used by cosign validation")
 }
 
 // addPowerFlags adds flags related to power
 func addPowerFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolP("reboot", "", false, "Reboot the system after install")
-	cmd.Flags().BoolP("poweroff", "", false, "Shutdown the system after install")
+	cmd.Flags().Bool("reboot", false, "Reboot the system after install")
+	cmd.Flags().Bool("poweroff", false, "Shutdown the system after install")
 }
 
 // addSharedInstallUpgradeFlags add flags shared between install, upgrade and reset
@@ -54,8 +54,8 @@ func addResetFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().MarkDeprecated("docker-image", "'docker-image' is deprecated please use 'system' instead")
 
 	cmd.Flags().String("system.uri", "", "Sets the system image source and its type (e.g. 'docker:registry.org/image:tag')")
-	cmd.Flags().BoolP("no-verify", "", false, "Disable mtree checksum verification (requires images manifests generated with mtree separately)")
-	cmd.Flags().BoolP("strict", "", false, "Enable strict check of hooks (They need to exit with 0)")
+	cmd.Flags().Bool("no-verify", false, "Disable mtree checksum verification (requires images manifests generated with mtree separately)")
+	cmd.Flags().Bool("strict", false, "Enable strict check of hooks (They need to exit with 0)")
 
 	addCosignFlags(cmd)
 	addPowerFlags(cmd)

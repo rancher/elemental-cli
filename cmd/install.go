@@ -38,7 +38,6 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 		Short: "elemental installer",
 		Args:  cobra.MaximumNArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			_ = viper.BindEnv("target", "ELEMENTAL_TARGET")
 			if addCheckRoot {
 				return CheckRoot()
 			}
@@ -67,9 +66,13 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			//Adapt 'force-efi' and 'force-gpt' to 'firmware' and 'part-table'
 			adaptEFIAndGPTFlags(cmd.Flags())
 
-			// TODO
-			// Map environment variables to sub viper keys
-			keyEnvMap := map[string]string{}
+			// Map install environment variables to sub viper keys
+			// without the ELEMENTAL_INSTALL prefix
+			keyEnvMap := map[string]string{
+				"target":              "TARGET",
+				"system.uri":          "SYSTEM",
+				"recovery-system.uri": "RECOVERY",
+			}
 
 			cmd.SilenceUsage = true
 			spec, err := config.ReadInstallSpec(cfg, cmd.Flags(), keyEnvMap)
@@ -108,19 +111,19 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	c.Flags().StringP("iso", "i", "", "Performs an installation from the ISO url")
 	c.Flags().StringP("partition-layout", "p", "", "Partitioning layout file")
 	_ = c.Flags().MarkDeprecated("partition-layout", "'partition-layout' is deprecated and ignored please use a config file instead")
-	c.Flags().BoolP("no-format", "", false, "Don’t format disks. It is implied that COS_STATE, COS_RECOVERY, COS_PERSISTENT, COS_OEM are already existing")
+	c.Flags().Bool("no-format", false, "Don’t format disks. It is implied that COS_STATE, COS_RECOVERY, COS_PERSISTENT, COS_OEM are already existing")
 
-	c.Flags().BoolP("force-efi", "", false, "Forces an EFI installation")
+	c.Flags().Bool("force-efi", false, "Forces an EFI installation")
 	_ = c.Flags().MarkDeprecated("force-efi", "'force-efi' is deprecated please use 'firmware' instead")
 	c.Flags().Var(firmType, "firmware", "Firmware to install for ('esp' or 'bios_grub')")
 
-	c.Flags().BoolP("force-gpt", "", false, "Forces a GPT partition table")
+	c.Flags().Bool("force-gpt", false, "Forces a GPT partition table")
 	_ = c.Flags().MarkDeprecated("force-gpt", "'force-gpt' is deprecated please use 'part-table' instead")
 	c.Flags().Var(pTableType, "part-table", "Partition table type to use")
 
-	c.Flags().BoolP("tty", "", false, "Add named tty to grub")
-	c.Flags().BoolP("force", "", false, "Force install")
-	c.Flags().BoolP("eject-cd", "", false, "Try to eject the cd on reboot, only valid if booting from iso")
+	c.Flags().String("tty", "", "Add named tty to grub")
+	c.Flags().Bool("force", false, "Force install")
+	c.Flags().Bool("eject-cd", false, "Try to eject the cd on reboot, only valid if booting from iso")
 	addSharedInstallUpgradeFlags(c)
 	addLocalImageFlag(c)
 	return c

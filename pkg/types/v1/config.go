@@ -130,7 +130,7 @@ func (r *ResetSpec) CustomUnmarshal(data interface{}) (bool, error) {
 }
 
 type UpgradeSpec struct {
-	RecoveryUpgrade    bool   `yaml:"upgrade-recovery,omitempty" mapstructure:"upgrade-recovery"`
+	RecoveryUpgrade    bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
 	ActiveImg          Image  `yaml:"system,omitempty" mapstructure:"system"`
 	RecoveryImg        Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
 	PassiveLabel       string `yaml:"passive-label,omitempty" mapstructure:"passive-label"`
