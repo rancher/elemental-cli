@@ -91,7 +91,13 @@ func bindGivenFlags(vp *viper.Viper, flagSet *pflag.FlagSet) {
 	if flagSet != nil {
 		flagSet.VisitAll(func(f *pflag.Flag) {
 			if f.Changed {
-				vp.Set(f.Name, f.Value)
+				// Use string representation for string types
+				// needed for enums or similar custom types
+				if f.Value.String() == "string" {
+					vp.Set(f.Name, f.Value.String())
+				} else {
+					vp.Set(f.Name, f.Value)
+				}
 			}
 		})
 	}
