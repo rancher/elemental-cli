@@ -99,6 +99,10 @@ func (u *UpgradeAction) Run() (err error) {
 		finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.ActiveImgFile)
 	}
 
+	if upgradeImg.Source.IsEmpty() {
+		return fmt.Errorf("undefined upgrade source")
+	}
+
 	u.Info("mounting %s partition as rw", mountPart.Name)
 	if mnt, _ := utils.IsMounted(&u.config.Config, mountPart); mnt {
 		err = e.MountPartition(mountPart, "remount", "rw")

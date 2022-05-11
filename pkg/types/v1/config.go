@@ -130,13 +130,12 @@ func (r *ResetSpec) CustomUnmarshal(data interface{}) (bool, error) {
 }
 
 type UpgradeSpec struct {
-	RecoveryUpgrade    bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	ActiveImg          Image  `yaml:"system,omitempty" mapstructure:"system"`
-	RecoveryImg        Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
-	PassiveLabel       string `yaml:"passive-label,omitempty" mapstructure:"passive-label"`
-	Partitions         PartitionMap
-	BootedFromRecovery bool
-	SquashedRecovery   bool
+	RecoveryUpgrade  bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	ActiveImg        Image  `yaml:"system,omitempty" mapstructure:"system"`
+	RecoveryImg      Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	PassiveLabel     string `yaml:"passive-label,omitempty" mapstructure:"passive-label"`
+	Partitions       PartitionMap
+	SquashedRecovery bool
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB

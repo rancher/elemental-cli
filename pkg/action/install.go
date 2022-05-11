@@ -75,6 +75,10 @@ func (i InstallAction) Run() (err error) {
 		}
 	}
 
+	if i.spec.ActiveImg.Source.IsEmpty() {
+		return fmt.Errorf("undefined system source to install")
+	}
+
 	// Check no-format flag
 	if i.spec.NoFormat {
 		// Check force flag against current device

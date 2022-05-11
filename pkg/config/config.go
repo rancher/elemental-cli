@@ -315,8 +315,6 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		statePart.MountPoint = constants.StateDir
 	}
 
-	// TODO find a way to pre-load current state values such as SystemLabel
-	bootedRec := utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) || utils.BootedFrom(cfg.Runner, constants.SystemLabel)
 	squashedRec, err := utils.HasSquashedRecovery(&cfg, partitionMap[constants.RecoveryPartName])
 	if err != nil {
 		return nil, fmt.Errorf("failed checking for squashed recovery")
@@ -348,11 +346,10 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 	}
 
 	return &v1.UpgradeSpec{
-		BootedFromRecovery: bootedRec,
-		SquashedRecovery:   squashedRec,
-		ActiveImg:          active,
-		RecoveryImg:        recovery,
-		Partitions:         partitionMap,
+		SquashedRecovery: squashedRec,
+		ActiveImg:        active,
+		RecoveryImg:      recovery,
+		Partitions:       partitionMap,
 	}, nil
 }
 
@@ -381,8 +378,7 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	if efiExists {
 		partEfi, ok := partitions[constants.EfiPartName]
 		if !ok {
-			cfg.Logger.Errorf("EFI partition not found!")
-			return nil, err
+			return nil, fmt.Errorf("EFI partition not found")
 		}
 		if partEfi.MountPoint == "" {
 			partEfi.MountPoint = constants.EfiDir
@@ -392,8 +388,7 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 
 	partState, ok := partitions[constants.StatePartName]
 	if !ok {
-		cfg.Logger.Error("state partition not found")
-		return nil, err
+		return nil, fmt.Errorf("state partition not found")
 	}
 	if partState.MountPoint == "" {
 		partState.MountPoint = constants.StateDir
