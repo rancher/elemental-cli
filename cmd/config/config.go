@@ -91,13 +91,7 @@ func bindGivenFlags(vp *viper.Viper, flagSet *pflag.FlagSet) {
 	if flagSet != nil {
 		flagSet.VisitAll(func(f *pflag.Flag) {
 			if f.Changed {
-				// Use string representation for string types
-				// needed for enums or similar custom types
-				if f.Value.String() == "string" {
-					vp.Set(f.Name, f.Value.String())
-				} else {
-					vp.Set(f.Name, f.Value)
-				}
+				_ = vp.BindPFlag(f.Name, f)
 			}
 		})
 	}
@@ -174,9 +168,9 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	if exists, _ := utils.Exists(cfg.Fs, cfgExtra); exists {
 		viper.AddConfigPath(cfgExtra)
 		_ = filepath.WalkDir(cfgExtra, func(path string, d fs.DirEntry, err error) error {
-			if !d.IsDir() {
+			if !d.IsDir() && filepath.Ext(d.Name()) == ".yaml" {
 				viper.SetConfigType("yaml")
-				viper.SetConfigName(d.Name())
+				viper.SetConfigName(strings.TrimSuffix(d.Name(), ".yaml"))
 				cobra.CheckErr(viper.MergeInConfig())
 			}
 			return nil

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"k8s.io/mount-utils"
 )
@@ -211,9 +212,20 @@ func (pm PartitionMap) CustomUnmarshal(data interface{}) (bool, error) {
 		if !pm.validName(k) {
 			// Removing the invalid entry causes to completely ignore it
 			delete(m, k)
+		} else {
+			// We need manually decode here if we want to properly merge into
+			// already initialized data
+			p, ok := pm[k]
+			if !ok {
+				p = &Partition{}
+			}
+			err := mapstructure.Decode(m[k], p)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
-	return true, nil
+	return false, nil
 }
 
 // OrderedByLayoutPartitions sorts partitions according to the default layout
