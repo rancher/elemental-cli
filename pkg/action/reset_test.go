@@ -127,11 +127,11 @@ var _ = Describe("Reset action tests", func() {
 
 			spec, err = conf.NewResetSpec(config.Config)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(spec.ActiveImg.Source.IsEmpty()).To(BeFalse())
+			Expect(spec.Active.Source.IsEmpty()).To(BeFalse())
 
-			spec.ActiveImg.Size = 16
+			spec.Active.Size = 16
 
-			grubCfg := filepath.Join(spec.ActiveImg.MountPoint, spec.GrubConf)
+			grubCfg := filepath.Join(spec.Active.MountPoint, spec.GrubConf)
 			err = utils.MkdirAll(fs, filepath.Dir(grubCfg), constants.DirPerm)
 			Expect(err).To(BeNil())
 			_, err = fs.Create(grubCfg)
@@ -164,7 +164,7 @@ var _ = Describe("Reset action tests", func() {
 		It("Successfully resets from a squashfs recovery image", Label("channel"), func() {
 			err := utils.MkdirAll(config.Fs, constants.IsoBaseTree, constants.DirPerm)
 			Expect(err).ShouldNot(HaveOccurred())
-			spec.ActiveImg.Source = v1.NewDirSrc(constants.IsoBaseTree)
+			spec.Active.Source = v1.NewDirSrc(constants.IsoBaseTree)
 			Expect(reset.Run()).To(BeNil())
 		})
 		It("Successfully resets despite having errors on hooks", func() {
@@ -172,14 +172,14 @@ var _ = Describe("Reset action tests", func() {
 			Expect(reset.Run()).To(BeNil())
 		})
 		It("Successfully resets from a docker image", Label("docker"), func() {
-			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
+			spec.Active.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
 			Expect(reset.Run()).To(BeNil())
 			Expect(luet.UnpackCalled()).To(BeTrue())
 		})
 		It("Successfully resets from a channel package", Label("channel"), func() {
-			spec.ActiveImg.Source = v1.NewChannelSrc("system/cos")
+			spec.Active.Source = v1.NewChannelSrc("system/cos")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
 			Expect(reset.Run()).To(BeNil())
@@ -213,7 +213,7 @@ var _ = Describe("Reset action tests", func() {
 			Expect(reset.Run()).NotTo(BeNil())
 		})
 		It("Fails unpacking docker image ", func() {
-			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
+			spec.Active.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
 			config.Luet = luet

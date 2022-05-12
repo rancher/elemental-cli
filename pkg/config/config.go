@@ -30,12 +30,6 @@ import (
 	"k8s.io/mount-utils"
 )
 
-const (
-	ESP  = "esp"
-	BIOS = "bios_grub"
-	BOOT = "boot"
-)
-
 type GenericOptions func(a *v1.Config) error
 
 func WithFs(fs v1.FS) func(r *v1.Config) error {
@@ -209,51 +203,19 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 	return &v1.InstallSpec{
 		Firmware:     firmware,
 		PartTable:    v1.GPT,
-		Partitions:   NewInstallParitionMap(),
+		Partitions:   NewInstallElementalParitions(),
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
 		Tty:          constants.DefaultTty,
-		ActiveImg:    activeImg,
-		RecoveryImg:  recoveryImg,
-		PassiveImg:   passiveImg,
+		Active:       activeImg,
+		Recovery:     recoveryImg,
+		Passive:      passiveImg,
 	}
 }
 
-func AddFirmwarePartitions(i *v1.InstallSpec) error {
-	if i.Partitions == nil {
-		return fmt.Errorf("nil partitions map")
-	}
-	if i.Firmware == v1.EFI && i.PartTable == v1.GPT {
-		i.Partitions[constants.EfiPartName] = &v1.Partition{
-			Label:      constants.EfiLabel,
-			Size:       constants.EfiSize,
-			Name:       constants.EfiPartName,
-			FS:         constants.EfiFs,
-			MountPoint: constants.EfiDir,
-			Flags:      []string{ESP},
-		}
-	} else if i.Firmware == v1.BIOS && i.PartTable == v1.GPT {
-		i.Partitions[constants.BiosPartName] = &v1.Partition{
-			Label:      "",
-			Size:       constants.BiosSize,
-			Name:       constants.BiosPartName,
-			FS:         "",
-			MountPoint: "",
-			Flags:      []string{BIOS},
-		}
-	} else {
-		statePart, ok := i.Partitions[constants.StatePartName]
-		if !ok {
-			return fmt.Errorf("nil state partition")
-		}
-		statePart.Flags = []string{BOOT}
-	}
-	return nil
-}
-
-func NewInstallParitionMap() v1.PartitionMap {
-	partitions := v1.PartitionMap{}
-	partitions[constants.OEMPartName] = &v1.Partition{
+func NewInstallElementalParitions() v1.ElementalPartitions {
+	partitions := v1.ElementalPartitions{}
+	partitions.OEM = &v1.Partition{
 		Label:      constants.OEMLabel,
 		Size:       constants.OEMSize,
 		Name:       constants.OEMPartName,
@@ -262,7 +224,7 @@ func NewInstallParitionMap() v1.PartitionMap {
 		Flags:      []string{},
 	}
 
-	partitions[constants.RecoveryPartName] = &v1.Partition{
+	partitions.Recovery = &v1.Partition{
 		Label:      constants.RecoveryLabel,
 		Size:       constants.RecoverySize,
 		Name:       constants.RecoveryPartName,
@@ -271,7 +233,7 @@ func NewInstallParitionMap() v1.PartitionMap {
 		Flags:      []string{},
 	}
 
-	partitions[constants.StatePartName] = &v1.Partition{
+	partitions.State = &v1.Partition{
 		Label:      constants.StateLabel,
 		Size:       constants.StateSize,
 		Name:       constants.StatePartName,
@@ -280,7 +242,7 @@ func NewInstallParitionMap() v1.PartitionMap {
 		Flags:      []string{},
 	}
 
-	partitions[constants.PersistentPartName] = &v1.Partition{
+	partitions.Persistent = &v1.Partition{
 		Label:      constants.PersistentLabel,
 		Size:       constants.PersistentSize,
 		Name:       constants.PersistentPartName,
@@ -299,29 +261,27 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read host partitions")
 	}
-	partitionMap := parts.GetPartitionMap()
+	ep := v1.NewElementalPartitionsFromList(parts)
 
-	recPart, ok := partitionMap[constants.RecoveryPartName]
-	if !ok {
+	if ep.Recovery == nil {
 		return nil, fmt.Errorf("recovery partition not found")
-	} else if recPart.MountPoint == "" {
-		recPart.MountPoint = constants.RecoveryDir
+	} else if ep.Recovery.MountPoint == "" {
+		ep.Recovery.MountPoint = constants.RecoveryDir
 	}
 
-	statePart, ok := partitionMap[constants.StatePartName]
-	if !ok {
+	if ep.State == nil {
 		return nil, fmt.Errorf("state partition not found")
-	} else if statePart.MountPoint == "" {
-		statePart.MountPoint = constants.StateDir
+	} else if ep.State.MountPoint == "" {
+		ep.State.MountPoint = constants.StateDir
 	}
 
-	squashedRec, err := utils.HasSquashedRecovery(&cfg, partitionMap[constants.RecoveryPartName])
+	squashedRec, err := utils.HasSquashedRecovery(&cfg, ep.Recovery)
 	if err != nil {
 		return nil, fmt.Errorf("failed checking for squashed recovery")
 	}
 
 	active := v1.Image{
-		File:       filepath.Join(statePart.MountPoint, "cOS", constants.TransitionImgFile),
+		File:       filepath.Join(ep.State.MountPoint, "cOS", constants.TransitionImgFile),
 		Size:       constants.ImgSize,
 		Label:      constants.ActiveLabel,
 		FS:         constants.LinuxImgFs,
@@ -337,19 +297,27 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		recMnt = constants.TransitionDir
 	}
 	recovery := v1.Image{
-		File:       filepath.Join(recPart.MountPoint, "cOS", constants.TransitionImgFile),
+		File:       filepath.Join(ep.Recovery.MountPoint, "cOS", constants.TransitionImgFile),
 		Size:       constants.ImgSize,
 		Label:      recLabel,
 		FS:         recFs,
 		MountPoint: recMnt,
-		Source:     v1.NewEmptySrc(), //TODO apply defaults if any
+		Source:     v1.NewEmptySrc(),
+	}
+
+	passive := v1.Image{
+		File:   filepath.Join(ep.State.MountPoint, "cOS", constants.PassiveImgFile),
+		Label:  constants.PassiveLabel,
+		Source: v1.NewFileSrc(active.File),
+		FS:     constants.LinuxImgFs,
 	}
 
 	return &v1.UpgradeSpec{
 		SquashedRecovery: squashedRec,
-		ActiveImg:        active,
-		RecoveryImg:      recovery,
-		Partitions:       partitionMap,
+		Active:           active,
+		Recovery:         recovery,
+		Passive:          passive,
+		Partitions:       ep,
 	}, nil
 }
 
@@ -369,51 +337,47 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not read host partitions")
 	}
-	partitions := parts.GetPartitionMap()
+	ep := v1.NewElementalPartitionsFromList(parts)
 
 	// We won't do anything with the recovery partition
 	// removing it so we can easily loop to mount and unmount
-	delete(partitions, constants.RecoveryPartName)
+	ep.Recovery = nil
 
 	if efiExists {
-		partEfi, ok := partitions[constants.EfiPartName]
-		if !ok {
+		if ep.EFI == nil {
 			return nil, fmt.Errorf("EFI partition not found")
 		}
-		if partEfi.MountPoint == "" {
-			partEfi.MountPoint = constants.EfiDir
+		if ep.EFI.MountPoint == "" {
+			ep.EFI.MountPoint = constants.EfiDir
 		}
-		partEfi.Name = constants.EfiPartName
+		ep.EFI.Name = constants.EfiPartName
 	}
 
-	partState, ok := partitions[constants.StatePartName]
-	if !ok {
+	if ep.State == nil {
 		return nil, fmt.Errorf("state partition not found")
 	}
-	if partState.MountPoint == "" {
-		partState.MountPoint = constants.StateDir
+	if ep.State.MountPoint == "" {
+		ep.State.MountPoint = constants.StateDir
 	}
-	partState.Name = constants.StatePartName
-	target := partState.Disk
+	ep.State.Name = constants.StatePartName
+	target := ep.State.Disk
 
 	// OEM partition is not a hard requirement
-	partOEM, ok := partitions[constants.OEMPartName]
-	if ok {
-		if partOEM.MountPoint == "" {
-			partOEM.MountPoint = constants.OEMDir
+	if ep.OEM != nil {
+		if ep.OEM.MountPoint == "" {
+			ep.OEM.MountPoint = constants.OEMDir
 		}
-		partOEM.Name = constants.OEMPartName
+		ep.OEM.Name = constants.OEMPartName
 	} else {
 		cfg.Logger.Warnf("no OEM partition found")
 	}
 
 	// Persistent partition is not a hard requirement
-	partPersistent, ok := partitions[constants.PersistentPartName]
-	if ok {
-		if partPersistent.MountPoint == "" {
-			partPersistent.MountPoint = constants.PersistentDir
+	if ep.Persistent != nil {
+		if ep.Persistent.MountPoint == "" {
+			ep.Persistent.MountPoint = constants.PersistentDir
 		}
-		partPersistent.Name = constants.PersistentPartName
+		ep.Persistent.Name = constants.PersistentPartName
 	} else {
 		cfg.Logger.Warnf("no Persistent partition found")
 	}
@@ -427,15 +391,15 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 		imgSource = v1.NewEmptySrc()
 	}
 
-	activeFile := filepath.Join(partState.MountPoint, "cOS", constants.ActiveImgFile)
+	activeFile := filepath.Join(ep.State.MountPoint, "cOS", constants.ActiveImgFile)
 	return &v1.ResetSpec{
 		Target:       target,
-		Partitions:   partitions,
+		Partitions:   ep,
 		Efi:          efiExists,
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
 		Tty:          constants.DefaultTty,
-		ActiveImg: v1.Image{
+		Active: v1.Image{
 			Label:      constants.ActiveLabel,
 			Size:       constants.ImgSize,
 			File:       activeFile,
@@ -443,8 +407,8 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 			Source:     imgSource,
 			MountPoint: constants.ActiveDir,
 		},
-		PassiveImg: v1.Image{
-			File:   filepath.Join(partState.MountPoint, "cOS", constants.PassiveImgFile),
+		Passive: v1.Image{
+			File:   filepath.Join(ep.State.MountPoint, "cOS", constants.PassiveImgFile),
 			Label:  constants.PassiveLabel,
 			Source: v1.NewFileSrc(activeFile),
 			FS:     constants.LinuxImgFs,

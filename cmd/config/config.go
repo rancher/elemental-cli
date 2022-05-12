@@ -182,16 +182,8 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	// merge environment variables on top for rootCmd
 	viperReadEnv(viper.GetViper(), "", map[string]string{})
 
-	// unmarshal all the vars into the config object
-	// extra call for v1.Config is needed as decorators from Config
-	// are not inherited in RunConfig type definition
-	err := viper.Unmarshal(&cfg.Config, setDecoder, decodeHook)
-	if err != nil {
-		cfg.Logger.Warnf("error unmarshalling Config: %s", err)
-	}
-
 	// unmarshal all the vars into the RunConfig object
-	err = viper.Unmarshal(cfg, setDecoder, decodeHook)
+	err := viper.Unmarshal(cfg, setDecoder, decodeHook)
 	if err != nil {
 		cfg.Logger.Warnf("error unmarshalling RunConfig: %s", err)
 	}

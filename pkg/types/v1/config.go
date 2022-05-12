@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"k8s.io/mount-utils"
 )
@@ -30,6 +29,9 @@ const (
 	BIOS  = "bios"
 	MSDOS = "msdos"
 	EFI   = "efi"
+	esp   = "esp"
+	bios  = "bios_grub"
+	boot  = "boot"
 )
 
 // Config is the struct that includes basic and generic configuration of elemental binary runtime.
@@ -59,52 +61,27 @@ type RunConfig struct {
 	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
 	EjectCD        bool     `yaml:"eject-cd,omitempty" mapstructure:"eject-cd"`
 
-	Config
+	// 'inline' and 'squash' labels ensure config fields
+	// are embedded from a yaml and map PoV
+	Config `yaml:",inline" mapstructure:",squash"`
 }
 
 // InstallSpec struct represents all the installation action details
 type InstallSpec struct {
-	Target       string       `yaml:"target,omitempty" mapstructure:"target"`
-	Firmware     string       `yaml:"firmware,omitempty" mapstructure:"firmware"`
-	PartTable    string       `yaml:"part-table,omitempty" mapstructure:"part-table"`
-	Partitions   PartitionMap `yaml:"partitions,omitempty" mapstructure:"partitions"`
-	NoFormat     bool         `yaml:"no-format,omitempty" mapstructure:"no-format"`
-	Force        bool         `yaml:"force,omitempty" mapstructure:"force"`
-	CloudInit    string       `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
-	Iso          string       `yaml:"iso,omitempty" mapstructure:"iso"`
-	GrubDefEntry string       `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
-	Tty          string       `yaml:"tty,omitempty" mapstructure:"tty"`
-	ActiveImg    Image        `yaml:"system,omitempty" mapstructure:"system"`
-	RecoveryImg  Image        `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
-	PassiveImg   Image
+	Target       string              `yaml:"target,omitempty" mapstructure:"target"`
+	Firmware     string              `yaml:"firmware,omitempty" mapstructure:"firmware"`
+	PartTable    string              `yaml:"part-table,omitempty" mapstructure:"part-table"`
+	Partitions   ElementalPartitions `yaml:"partitions,omitempty" mapstructure:"partitions"`
+	NoFormat     bool                `yaml:"no-format,omitempty" mapstructure:"no-format"`
+	Force        bool                `yaml:"force,omitempty" mapstructure:"force"`
+	CloudInit    string              `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
+	Iso          string              `yaml:"iso,omitempty" mapstructure:"iso"`
+	GrubDefEntry string              `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
+	Tty          string              `yaml:"tty,omitempty" mapstructure:"tty"`
+	Active       Image               `yaml:"system,omitempty" mapstructure:"system"`
+	Recovery     Image               `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	Passive      Image
 	GrubConf     string
-}
-
-func passiveLabel(data interface{}) (string, error) {
-	m, ok := data.(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("cannot unmarshal, unexpected format %+v", data)
-	}
-	raw, ok := m["passive-label"]
-	if !ok {
-		// No passive-label tag, continue decoding
-		return "", nil
-	}
-	label, ok := raw.(string)
-	if !ok {
-		return "", fmt.Errorf("invalid 'passive-label' type, unexpected format")
-	}
-	return label, nil
-}
-
-// Manually unmarshals passive-label to PassiveImg.Label
-func (i *InstallSpec) CustomUnmarshal(data interface{}) (bool, error) {
-	label, err := passiveLabel(data)
-	if err != nil {
-		return true, err
-	}
-	i.PassiveImg.Label = label
-	return true, nil
 }
 
 // ResetSpec struct represents all the reset action details
@@ -112,30 +89,20 @@ type ResetSpec struct {
 	FormatPersistent bool   `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
 	GrubDefEntry     string `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
 	Tty              string `yaml:"tty,omitempty" mapstructure:"tty"`
-	ActiveImg        Image  `yaml:"system,omitempty" mapstructure:"system"`
-	PassiveImg       Image
-	Partitions       PartitionMap
+	Active           Image  `yaml:"system,omitempty" mapstructure:"system"`
+	Passive          Image
+	Partitions       ElementalPartitions
 	Target           string
 	Efi              bool
 	GrubConf         string
 }
 
-// Manually unmarshals passive-label to PassiveImg.Label
-func (r *ResetSpec) CustomUnmarshal(data interface{}) (bool, error) {
-	label, err := passiveLabel(data)
-	if err != nil {
-		return true, err
-	}
-	r.PassiveImg.Label = label
-	return true, nil
-}
-
 type UpgradeSpec struct {
-	RecoveryUpgrade  bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	ActiveImg        Image  `yaml:"system,omitempty" mapstructure:"system"`
-	RecoveryImg      Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
-	PassiveLabel     string `yaml:"passive-label,omitempty" mapstructure:"passive-label"`
-	Partitions       PartitionMap
+	RecoveryUpgrade  bool  `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	Active           Image `yaml:"system,omitempty" mapstructure:"system"`
+	Recovery         Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	Passive          Image
+	Partitions       ElementalPartitions
 	SquashedRecovery bool
 }
 
@@ -152,23 +119,6 @@ type Partition struct {
 }
 
 type PartitionList []*Partition
-
-// GetPartitionMap gets a partition map mapped by partition name. Partitions
-// without a default name and not matching any default label are ignored.
-func (pl PartitionList) GetPartitionMap() PartitionMap {
-	pm := PartitionMap{}
-	for _, part := range pl {
-		if part == nil {
-			continue
-		}
-		for k, v := range constants.GetPartitionDefaultLabels() {
-			if part.Name == k || part.Label == v {
-				pm[k] = part
-			}
-		}
-	}
-	return pm
-}
 
 // GetByName gets a partitions by its name from the PartitionList
 func (pl PartitionList) GetByName(name string) *Partition {
@@ -190,69 +140,110 @@ func (pl PartitionList) GetByLabel(label string) *Partition {
 	return nil
 }
 
-type PartitionMap map[string]*Partition
-
-// validName checks if the given partition name is valid within the unmarshaling scope
-func (pm PartitionMap) validName(name string) bool {
-	for _, n := range constants.GetCustomizablePartitions() {
-		if n == name {
-			return true
-		}
-	}
-	return false
+type ElementalPartitions struct {
+	BIOS       *Partition
+	EFI        *Partition
+	OEM        *Partition `yaml:"oem,omitempty" mapstructure:"oem"`
+	Recovery   *Partition `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	State      *Partition `yaml:"state,omitempty" mapstructure:"state"`
+	Persistent *Partition `yaml:"persistent,omitempty" mapstructure:"persistent"`
 }
 
-// CustomUnmarshal only checks the keys of the PartitionMap are valid, non valid ones are ignored
-func (pm PartitionMap) CustomUnmarshal(data interface{}) (bool, error) {
-	m, ok := data.(map[string]interface{})
-	if !ok {
-		return true, fmt.Errorf("cannot unmarshal to PartitionMap, unexpected format %+v", data)
-	}
-	for k := range m {
-		if !pm.validName(k) {
-			// Removing the invalid entry causes to completely ignore it
-			delete(m, k)
-		} else {
-			// We need manually decode here if we want to properly merge into
-			// already initialized data
-			p, ok := pm[k]
-			if !ok {
-				p = &Partition{}
-			}
-			err := mapstructure.Decode(m[k], p)
-			if err != nil {
-				return false, err
-			}
+// SetFirmwarePartitions sets firmware partitions for a given firmware and partition table type
+func (ep *ElementalPartitions) SetFirmwarePartitions(firmware string, partTable string) error {
+	if firmware == EFI && partTable == GPT {
+		ep.EFI = &Partition{
+			Label:      constants.EfiLabel,
+			Size:       constants.EfiSize,
+			Name:       constants.EfiPartName,
+			FS:         constants.EfiFs,
+			MountPoint: constants.EfiDir,
+			Flags:      []string{esp},
 		}
+	} else if firmware == BIOS && partTable == GPT {
+		ep.BIOS = &Partition{
+			Label:      "",
+			Size:       constants.BiosSize,
+			Name:       constants.BiosPartName,
+			FS:         "",
+			MountPoint: "",
+			Flags:      []string{bios},
+		}
+	} else {
+		if ep.State == nil {
+			return fmt.Errorf("nil state partition")
+		}
+		ep.State.Flags = []string{boot}
 	}
-	return false, nil
+	return nil
 }
 
-// OrderedByLayoutPartitions sorts partitions according to the default layout
-func (pm PartitionMap) OrderedByLayoutPartitions() PartitionList {
-	var part *Partition
-	var present bool
+// NewElementalPartitionsFromList fills an ElementalPartitions instance from given
+// partitions list. First tries to match partitions by partition label, if not,
+// it tries to match partitions by default filesystem label
+// TODO find a way to map custom labels when partition labels are not available
+func NewElementalPartitionsFromList(pl PartitionList) ElementalPartitions {
+	ep := ElementalPartitions{}
+	ep.BIOS = pl.GetByName(constants.BiosPartName)
+	ep.EFI = pl.GetByName(constants.EfiPartName)
+	if ep.EFI == nil {
+		ep.EFI = pl.GetByLabel(constants.EfiLabel)
+	}
+	ep.OEM = pl.GetByName(constants.OEMPartName)
+	if ep.OEM == nil {
+		ep.OEM = pl.GetByLabel(constants.OEMLabel)
+	}
+	ep.Recovery = pl.GetByName(constants.RecoveryPartName)
+	if ep.Recovery == nil {
+		ep.Recovery = pl.GetByLabel(constants.RecoveryLabel)
+	}
+	ep.State = pl.GetByName(constants.StatePartName)
+	if ep.State == nil {
+		ep.State = pl.GetByLabel(constants.StateLabel)
+	}
+	ep.Persistent = pl.GetByName(constants.PersistentPartName)
+	if ep.Persistent == nil {
+		ep.Persistent = pl.GetByLabel(constants.PersistentLabel)
+	}
+	return ep
+}
 
+// PartitionsByInstallOrder sorts partitions according to the default layout
+// nil partitons are ignored
+func (ep ElementalPartitions) PartitionsByInstallOrder() PartitionList {
 	partitions := PartitionList{}
-	for _, name := range constants.GetPartitionsOrder() {
-		if part, present = pm[name]; present {
-			partitions = append(partitions, part)
-		}
+	if ep.BIOS != nil {
+		partitions = append(partitions, ep.BIOS)
+	}
+	if ep.EFI != nil {
+		partitions = append(partitions, ep.EFI)
+	}
+	if ep.OEM != nil {
+		partitions = append(partitions, ep.OEM)
+	}
+	if ep.Recovery != nil {
+		partitions = append(partitions, ep.Recovery)
+	}
+	if ep.State != nil {
+		partitions = append(partitions, ep.State)
+	}
+	if ep.Persistent != nil {
+		partitions = append(partitions, ep.Persistent)
 	}
 	return partitions
 }
 
-// OrderedByMountPointPartitions sorts partitions according to its mountpoint, ignores partitions
-// with an empty mountpoint, these are excluded
-func (pm PartitionMap) OrderedByMountPointPartitions(descending bool) PartitionList {
-	mountPointKeys := map[string]string{}
+// PartitionsByMountPoint sorts partitions according to its mountpoint, ignores nil
+// partitions or partitions with an empty mountpoint
+func (ep ElementalPartitions) PartitionsByMountPoint(descending bool) PartitionList {
+	mountPointKeys := map[string]*Partition{}
 	mountPoints := []string{}
 	partitions := PartitionList{}
 
-	for k, v := range pm {
-		if v.MountPoint != "" {
-			mountPointKeys[v.MountPoint] = k
-			mountPoints = append(mountPoints, v.MountPoint)
+	for _, p := range ep.PartitionsByInstallOrder() {
+		if p.MountPoint != "" {
+			mountPointKeys[p.MountPoint] = p
+			mountPoints = append(mountPoints, p.MountPoint)
 		}
 	}
 
@@ -263,7 +254,7 @@ func (pm PartitionMap) OrderedByMountPointPartitions(descending bool) PartitionL
 	}
 
 	for _, mnt := range mountPoints {
-		partitions = append(partitions, pm[mountPointKeys[mnt]])
+		partitions = append(partitions, mountPointKeys[mnt])
 	}
 	return partitions
 }

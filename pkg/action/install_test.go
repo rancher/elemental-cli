@@ -143,9 +143,9 @@ var _ = Describe("Install action tests", func() {
 			Expect(err).To(BeNil())
 
 			spec = conf.NewInstallSpec(config.Config)
-			spec.ActiveImg.Size = 16
+			spec.Active.Size = 16
 
-			grubCfg := filepath.Join(spec.ActiveImg.MountPoint, constants.GrubConf)
+			grubCfg := filepath.Join(spec.Active.MountPoint, constants.GrubConf)
 			err = utils.MkdirAll(fs, filepath.Dir(grubCfg), constants.DirPerm)
 			Expect(err).To(BeNil())
 			_, err = fs.Create(grubCfg)
@@ -258,7 +258,7 @@ var _ = Describe("Install action tests", func() {
 
 		It("Successfully installs a docker image", Label("docker"), func() {
 			spec.Target = device
-			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
+			spec.Active.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			config.Luet = luet
 			Expect(installer.Run()).To(BeNil())
@@ -298,8 +298,8 @@ var _ = Describe("Install action tests", func() {
 			spec.Iso = "cOS.iso"
 			spec.Target = device
 			Expect(installer.Run()).NotTo(BeNil())
-			Expect(spec.ActiveImg.Source.Value()).To(ContainSubstring("/rootfs"))
-			Expect(spec.ActiveImg.Source.IsDir()).To(BeTrue())
+			Expect(spec.Active.Source.Value()).To(ContainSubstring("/rootfs"))
+			Expect(spec.Active.Source.IsDir()).To(BeTrue())
 		})
 
 		It("Fails to install without formatting if a previous install is detected", Label("no-format", "disk"), func() {
@@ -336,7 +336,7 @@ var _ = Describe("Install action tests", func() {
 
 		It("Fails if luet fails to unpack image", Label("image", "luet", "unpack"), func() {
 			spec.Target = device
-			spec.ActiveImg.Source = v1.NewDockerSrc("my/image:latest")
+			spec.Active.Source = v1.NewDockerSrc("my/image:latest")
 			luet := v1mock.NewFakeLuet()
 			luet.OnUnpackError = true
 			config.Luet = luet

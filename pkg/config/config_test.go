@@ -135,18 +135,17 @@ var _ = Describe("Types", Label("types", "config"), func() {
 
 				spec := config.NewInstallSpec(*c)
 				Expect(spec.Firmware).To(Equal(v1.EFI))
-				Expect(spec.ActiveImg.Source.Value()).To(Equal(constants.IsoBaseTree))
-				Expect(spec.RecoveryImg.Source.Value()).To(Equal(recoveryImgFile))
+				Expect(spec.Active.Source.Value()).To(Equal(constants.IsoBaseTree))
+				Expect(spec.Recovery.Source.Value()).To(Equal(recoveryImgFile))
 				Expect(spec.PartTable).To(Equal(v1.GPT))
 
 				// No firmware partitions added yet
-				_, ok := spec.Partitions[constants.EfiPartName]
-				Expect(ok).To(BeFalse())
+				Expect(spec.Partitions.EFI).To(BeNil())
 
 				// Adding firmware partitions
-				config.AddFirmwarePartitions(spec)
-				_, ok = spec.Partitions[constants.EfiPartName]
-				Expect(ok).To(BeTrue())
+				err = spec.Partitions.SetFirmwarePartitions(spec.Firmware, spec.PartTable)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(spec.Partitions.EFI).NotTo(BeNil())
 			})
 			It("sets installation defaults from install bios media without recovery", Label("install", "bios"), func() {
 				// Set ISO base tree detection
@@ -157,24 +156,23 @@ var _ = Describe("Types", Label("types", "config"), func() {
 
 				spec := config.NewInstallSpec(*c)
 				Expect(spec.Firmware).To(Equal(v1.BIOS))
-				Expect(spec.ActiveImg.Source.Value()).To(Equal(constants.IsoBaseTree))
-				Expect(spec.RecoveryImg.Source.Value()).To(Equal(spec.ActiveImg.File))
+				Expect(spec.Active.Source.Value()).To(Equal(constants.IsoBaseTree))
+				Expect(spec.Recovery.Source.Value()).To(Equal(spec.Active.File))
 				Expect(spec.PartTable).To(Equal(v1.GPT))
 
 				// No firmware partitions added yet
-				_, ok := spec.Partitions[constants.BiosPartName]
-				Expect(ok).To(BeFalse())
+				Expect(spec.Partitions.BIOS).To(BeNil())
 
 				// Adding firmware partitions
-				config.AddFirmwarePartitions(spec)
-				_, ok = spec.Partitions[constants.BiosPartName]
-				Expect(ok).To(BeTrue())
+				err = spec.Partitions.SetFirmwarePartitions(spec.Firmware, spec.PartTable)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(spec.Partitions.BIOS).NotTo(BeNil())
 			})
 			It("sets installation defaults without being on installation media", Label("install"), func() {
 				spec := config.NewInstallSpec(*c)
 				Expect(spec.Firmware).To(Equal(v1.BIOS))
-				Expect(spec.ActiveImg.Source.IsEmpty()).To(BeTrue())
-				Expect(spec.RecoveryImg.Source.Value()).To(Equal(spec.ActiveImg.File))
+				Expect(spec.Active.Source.IsEmpty()).To(BeTrue())
+				Expect(spec.Recovery.Source.Value()).To(Equal(spec.Active.File))
 				Expect(spec.PartTable).To(Equal(v1.GPT))
 			})
 		})
@@ -243,10 +241,9 @@ var _ = Describe("Types", Label("types", "config"), func() {
 
 					spec, err := config.NewResetSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.ActiveImg.Source.Value()).To(Equal(constants.IsoBaseTree))
-					Expect(spec.Partitions[constants.EfiPartName].MountPoint).To(Equal(constants.EfiDir))
-					_, ok := spec.Partitions[constants.RecoveryPartName]
-					Expect(ok).To(BeFalse())
+					Expect(spec.Active.Source.Value()).To(Equal(constants.IsoBaseTree))
+					Expect(spec.Partitions.EFI.MountPoint).To(Equal(constants.EfiDir))
+					Expect(spec.Partitions.Recovery).To(BeNil())
 				})
 				It("sets reset defaults on bios from non-squashed recovery", func() {
 					// Set non-squashfs recovery image detection
@@ -258,20 +255,19 @@ var _ = Describe("Types", Label("types", "config"), func() {
 
 					spec, err := config.NewResetSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.ActiveImg.Source.Value()).To(Equal(recoveryImg))
-					_, ok := spec.Partitions[constants.RecoveryPartName]
-					Expect(ok).To(BeFalse())
+					Expect(spec.Active.Source.Value()).To(Equal(recoveryImg))
+					Expect(spec.Partitions.Recovery).To(BeNil())
 				})
 				It("sets reset defaults on bios from unknown recovery", func() {
 					spec, err := config.NewResetSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.ActiveImg.Source.IsEmpty()).To(BeTrue())
-					_, ok := spec.Partitions[constants.RecoveryPartName]
-					Expect(ok).To(BeFalse())
+					Expect(spec.Active.Source.IsEmpty()).To(BeTrue())
+					Expect(spec.Partitions.Recovery).To(BeNil())
 				})
 			})
 			Describe("Failures", func() {
 				var bootedFrom string
+				var ghwTest v1mock.GhwMock
 				BeforeEach(func() {
 					bootedFrom = ""
 					runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
@@ -282,6 +278,18 @@ var _ = Describe("Types", Label("types", "config"), func() {
 							return []byte{}, nil
 						}
 					}
+
+					// Set an empty disk for tests, otherwise reads the hosts hardware
+					mainDisk := block.Disk{
+						Name:       "device",
+						Partitions: []*block.Partition{},
+					}
+					ghwTest = v1mock.GhwMock{}
+					ghwTest.AddDisk(mainDisk)
+					ghwTest.CreateDevices()
+				})
+				AfterEach(func() {
+					ghwTest.Clean()
 				})
 				It("fails to set defaults if not booted from recovery", func() {
 					_, err := config.NewResetSpec(*c)
@@ -352,13 +360,13 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				It("sets upgrade defaults for active upgrade", func() {
 					spec, err := config.NewUpgradeSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.ActiveImg.Source.IsEmpty()).To(BeTrue())
+					Expect(spec.Active.Source.IsEmpty()).To(BeTrue())
 				})
 				It("sets upgrade defaults for non-squashed recovery upgrade", func() {
 					spec, err := config.NewUpgradeSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.RecoveryImg.Source.IsEmpty()).To(BeTrue())
-					Expect(spec.RecoveryImg.FS).To(Equal(constants.LinuxImgFs))
+					Expect(spec.Recovery.Source.IsEmpty()).To(BeTrue())
+					Expect(spec.Recovery.FS).To(Equal(constants.LinuxImgFs))
 				})
 				It("sets upgrade defaults for squashed recovery upgrade", func() {
 					//Set squashed recovery detection
@@ -370,8 +378,8 @@ var _ = Describe("Types", Label("types", "config"), func() {
 
 					spec, err := config.NewUpgradeSpec(*c)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(spec.RecoveryImg.Source.IsEmpty()).To(BeTrue())
-					Expect(spec.RecoveryImg.FS).To(Equal(constants.SquashFs))
+					Expect(spec.Recovery.Source.IsEmpty()).To(BeTrue())
+					Expect(spec.Recovery.FS).To(Equal(constants.SquashFs))
 				})
 			})
 			Describe("Failures", func() {

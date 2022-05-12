@@ -75,66 +75,74 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 	AfterEach(func() { cleanup() })
 	Describe("MountPartitions", Label("MountPartitions", "disk", "partition", "mount"), func() {
 		var el *elemental.Elemental
-		var parts v1.PartitionMap
+		var parts v1.ElementalPartitions
 		BeforeEach(func() {
-			parts = conf.NewInstallParitionMap()
+			parts = conf.NewInstallElementalParitions()
 
 			err := utils.MkdirAll(fs, "/some", cnst.DirPerm)
 			Expect(err).ToNot(HaveOccurred())
 			_, err = fs.Create("/some/device")
 			Expect(err).ToNot(HaveOccurred())
 
-			for _, part := range parts {
-				part.Path = "/some/device"
-			}
+			parts.OEM.Path = "/dev/device2"
+			parts.Recovery.Path = "/dev/device3"
+			parts.State.Path = "/dev/device4"
+			parts.Persistent.Path = "/dev/device5"
+
 			el = elemental.NewElemental(config)
 		})
 
 		It("Mounts disk partitions", func() {
-			err := el.MountPartitions(parts.OrderedByMountPointPartitions(false))
+			err := el.MountPartitions(parts.PartitionsByMountPoint(false))
 			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			Expect(len(lst)).To(Equal(4))
 		})
 
 		It("Fails if some partition resists to mount ", func() {
 			mounter.ErrorOnMount = true
-			err := el.MountPartitions(parts.OrderedByMountPointPartitions(false))
+			err := el.MountPartitions(parts.PartitionsByMountPoint(false))
 			Expect(err).NotTo(BeNil())
 		})
 
 		It("Fails if oem partition is not found ", func() {
-			parts[cnst.OEMPartName].Path = ""
-			err := el.MountPartitions(parts.OrderedByMountPointPartitions(false))
+			parts.OEM.Path = ""
+			err := el.MountPartitions(parts.PartitionsByMountPoint(false))
 			Expect(err).NotTo(BeNil())
 		})
 	})
 
 	Describe("UnmountPartitions", Label("UnmountPartitions", "disk", "partition", "unmount"), func() {
 		var el *elemental.Elemental
-		var parts v1.PartitionMap
+		var parts v1.ElementalPartitions
 		BeforeEach(func() {
-			parts = conf.NewInstallParitionMap()
+			parts = conf.NewInstallElementalParitions()
 
 			err := utils.MkdirAll(fs, "/some", cnst.DirPerm)
 			Expect(err).ToNot(HaveOccurred())
 			_, err = fs.Create("/some/device")
 			Expect(err).ToNot(HaveOccurred())
 
-			for _, part := range parts {
-				part.Path = "/some/device"
-			}
+			parts.OEM.Path = "/dev/device2"
+			parts.Recovery.Path = "/dev/device3"
+			parts.State.Path = "/dev/device4"
+			parts.Persistent.Path = "/dev/device5"
+
 			el = elemental.NewElemental(config)
-			err = el.MountPartitions(parts.OrderedByMountPointPartitions(false))
+			err = el.MountPartitions(parts.PartitionsByMountPoint(false))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("Unmounts disk partitions", func() {
-			err := el.UnmountPartitions(parts.OrderedByMountPointPartitions(true))
+			err := el.UnmountPartitions(parts.PartitionsByMountPoint(true))
 			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			Expect(len(lst)).To(Equal(0))
 		})
 
 		It("Fails to unmount disk partitions", func() {
 			mounter.ErrorOnUnmount = true
-			err := el.UnmountPartitions(parts.OrderedByMountPointPartitions(true))
+			err := el.UnmountPartitions(parts.PartitionsByMountPoint(true))
 			Expect(err).NotTo(BeNil())
 		})
 	})
@@ -332,7 +340,6 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			It("Successfully creates partitions and formats them, EFI boot", func() {
 				install.PartTable = v1.GPT
 				install.Firmware = v1.EFI
-				conf.AddFirmwarePartitions(install)
 				Expect(el.PartitionAndFormatDevice(install)).To(BeNil())
 				Expect(runner.MatchMilestones(append(efiPartCmds, partCmds...))).To(BeNil())
 			})
@@ -340,7 +347,6 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			It("Successfully creates partitions and formats them, BIOS boot", func() {
 				install.PartTable = v1.GPT
 				install.Firmware = v1.BIOS
-				conf.AddFirmwarePartitions(install)
 				Expect(el.PartitionAndFormatDevice(install)).To(BeNil())
 				Expect(runner.MatchMilestones(biosPartCmds)).To(BeNil())
 			})

@@ -22,7 +22,6 @@ import (
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
-	conf "github.com/rancher-sandbox/elemental/pkg/config"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -87,11 +86,6 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 
 			if spec.Target == "" {
 				return errors.New("at least a target device must be supplied")
-			}
-
-			err = conf.AddFirmwarePartitions(spec)
-			if err != nil {
-				return err
 			}
 
 			cfg.Logger.Infof("Install called")

@@ -52,7 +52,7 @@ install:
     uri: channel:recovery/cos
 
   # filesystem label of the passive backup image
-  passive-label: COS_PASSIVE
+  passive.label: COS_PASSIVE
 
   # extra cloud-init config file URI to include during the installation
   cloud-init: "https://some.cloud-init.org/my-config-file"
@@ -79,7 +79,7 @@ reset:
     uri: docker:some.registry.org/cos/image:latest
 
   # filesystem label of the passive backup image
-  passive-label: COS_PASSIVE
+  passive.label: COS_PASSIVE
 
   # grub menu entry, this is the string that will be displayed
   grub-default-entry: cOS
@@ -93,7 +93,7 @@ reset:
 upgrade:
   # if set to true upgrade command will upgrade recovery system instead
   # of main active system
-  upgrade-recovery: false
+  recovery: false
 
   # image used to upgrade main OS
   # size in MiB
@@ -107,7 +107,7 @@ upgrade:
     uri: channel:recovery/cos
 
   # filesystem label of the passive backup image
-  passive-label: COS_PASSIVE
+  passive.label: COS_PASSIVE
 
 
 # use cosing to validate images from container registries

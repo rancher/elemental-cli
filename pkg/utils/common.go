@@ -318,9 +318,9 @@ func GetTempDir(config *v1.Config, suffix string) string {
 		return filepath.Join("/", "tmp", elementalTmpDir)
 	}
 	// Check persistent and if its mounted
-	pm := parts.GetPartitionMap()
-	persistent, ok := pm[cnst.PersistentPartName]
-	if ok {
+	ep := v1.NewElementalPartitionsFromList(parts)
+	persistent := ep.Persistent
+	if persistent != nil {
 		if mnt, _ := IsMounted(config, persistent); mnt {
 			return filepath.Join(persistent.MountPoint, elementalTmpDir)
 		}

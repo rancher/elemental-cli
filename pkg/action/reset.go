@@ -19,7 +19,6 @@ package action
 import (
 	"fmt"
 
-	"github.com/rancher-sandbox/elemental/pkg/constants"
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
@@ -29,15 +28,15 @@ import (
 func (r *ResetAction) resetHook(hook string, chroot bool) error {
 	if chroot {
 		extraMounts := map[string]string{}
-		persistent, ok := r.spec.Partitions[cnst.PersistentPartName]
-		if ok && persistent.MountPoint != "" {
+		persistent := r.spec.Partitions.Persistent
+		if persistent != nil && persistent.MountPoint != "" {
 			extraMounts[persistent.MountPoint] = "/usr/local" // nolint:goconst
 		}
-		oem, ok := r.spec.Partitions[cnst.OEMPartName]
-		if ok && oem.MountPoint != "" {
+		oem := r.spec.Partitions.OEM
+		if oem != nil && oem.MountPoint != "" {
 			extraMounts[oem.MountPoint] = "/oem" // nolint:goconst
 		}
-		return ChrootHook(&r.cfg.Config, hook, r.cfg.Strict, r.spec.ActiveImg.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
+		return ChrootHook(&r.cfg.Config, hook, r.cfg.Strict, r.spec.Active.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
 	}
 	return Hook(&r.cfg.Config, hook, r.cfg.Strict, r.cfg.CloudInitPaths...)
 }
@@ -62,33 +61,36 @@ func (r ResetAction) Run() (err error) {
 		return err
 	}
 
-	if r.spec.ActiveImg.Source.IsEmpty() {
+	if r.spec.Active.Source.IsEmpty() {
 		return fmt.Errorf("undefined system source to reset to")
+	}
+	if r.spec.Partitions.State == nil || r.spec.Partitions.State.MountPoint == "" {
+		return fmt.Errorf("undefined state partition")
 	}
 
 	// Unmount partitions if any is already mounted before formatting
-	err = e.UnmountPartitions(r.spec.Partitions.OrderedByMountPointPartitions(true))
+	err = e.UnmountPartitions(r.spec.Partitions.PartitionsByMountPoint(true))
 	if err != nil {
 		return err
 	}
 
 	// Reformat state partition
-	err = e.FormatPartition(r.spec.Partitions[cnst.StatePartName])
+	err = e.FormatPartition(r.spec.Partitions.State)
 	if err != nil {
 		return err
 	}
 
 	// Reformat persistent partitions
 	if r.spec.FormatPersistent {
-		persistent, ok := r.spec.Partitions[cnst.PersistentPartName]
-		if ok {
+		persistent := r.spec.Partitions.Persistent
+		if persistent != nil {
 			err = e.FormatPartition(persistent)
 			if err != nil {
 				return err
 			}
 		}
-		oem, ok := r.spec.Partitions[cnst.OEMPartName]
-		if ok {
+		oem := r.spec.Partitions.OEM
+		if oem != nil {
 			err = e.FormatPartition(oem)
 			if err != nil {
 				return err
@@ -97,27 +99,27 @@ func (r ResetAction) Run() (err error) {
 	}
 
 	// Mount configured partitions
-	err = e.MountPartitions(r.spec.Partitions.OrderedByMountPointPartitions(false))
+	err = e.MountPartitions(r.spec.Partitions.PartitionsByMountPoint(false))
 	if err != nil {
 		return err
 	}
 	cleanup.Push(func() error {
-		return e.UnmountPartitions(r.spec.Partitions.OrderedByMountPointPartitions(true))
+		return e.UnmountPartitions(r.spec.Partitions.PartitionsByMountPoint(true))
 	})
 
 	// Deploy active image
-	err = e.DeployImage(&r.spec.ActiveImg, true)
+	err = e.DeployImage(&r.spec.Active, true)
 	if err != nil {
 		return err
 	}
-	cleanup.Push(func() error { return e.UnmountImage(&r.spec.ActiveImg) })
+	cleanup.Push(func() error { return e.UnmountImage(&r.spec.Active) })
 
 	// install grub
 	grub := utils.NewGrub(&r.cfg.Config)
 	err = grub.Install(
 		r.spec.Target,
-		r.spec.ActiveImg.MountPoint,
-		r.spec.Partitions[constants.StatePartName].MountPoint,
+		r.spec.Active.MountPoint,
+		r.spec.Partitions.State.MountPoint,
 		r.spec.GrubConf,
 		r.spec.Tty,
 		r.spec.Efi,
@@ -134,13 +136,13 @@ func (r ResetAction) Run() (err error) {
 	}
 
 	// Unmount active image
-	err = e.UnmountImage(&r.spec.ActiveImg)
+	err = e.UnmountImage(&r.spec.Active)
 	if err != nil {
 		return err
 	}
 
 	// Install Passive
-	err = e.DeployImage(&r.spec.PassiveImg, false)
+	err = e.DeployImage(&r.spec.Passive, false)
 	if err != nil {
 		return err
 	}

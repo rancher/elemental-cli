@@ -53,24 +53,23 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 	if chroot {
 		mountPoints := map[string]string{}
 
-		oemDevice, ok := u.spec.Partitions[constants.OEMPartName]
-		if ok && oemDevice.MountPoint != "" {
+		oemDevice := u.spec.Partitions.OEM
+		if oemDevice != nil && oemDevice.MountPoint != "" {
 			mountPoints[oemDevice.MountPoint] = "/oem" //nolint:goconst
 		}
 
-		persistentDevice, ok := u.spec.Partitions[constants.PersistentPartName]
-		if ok && persistentDevice.MountPoint != "" {
+		persistentDevice := u.spec.Partitions.Persistent
+		if persistentDevice != nil && persistentDevice.MountPoint != "" {
 			mountPoints[persistentDevice.MountPoint] = "/usr/local" //nolint:goconst
 		}
 
-		return ChrootHook(&u.config.Config, hook, u.config.Strict, u.spec.ActiveImg.MountPoint, mountPoints, u.config.CloudInitPaths...)
+		return ChrootHook(&u.config.Config, hook, u.config.Strict, u.spec.Active.MountPoint, mountPoints, u.config.CloudInitPaths...)
 	}
 	return Hook(&u.config.Config, hook, u.config.Strict, u.config.CloudInitPaths...)
 }
 
 func (u *UpgradeAction) Run() (err error) {
 	var mountPart *v1.Partition
-	var ok bool
 	var upgradeImg v1.Image
 	var finalImageFile string
 
@@ -80,22 +79,22 @@ func (u *UpgradeAction) Run() (err error) {
 	e := elemental.NewElemental(&u.config.Config)
 
 	if u.spec.RecoveryUpgrade {
-		mountPart, ok = u.spec.Partitions[constants.RecoveryPartName]
-		if !ok || mountPart.MountPoint == "" {
+		mountPart = u.spec.Partitions.Recovery
+		if mountPart == nil || mountPart.MountPoint == "" {
 			return fmt.Errorf("unset recovery partition")
 		}
-		upgradeImg = u.spec.RecoveryImg
+		upgradeImg = u.spec.Recovery
 		if upgradeImg.FS == constants.SquashFs {
 			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoverySquashFile)
 		} else {
 			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoveryImgFile)
 		}
 	} else {
-		mountPart, ok = u.spec.Partitions[constants.StatePartName]
-		if !ok || mountPart.MountPoint == "" {
+		mountPart = u.spec.Partitions.State
+		if mountPart == nil || mountPart.MountPoint == "" {
 			return fmt.Errorf("unset state partition")
 		}
-		upgradeImg = u.spec.ActiveImg
+		upgradeImg = u.spec.Active
 		finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.ActiveImgFile)
 	}
 
@@ -123,8 +122,8 @@ func (u *UpgradeAction) Run() (err error) {
 	cleanup.Push(func() error { return u.remove(upgradeImg.File) })
 
 	// Recovery does not mount persistent, so try to mount it. Ignore errors, as its not mandatory.
-	persistentPart, ok := u.spec.Partitions[constants.PersistentPartName]
-	if ok {
+	persistentPart := u.spec.Partitions.Persistent
+	if persistentPart != nil {
 		if mnt, _ := utils.IsMounted(&u.config.Config, persistentPart); !mnt {
 			u.Debug("mounting persistent partition")
 			err := e.MountPartition(persistentPart, "rw")
@@ -199,18 +198,17 @@ func (u *UpgradeAction) Run() (err error) {
 		// backup current active.img to passive.img before overwriting the active.img
 		u.Info("Backing up current active image")
 		source := filepath.Join(mountPart.MountPoint, "cOS", constants.ActiveImgFile)
-		destination := filepath.Join(mountPart.MountPoint, "cOS", constants.PassiveImgFile)
-		u.Info("Moving %s to %s", source, destination)
-		_, err := u.config.Runner.Run("mv", "-f", source, destination)
+		u.Info("Moving %s to %s", source, u.spec.Passive.File)
+		_, err := u.config.Runner.Run("mv", "-f", source, u.spec.Passive.File)
 		if err != nil {
-			u.Error("Failed to move %s to %s: %s", source, destination, err)
+			u.Error("Failed to move %s to %s: %s", source, u.spec.Passive.File, err)
 			return err
 		}
-		u.Info("Finished moving %s to %s", source, destination)
+		u.Info("Finished moving %s to %s", source, u.spec.Passive.File)
 		// Label the image to passive!
-		out, err := u.config.Runner.Run("tune2fs", "-L", u.spec.PassiveLabel, destination)
+		out, err := u.config.Runner.Run("tune2fs", "-L", u.spec.Passive.Label, u.spec.Passive.File)
 		if err != nil {
-			u.Error("Error while labeling the passive image %s: %s", destination, err)
+			u.Error("Error while labeling the passive image %s: %s", u.spec.Passive.File, err)
 			u.Debug("Error while labeling the passive image %s, command output: %s", out)
 			return err
 		}
