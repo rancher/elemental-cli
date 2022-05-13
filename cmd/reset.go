@@ -56,7 +56,7 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
-			// Map install environment variables to sub viper keys
+			// Map reset sub viper keys to environment variables
 			// without the ELEMENTAL_RESET prefix
 			keyEnvMap := map[string]string{
 				"target":     "TARGET",

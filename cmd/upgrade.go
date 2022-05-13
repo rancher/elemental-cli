@@ -60,7 +60,7 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
-			// Map install environment variables to sub viper keys
+			// Map upgrade sub viper keys to environment variables
 			// without the ELEMENTAL_UPGRADE prefix
 			keyEnvMap := map[string]string{
 				"recovery":            "RECOVERY",

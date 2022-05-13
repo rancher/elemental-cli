@@ -90,15 +90,14 @@ const (
 	UpgradeActive          = "active"
 	UpgradeRecovery        = "recovery"
 	ChannelSource          = "system/cos"
-	//UpgradeRecoveryDir     = "/run/initramfs/live"
-	TransitionImgFile    = "transition.img"
-	TransitionSquashFile = "transition.squashfs"
-	RunningStateDir      = "/run/initramfs/cos-state" // TODO: converge this constant with StateDir/RecoveryDir in dracut module from cos-toolkit
-	ActiveImgName        = "active"
-	PassiveImgName       = "passive"
-	RecoveryImgName      = "recovery"
-	GPT                  = "gpt"
-	BuildImgName         = "elemental"
+	TransitionImgFile      = "transition.img"
+	TransitionSquashFile   = "transition.squashfs"
+	RunningStateDir        = "/run/initramfs/cos-state" // TODO: converge this constant with StateDir/RecoveryDir in dracut module from cos-toolkit
+	ActiveImgName          = "active"
+	PassiveImgName         = "passive"
+	RecoveryImgName        = "recovery"
+	GPT                    = "gpt"
+	BuildImgName           = "elemental"
 
 	//TODO these paths are abitrary, coupled to package live/grub2 and assuming xz
 	// I'd suggest using `/boot/kernel` and `/boot/initrd`
@@ -191,38 +190,5 @@ func GetBuildDiskDefaultPackages() map[string]string {
 		"system/grub2-config":    "root",
 		"system/grub2-artifacts": "root/grub2",
 		"recovery/cos-img":       "root/cOS",
-	}
-}
-
-// GetPartitionDefaultLabels returns a map of default labels accible by partition name
-func GetPartitionDefaultLabels() map[string]string {
-	return map[string]string{
-		EfiPartName:        EfiLabel,
-		OEMPartName:        OEMLabel,
-		RecoveryPartName:   RecoveryLabel,
-		StatePartName:      StateLabel,
-		PersistentPartName: PersistentLabel,
-	}
-}
-
-// GetPartitionsOrder returns a slice of ordered partition names
-func GetPartitionsOrder() []string {
-	return []string{
-		BiosPartName,
-		EfiPartName,
-		OEMPartName,
-		RecoveryPartName,
-		StatePartName,
-		PersistentPartName,
-	}
-}
-
-// GetCustomizablePartitions returns a slice of configurable partition names
-func GetCustomizablePartitions() []string {
-	return []string{
-		OEMPartName,
-		RecoveryPartName,
-		StatePartName,
-		PersistentPartName,
 	}
 }

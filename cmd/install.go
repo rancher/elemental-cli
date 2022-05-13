@@ -65,7 +65,7 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			//Adapt 'force-efi' and 'force-gpt' to 'firmware' and 'part-table'
 			adaptEFIAndGPTFlags(cmd.Flags())
 
-			// Map install environment variables to sub viper keys
+			// Map install sub viper keys to environment variables
 			// without the ELEMENTAL_INSTALL prefix
 			keyEnvMap := map[string]string{
 				"target":              "TARGET",
