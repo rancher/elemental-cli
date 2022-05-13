@@ -270,34 +270,6 @@ type Image struct {
 	LoopDevice string
 }
 
-type ImageMap map[string]*Image
-
-// ImageMap setters and getters are just shortcut for accesses using constants
-
-func (im ImageMap) SetActive(img *Image) {
-	im[constants.ActiveImgName] = img
-}
-
-func (im ImageMap) SetPassive(img *Image) {
-	im[constants.PassiveImgName] = img
-}
-
-func (im ImageMap) SetRecovery(img *Image) {
-	im[constants.RecoveryImgName] = img
-}
-
-func (im ImageMap) GetActive() *Image {
-	return im[constants.ActiveImgName]
-}
-
-func (im ImageMap) GetPassive() *Image {
-	return im[constants.PassiveImgName]
-}
-
-func (im ImageMap) GetRecovery() *Image {
-	return im[constants.RecoveryImgName]
-}
-
 // LiveISO represents the configurations needed for a live ISO image
 type LiveISO struct {
 	RootFS      []string `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
