@@ -143,11 +143,11 @@ var _ = Describe("Runtime Actions", func() {
 				spec.Active.Source = v1.NewChannelSrc("system/cos-config")
 				spec.Active.Size = 16
 
-				err = utils.MkdirAll(config.Fs, filepath.Join(constants.RunningStateDir, "etc"), constants.DirPerm)
+				err = utils.MkdirAll(config.Fs, filepath.Join(spec.Active.MountPoint, "etc"), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = fs.WriteFile(
-					filepath.Join(constants.RunningStateDir, "etc", "os-release"),
+					filepath.Join(spec.Active.MountPoint, "etc", "os-release"),
 					[]byte("GRUB_ENTRY_NAME=TESTOS"),
 					constants.FilePerm,
 				)
@@ -316,11 +316,11 @@ var _ = Describe("Runtime Actions", func() {
 				spec.Active.Source = v1.NewChannelSrc("system/cos-config")
 				spec.Active.Size = 16
 
-				err = utils.MkdirAll(config.Fs, filepath.Join(constants.RunningStateDir, "etc"), constants.DirPerm)
+				err = utils.MkdirAll(config.Fs, filepath.Join(spec.Active.MountPoint, "etc"), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = fs.WriteFile(
-					filepath.Join(constants.RunningStateDir, "etc", "os-release"),
+					filepath.Join(spec.Active.MountPoint, "etc", "os-release"),
 					[]byte("GRUB_ENTRY_NAME=TESTOS"),
 					constants.FilePerm,
 				)

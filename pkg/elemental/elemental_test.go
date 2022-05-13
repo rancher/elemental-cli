@@ -719,6 +719,10 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			el := elemental.NewElemental(config)
 			Expect(el.SetDefaultGrubEntry("/mountpoint", "default_entry")).To(BeNil())
 		})
+		It("Does not fail on empty default entry", func() {
+			el := elemental.NewElemental(config)
+			Expect(el.SetDefaultGrubEntry("/mountpoint", "")).To(BeNil())
+		})
 		It("Fails setting grubenv", func() {
 			runner.ReturnError = errors.New("failure")
 			el := elemental.NewElemental(config)

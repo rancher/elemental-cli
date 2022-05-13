@@ -166,17 +166,15 @@ func (u *UpgradeAction) Run() (err error) {
 	// Only apply rebrand stage for system upgrades
 	if !u.spec.RecoveryUpgrade {
 		u.Info("rebranding")
-		osRelease, _ := utils.LoadEnvFile(u.config.Config.Fs, filepath.Join(mountPart.MountPoint, "etc", "os-release"))
+		osRelease, err := utils.LoadEnvFile(u.config.Config.Fs, filepath.Join(upgradeImg.MountPoint, "etc", "os-release"))
+		if err != nil {
+			u.config.Logger.Warnf("Could not load os-release file: %v", err)
+		}
 
-		grubDefEntry, ok := osRelease["GRUB_ENTRY_NAME"]
-		if ok {
-			err = e.SetDefaultGrubEntry(mountPart.MountPoint, grubDefEntry)
-			if err != nil {
-				u.Error("failed setting default entry")
-				return err
-			}
-		} else {
-			u.Debug("no grub default entry configured")
+		err = e.SetDefaultGrubEntry(mountPart.MountPoint, osRelease["GRUB_ENTRY_NAME"])
+		if err != nil {
+			u.Error("failed setting default entry")
+			return err
 		}
 	}
 

@@ -513,16 +513,13 @@ func (e Elemental) UpdateSourcesFormDownloadedISO(workDir string, activeImg *v1.
 // Sets the default_meny_entry value in RunConfig.GrubOEMEnv file at in
 // State partition mountpoint.
 func (e Elemental) SetDefaultGrubEntry(mountPoint string, defaultEntry string) error {
+	if defaultEntry == "" {
+		e.config.Logger.Debug("unset grub default entry")
+		return nil
+	}
 	grub := utils.NewGrub(e.config)
 	return grub.SetPersistentVariables(
 		filepath.Join(mountPoint, cnst.GrubOEMEnv),
 		map[string]string{"default_menu_entry": defaultEntry},
 	)
 }
-
-/*
-// Runs rebranding procedure. Note this assumes all required partitions and
-// images to be mounted in advance.
-func (c Elemental) Rebrand(r *v1.RunConfigNew) error {
-	return c.SetDefaultGrubEntry()
-}*/
