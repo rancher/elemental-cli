@@ -129,6 +129,10 @@ func (l *Luet) SetPlugins(plugins ...string) {
 	l.plugins = plugins
 }
 
+func (l *Luet) GetPlugins() []string {
+	return l.plugins
+}
+
 func (l *Luet) InitPlugins() {
 	if len(l.plugins) > 0 {
 		bus.Manager.Initialize(l.context, l.plugins...)

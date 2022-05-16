@@ -151,6 +151,16 @@ func NewRunConfig(opts ...GenericOptions) *v1.RunConfig {
 	return r
 }
 
+// CoOccurrenceConfig sets further configurations once config files and other
+// runtime configurations are read. This is mostly a method to call once the
+// mapstructure unmarshal already took place.
+func CoOccurrenceConfig(cfg *v1.Config) {
+	// Set Luet plugins, we only use the mtree plugin for now
+	if !cfg.NoVerify {
+		cfg.Luet.SetPlugins(constants.LuetMtreePlugin)
+	}
+}
+
 // NewInstallSpec returns an InstallSpec struct all based on defaults and basic host checks (e.g. EFI vs BIOS)
 func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 	var firmware string

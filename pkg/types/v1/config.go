@@ -46,6 +46,7 @@ type Config struct {
 	Luet                      LuetInterface
 	Client                    HTTPClient
 	Cosign                    bool         `yaml:"cosign,omitempty" mapstructure:"cosign"`
+	NoVerify                  bool         `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
 	CosignPubKey              string       `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
 	LocalImage                bool         `yaml:"local,omitempty" mapstructure:"local"`
 	Repos                     []Repository `yaml:"repositories,omitempty" mapstructure:"repositories"`
@@ -55,7 +56,6 @@ type Config struct {
 
 type RunConfig struct {
 	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
-	NoVerify       bool     `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
 	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
 	PowerOff       bool     `yaml:"poweroff,omitempty" mapstructure:"poweroff"`
 	CloudInitPaths []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`

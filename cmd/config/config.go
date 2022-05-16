@@ -188,6 +188,9 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 		cfg.Logger.Warnf("error unmarshalling RunConfig: %s", err)
 	}
 
+	// Apply further configurations based on unmarshal results (e.g. Luet plugins)
+	config.CoOccurrenceConfig(&cfg.Config)
+
 	cfg.Logger.Debugf("Full config loaded: %+v", cfg)
 
 	return cfg, nil
