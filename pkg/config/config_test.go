@@ -36,7 +36,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 		var err error
 		var cleanup func()
 		var fs *vfst.TestFS
-		var mounter *mount.FakeMounter
+		var mounter *v1mock.ErrorMounter
 		var runner *v1mock.FakeRunner
 		var client *v1mock.FakeHTTPClient
 		var sysc *v1mock.FakeSyscall
@@ -47,7 +47,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 		BeforeEach(func() {
 			fs, cleanup, err = vfst.NewTestFS(nil)
 			Expect(err).ToNot(HaveOccurred())
-			mounter = mount.NewFakeMounter([]mount.MountPoint{})
+			mounter = v1mock.NewErrorMounter()
 			runner = v1mock.NewFakeRunner()
 			client = &v1mock.FakeHTTPClient{}
 			sysc = &v1mock.FakeSyscall{}
@@ -83,7 +83,6 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				fs, cleanup, err := vfst.NewTestFS(nil)
 				defer cleanup()
 				Expect(err).ToNot(HaveOccurred())
-				mounter := mount.NewFakeMounter([]mount.MountPoint{})
 				c := config.NewConfig(
 					config.WithFs(fs),
 					config.WithMounter(mounter),
@@ -107,7 +106,6 @@ var _ = Describe("Types", Label("types", "config"), func() {
 			})
 		})
 		Describe("RunConfig", func() {
-			mounter := mount.NewFakeMounter([]mount.MountPoint{})
 			cfg := config.NewRunConfig(config.WithMounter(mounter))
 			Expect(cfg.Mounter).To(Equal(mounter))
 			Expect(cfg.Runner).NotTo(BeNil())
@@ -334,9 +332,10 @@ var _ = Describe("Types", Label("types", "config"), func() {
 								Type:  "ext4",
 							},
 							{
-								Name:  "device3",
-								Label: constants.RecoveryLabel,
-								Type:  "ext4",
+								Name:       "device3",
+								Label:      constants.RecoveryLabel,
+								Type:       "ext4",
+								MountPoint: constants.LiveDir,
 							},
 							{
 								Name:  "device4",
@@ -370,6 +369,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				})
 				It("sets upgrade defaults for squashed recovery upgrade", func() {
 					//Set squashed recovery detection
+					mounter.Mount("device3", constants.LiveDir, "auto", []string{})
 					img := filepath.Join(constants.LiveDir, "cOS", constants.RecoverySquashFile)
 					err = utils.MkdirAll(fs, filepath.Dir(img), constants.DirPerm)
 					Expect(err).ShouldNot(HaveOccurred())

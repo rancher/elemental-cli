@@ -385,6 +385,8 @@ var _ = Describe("Runtime Actions", func() {
 			Describe("Using squashfs", Label("squashfs"), func() {
 				var err error
 				BeforeEach(func() {
+					// Mount recovery partition as it is expected to be mounted when booting from recovery
+					mounter.Mount("device5", constants.LiveDir, "auto", []string{"ro"})
 					// Create recoveryImgSquash so ti identifies that we are using squash recovery
 					err = fs.WriteFile(recoveryImgSquash, []byte("recovery"), constants.FilePerm)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -413,8 +415,6 @@ var _ = Describe("Runtime Actions", func() {
 						return []byte{}, nil
 					}
 					config.Runner = runner
-					// Mount recovery partition as it is expected to be mounted when booting from recovery
-					mounter.Mount("device5", constants.LiveDir, "auto", []string{"ro"})
 				})
 				It("Successfully upgrades recovery from docker image", Label("docker"), func() {
 					// This should be the old image
