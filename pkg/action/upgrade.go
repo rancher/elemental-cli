@@ -55,12 +55,12 @@ func (u UpgradeAction) upgradeHook(hook string, chroot bool) error {
 
 		oemDevice := u.spec.Partitions.OEM
 		if oemDevice != nil && oemDevice.MountPoint != "" {
-			mountPoints[oemDevice.MountPoint] = "/oem" //nolint:goconst
+			mountPoints[oemDevice.MountPoint] = constants.OEMPath
 		}
 
 		persistentDevice := u.spec.Partitions.Persistent
 		if persistentDevice != nil && persistentDevice.MountPoint != "" {
-			mountPoints[persistentDevice.MountPoint] = "/usr/local" //nolint:goconst
+			mountPoints[persistentDevice.MountPoint] = constants.UsrLocalPath
 		}
 
 		return ChrootHook(&u.config.Config, hook, u.config.Strict, u.spec.Active.MountPoint, mountPoints, u.config.CloudInitPaths...)

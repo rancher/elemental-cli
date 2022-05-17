@@ -30,11 +30,11 @@ func (r *ResetAction) resetHook(hook string, chroot bool) error {
 		extraMounts := map[string]string{}
 		persistent := r.spec.Partitions.Persistent
 		if persistent != nil && persistent.MountPoint != "" {
-			extraMounts[persistent.MountPoint] = "/usr/local" // nolint:goconst
+			extraMounts[persistent.MountPoint] = cnst.UsrLocalPath
 		}
 		oem := r.spec.Partitions.OEM
 		if oem != nil && oem.MountPoint != "" {
-			extraMounts[oem.MountPoint] = "/oem" // nolint:goconst
+			extraMounts[oem.MountPoint] = cnst.OEMPath
 		}
 		return ChrootHook(&r.cfg.Config, hook, r.cfg.Strict, r.spec.Active.MountPoint, extraMounts, r.cfg.CloudInitPaths...)
 	}

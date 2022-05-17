@@ -98,6 +98,8 @@ const (
 	RecoveryImgName        = "recovery"
 	GPT                    = "gpt"
 	BuildImgName           = "elemental"
+	UsrLocalPath           = "/usr/local"
+	OEMPath                = "/oem"
 
 	//TODO these paths are abitrary, coupled to package live/grub2 and assuming xz
 	// I'd suggest using `/boot/kernel` and `/boot/initrd`

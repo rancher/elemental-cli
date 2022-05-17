@@ -30,11 +30,11 @@ func (i *InstallAction) installHook(hook string, chroot bool) error {
 		extraMounts := map[string]string{}
 		persistent := i.spec.Partitions.Persistent
 		if persistent != nil && persistent.MountPoint != "" {
-			extraMounts[persistent.MountPoint] = "/usr/local" //nolint:goconst
+			extraMounts[persistent.MountPoint] = cnst.UsrLocalPath
 		}
 		oem := i.spec.Partitions.OEM
 		if oem != nil && oem.MountPoint != "" {
-			extraMounts[oem.MountPoint] = "/oem" //nolint:goconst
+			extraMounts[oem.MountPoint] = cnst.OEMPath
 		}
 		return ChrootHook(&i.cfg.Config, hook, i.cfg.Strict, i.spec.Active.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
 	}
