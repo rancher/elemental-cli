@@ -188,12 +188,9 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 		cfg.Logger.Warnf("error unmarshalling RunConfig: %s", err)
 	}
 
-	// Apply further configurations based on unmarshal results (e.g. Luet plugins)
-	config.CoOccurrenceConfig(&cfg.Config)
-
+	err = cfg.Sanitize()
 	cfg.Logger.Debugf("Full config loaded: %+v", cfg)
-
-	return cfg, nil
+	return cfg, err
 }
 
 func ReadInstallSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]string) (*v1.InstallSpec, error) {
@@ -206,7 +203,12 @@ func ReadInstallSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]
 	bindGivenFlags(vp, flags)
 	// Bind install env vars
 	viperReadEnv(vp, "INSTALL", keyRemap)
+
 	err := vp.Unmarshal(install, setDecoder, decodeHook)
+	if err != nil {
+		r.Logger.Warnf("error unmarshalling InstallSpec: %s", err)
+	}
+	err = install.Sanitize()
 	r.Logger.Debugf("Loaded install spec: %+v", install)
 	return install, err
 }
@@ -224,7 +226,12 @@ func ReadResetSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]st
 	bindGivenFlags(vp, flags)
 	// Bind reset env vars
 	viperReadEnv(vp, "RESET", keyRemap)
+
 	err = vp.Unmarshal(reset, setDecoder, decodeHook)
+	if err != nil {
+		r.Logger.Warnf("error unmarshalling ResetSpec: %s", err)
+	}
+	err = reset.Sanitize()
 	r.Logger.Debugf("Loaded reset spec: %+v", reset)
 	return reset, err
 }
@@ -242,8 +249,13 @@ func ReadUpgradeSpec(r *v1.RunConfig, flags *pflag.FlagSet, keyRemap map[string]
 	bindGivenFlags(vp, flags)
 	// Bind upgrade env vars
 	viperReadEnv(vp, "UPGRADE", keyRemap)
+
 	err = vp.Unmarshal(upgrade, setDecoder, decodeHook)
-	r.Logger.Debugf("Loaded upgrade spec: %+v", upgrade)
+	if err != nil {
+		r.Logger.Warnf("error unmarshalling UpgradeSpec: %s", err)
+	}
+	err = upgrade.Sanitize()
+	r.Logger.Debugf("Loaded upgrade UpgradeSpec: %+v", upgrade)
 	return upgrade, err
 }
 

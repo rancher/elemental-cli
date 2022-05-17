@@ -48,10 +48,10 @@ var _ = Describe("Install", Label("install", "cmd"), func() {
 		Expect(buf.String()).To(ContainSubstring("Usage:"))
 		Expect(err.Error()).To(ContainSubstring("flags docker-image, directory and system are mutually exclusive"))
 	})
-	It("outputs usage if no DEVICE param", Label("args"), func() {
+	It("Errors out if no installation source is defined", Label("args"), func() {
 		_, _, err := executeCommandC(rootCmd, "install")
 		Expect(err).ToNot(BeNil())
-		Expect(buf.String()).To(ContainSubstring("at least a target device must be supplied"))
+		Expect(buf.String()).To(ContainSubstring("undefined system source to install"))
 	})
 	It("Errors out setting reboot and poweroff at the same time", Label("flags"), func() {
 		_, _, err := executeCommandC(rootCmd, "install", "--reboot", "--poweroff", "/dev/whatever")

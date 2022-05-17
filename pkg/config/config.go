@@ -266,6 +266,7 @@ func NewInstallElementalParitions() v1.ElementalPartitions {
 // NewUpgradeSpec returns an UpgradeSpec struct all based on defaults and current host state
 func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 	var recLabel, recFs, recMnt string
+	var active, passive, recovery v1.Image
 
 	parts, err := utils.GetAllPartitions()
 	if err != nil {
@@ -273,61 +274,61 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 	}
 	ep := v1.NewElementalPartitionsFromList(parts)
 
-	if ep.Recovery == nil {
-		return nil, fmt.Errorf("recovery partition not found")
-	} else if ep.Recovery.MountPoint == "" {
-		ep.Recovery.MountPoint = constants.RecoveryDir
+	if ep.Recovery != nil {
+		if ep.Recovery.MountPoint == "" {
+			ep.Recovery.MountPoint = constants.RecoveryDir
+		}
+
+		squashedRec, err := utils.HasSquashedRecovery(&cfg, ep.Recovery)
+		if err != nil {
+			return nil, fmt.Errorf("failed checking for squashed recovery")
+		}
+
+		if squashedRec {
+			recFs = constants.SquashFs
+		} else {
+			recLabel = constants.SystemLabel
+			recFs = constants.LinuxImgFs
+			recMnt = constants.TransitionDir
+		}
+
+		recovery = v1.Image{
+			File:       filepath.Join(ep.Recovery.MountPoint, "cOS", constants.TransitionImgFile),
+			Size:       constants.ImgSize,
+			Label:      recLabel,
+			FS:         recFs,
+			MountPoint: recMnt,
+			Source:     v1.NewEmptySrc(),
+		}
 	}
 
-	if ep.State == nil {
-		return nil, fmt.Errorf("state partition not found")
-	} else if ep.State.MountPoint == "" {
-		ep.State.MountPoint = constants.StateDir
-	}
+	if ep.State != nil {
+		if ep.State.MountPoint == "" {
+			ep.State.MountPoint = constants.StateDir
+		}
 
-	squashedRec, err := utils.HasSquashedRecovery(&cfg, ep.Recovery)
-	if err != nil {
-		return nil, fmt.Errorf("failed checking for squashed recovery")
-	}
+		active = v1.Image{
+			File:       filepath.Join(ep.State.MountPoint, "cOS", constants.TransitionImgFile),
+			Size:       constants.ImgSize,
+			Label:      constants.ActiveLabel,
+			FS:         constants.LinuxImgFs,
+			MountPoint: constants.TransitionDir,
+			Source:     v1.NewEmptySrc(),
+		}
 
-	active := v1.Image{
-		File:       filepath.Join(ep.State.MountPoint, "cOS", constants.TransitionImgFile),
-		Size:       constants.ImgSize,
-		Label:      constants.ActiveLabel,
-		FS:         constants.LinuxImgFs,
-		MountPoint: constants.TransitionDir,
-		Source:     v1.NewEmptySrc(), //TODO apply defaults if any
-	}
-
-	if squashedRec {
-		recFs = constants.SquashFs
-	} else {
-		recLabel = constants.SystemLabel
-		recFs = constants.LinuxImgFs
-		recMnt = constants.TransitionDir
-	}
-	recovery := v1.Image{
-		File:       filepath.Join(ep.Recovery.MountPoint, "cOS", constants.TransitionImgFile),
-		Size:       constants.ImgSize,
-		Label:      recLabel,
-		FS:         recFs,
-		MountPoint: recMnt,
-		Source:     v1.NewEmptySrc(),
-	}
-
-	passive := v1.Image{
-		File:   filepath.Join(ep.State.MountPoint, "cOS", constants.PassiveImgFile),
-		Label:  constants.PassiveLabel,
-		Source: v1.NewFileSrc(active.File),
-		FS:     constants.LinuxImgFs,
+		passive = v1.Image{
+			File:   filepath.Join(ep.State.MountPoint, "cOS", constants.PassiveImgFile),
+			Label:  constants.PassiveLabel,
+			Source: v1.NewFileSrc(active.File),
+			FS:     constants.LinuxImgFs,
+		}
 	}
 
 	return &v1.UpgradeSpec{
-		SquashedRecovery: squashedRec,
-		Active:           active,
-		Recovery:         recovery,
-		Passive:          passive,
-		Partitions:       ep,
+		Active:     active,
+		Recovery:   recovery,
+		Passive:    passive,
+		Partitions: ep,
 	}, nil
 }
 

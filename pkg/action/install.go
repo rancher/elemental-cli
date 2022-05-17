@@ -74,13 +74,6 @@ func (i InstallAction) Run() (err error) {
 		}
 	}
 
-	if i.spec.Active.Source.IsEmpty() {
-		return fmt.Errorf("undefined system source to install")
-	}
-	if i.spec.Partitions.State == nil || i.spec.Partitions.State.MountPoint == "" {
-		return fmt.Errorf("undefined state partition")
-	}
-
 	// Check no-format flag
 	if i.spec.NoFormat {
 		// Check force flag against current device

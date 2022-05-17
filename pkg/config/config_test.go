@@ -382,13 +382,6 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					Expect(spec.Recovery.FS).To(Equal(constants.SquashFs))
 				})
 			})
-			Describe("Failures", func() {
-				It("fails if partitions are not found", func() {
-					_, err := config.NewUpgradeSpec(*c)
-					Expect(err).Should(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("recovery partition not found"))
-				})
-			})
 		})
 		Describe("BuildConfig", func() {
 			build := config.NewBuildConfig()

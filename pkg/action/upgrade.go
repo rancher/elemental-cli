@@ -80,9 +80,6 @@ func (u *UpgradeAction) Run() (err error) {
 
 	if u.spec.RecoveryUpgrade {
 		mountPart = u.spec.Partitions.Recovery
-		if mountPart == nil || mountPart.MountPoint == "" {
-			return fmt.Errorf("unset recovery partition")
-		}
 		upgradeImg = u.spec.Recovery
 		if upgradeImg.FS == constants.SquashFs {
 			finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.RecoverySquashFile)
@@ -91,9 +88,6 @@ func (u *UpgradeAction) Run() (err error) {
 		}
 	} else {
 		mountPart = u.spec.Partitions.State
-		if mountPart == nil || mountPart.MountPoint == "" {
-			return fmt.Errorf("unset state partition")
-		}
 		upgradeImg = u.spec.Active
 		finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.ActiveImgFile)
 	}

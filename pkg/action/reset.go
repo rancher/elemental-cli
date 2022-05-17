@@ -17,8 +17,6 @@ limitations under the License.
 package action
 
 import (
-	"fmt"
-
 	cnst "github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/rancher-sandbox/elemental/pkg/elemental"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
@@ -59,13 +57,6 @@ func (r ResetAction) Run() (err error) {
 	err = r.resetHook(cnst.BeforeResetHook, false)
 	if err != nil {
 		return err
-	}
-
-	if r.spec.Active.Source.IsEmpty() {
-		return fmt.Errorf("undefined system source to reset to")
-	}
-	if r.spec.Partitions.State == nil || r.spec.Partitions.State.MountPoint == "" {
-		return fmt.Errorf("undefined state partition")
 	}
 
 	// Unmount partitions if any is already mounted before formatting

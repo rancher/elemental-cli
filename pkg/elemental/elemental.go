@@ -61,11 +61,6 @@ func (e *Elemental) PartitionAndFormatDevice(i *v1.InstallSpec) error {
 		return fmt.Errorf("disk %s does not exist", i.Target)
 	}
 
-	err := i.Partitions.SetFirmwarePartitions(i.Firmware, i.PartTable)
-	if err != nil {
-		return err
-	}
-
 	e.config.Logger.Infof("Partitioning device...")
 	out, err := disk.NewPartitionTable(i.PartTable)
 	if err != nil {

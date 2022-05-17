@@ -152,7 +152,7 @@ var _ = Describe("Config", Label("config"), func() {
 			fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 			Expect(err).Should(BeNil())
 
-			cfg, err = ReadConfigRun("", nil, mounter)
+			cfg, err = ReadConfigRun("config/", nil, mounter)
 			Expect(err).Should(BeNil())
 
 			cfg.Fs = fs
@@ -247,6 +247,8 @@ var _ = Describe("Config", Label("config"), func() {
 			It("inits a reset spec according to given configs", func() {
 				err := os.Setenv("ELEMENTAL_RESET_TARGET", "/special/disk")
 				Expect(err).ShouldNot(HaveOccurred())
+				err = os.Setenv("ELEMENTAL_RESET_SYSTEM", "channel:system/cos")
+				Expect(err).ShouldNot(HaveOccurred())
 				spec, err := ReadResetSpec(cfg, nil, constants.GetResetKeyEnvMap())
 				Expect(err).ShouldNot(HaveOccurred())
 				// Overwrites target from environment variables
@@ -269,7 +271,7 @@ var _ = Describe("Config", Label("config"), func() {
 			It("can't init upgrade spec if partitions are not found", func() {
 				_, err := ReadUpgradeSpec(cfg, nil, map[string]string{})
 				Expect(err).Should(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("recovery partition not found"))
+				Expect(err.Error()).To(ContainSubstring("undefined state partition"))
 			})
 			It("inits an upgrade spec according to given configs", func() {
 				mainDisk := block.Disk{

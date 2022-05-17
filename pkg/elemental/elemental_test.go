@@ -340,6 +340,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			It("Successfully creates partitions and formats them, EFI boot", func() {
 				install.PartTable = v1.GPT
 				install.Firmware = v1.EFI
+				install.Partitions.SetFirmwarePartitions(v1.EFI, v1.GPT)
 				Expect(el.PartitionAndFormatDevice(install)).To(BeNil())
 				Expect(runner.MatchMilestones(append(efiPartCmds, partCmds...))).To(BeNil())
 			})
@@ -347,6 +348,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			It("Successfully creates partitions and formats them, BIOS boot", func() {
 				install.PartTable = v1.GPT
 				install.Firmware = v1.BIOS
+				install.Partitions.SetFirmwarePartitions(v1.BIOS, v1.GPT)
 				Expect(el.PartitionAndFormatDevice(install)).To(BeNil())
 				Expect(runner.MatchMilestones(biosPartCmds)).To(BeNil())
 			})

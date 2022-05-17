@@ -54,6 +54,16 @@ type Config struct {
 	SquashFsCompressionConfig []string     `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
 }
 
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (c *Config) Sanitize() error {
+	// Set Luet plugins, we only use the mtree plugin for now
+	if !c.NoVerify {
+		c.Luet.SetPlugins(constants.LuetMtreePlugin)
+	}
+	return nil
+}
+
 type RunConfig struct {
 	Strict         bool     `yaml:"strict,omitempty" mapstructure:"strict"`
 	Reboot         bool     `yaml:"reboot,omitempty" mapstructure:"reboot"`
@@ -64,6 +74,12 @@ type RunConfig struct {
 	// 'inline' and 'squash' labels ensure config fields
 	// are embedded from a yaml and map PoV
 	Config `yaml:",inline" mapstructure:",squash"`
+}
+
+// Sanitize checks the consistency of the struct, returns error
+//if unsolvable inconsistencies are found
+func (r *RunConfig) Sanitize() error {
+	return r.Config.Sanitize()
 }
 
 // InstallSpec struct represents all the installation action details
@@ -84,6 +100,18 @@ type InstallSpec struct {
 	GrubConf     string
 }
 
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (i *InstallSpec) Sanitize() error {
+	if i.Active.Source.IsEmpty() && i.Iso == "" {
+		return fmt.Errorf("undefined system source to install")
+	}
+	if i.Partitions.State == nil || i.Partitions.State.MountPoint == "" {
+		return fmt.Errorf("undefined state partition")
+	}
+	return i.Partitions.SetFirmwarePartitions(i.Firmware, i.PartTable)
+}
+
 // ResetSpec struct represents all the reset action details
 type ResetSpec struct {
 	FormatPersistent bool   `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
@@ -97,13 +125,39 @@ type ResetSpec struct {
 	GrubConf         string
 }
 
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (r *ResetSpec) Sanitize() error {
+	if r.Active.Source.IsEmpty() {
+		return fmt.Errorf("undefined system source to reset to")
+	}
+	if r.Partitions.State == nil || r.Partitions.State.MountPoint == "" {
+		return fmt.Errorf("undefined state partition")
+	}
+	return nil
+}
+
 type UpgradeSpec struct {
-	RecoveryUpgrade  bool  `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	Active           Image `yaml:"system,omitempty" mapstructure:"system"`
-	Recovery         Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
-	Passive          Image
-	Partitions       ElementalPartitions
-	SquashedRecovery bool
+	RecoveryUpgrade bool  `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	Active          Image `yaml:"system,omitempty" mapstructure:"system"`
+	Recovery        Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	Passive         Image
+	Partitions      ElementalPartitions
+}
+
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (u *UpgradeSpec) Sanitize() error {
+	if u.RecoveryUpgrade {
+		if u.Partitions.Recovery == nil || u.Partitions.Recovery.MountPoint == "" {
+			return fmt.Errorf("undefined recovery partition")
+		}
+	} else {
+		if u.Partitions.State == nil || u.Partitions.State.MountPoint == "" {
+			return fmt.Errorf("undefined state partition")
+		}
+	}
+	return nil
 }
 
 // Partition struct represents a partition with its commonly configurable values, size in MiB
@@ -160,6 +214,7 @@ func (ep *ElementalPartitions) SetFirmwarePartitions(firmware string, partTable 
 			MountPoint: constants.EfiDir,
 			Flags:      []string{esp},
 		}
+		ep.BIOS = nil
 	} else if firmware == BIOS && partTable == GPT {
 		ep.BIOS = &Partition{
 			Label:      "",
@@ -169,11 +224,14 @@ func (ep *ElementalPartitions) SetFirmwarePartitions(firmware string, partTable 
 			MountPoint: "",
 			Flags:      []string{bios},
 		}
+		ep.EFI = nil
 	} else {
 		if ep.State == nil {
 			return fmt.Errorf("nil state partition")
 		}
 		ep.State.Flags = []string{boot}
+		ep.EFI = nil
+		ep.BIOS = nil
 	}
 	return nil
 }
