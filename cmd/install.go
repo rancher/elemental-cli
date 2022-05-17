@@ -102,7 +102,7 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 
 	c.Flags().Bool("force-efi", false, "Forces an EFI installation")
 	_ = c.Flags().MarkDeprecated("force-efi", "'force-efi' is deprecated please use 'firmware' instead")
-	c.Flags().Var(firmType, "firmware", "Firmware to install for ('esp' or 'bios_grub')")
+	c.Flags().Var(firmType, "firmware", "Firmware to install for ('esp' or 'bios')")
 
 	c.Flags().Bool("force-gpt", false, "Forces a GPT partition table")
 	_ = c.Flags().MarkDeprecated("force-gpt", "'force-gpt' is deprecated please use 'part-table' instead")

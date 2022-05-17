@@ -347,7 +347,7 @@ func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { //
 				return err
 			}
 		}
-		err = e.config.Luet.Unpack(img.MountPoint, img.Source.Value(), e.config.LocalImage)
+		err = e.config.Luet.Unpack(target, imgSrc.Value(), e.config.LocalImage)
 		if err != nil {
 			return err
 		}
