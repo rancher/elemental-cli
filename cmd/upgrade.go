@@ -21,6 +21,7 @@ import (
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/mount-utils"
@@ -60,19 +61,11 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
-			// Map upgrade sub viper keys to environment variables
-			// without the ELEMENTAL_UPGRADE prefix
-			keyEnvMap := map[string]string{
-				"recovery":            "RECOVERY",
-				"system.uri":          "SYSTEM",
-				"recovery-system.uri": "RECOVERY_SYSTEM",
-			}
-
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			spec, err := config.ReadUpgradeSpec(cfg, cmd.Flags(), keyEnvMap)
+			spec, err := config.ReadUpgradeSpec(cfg, cmd.Flags(), constants.GetUpgradeKeyEnvMap())
 			if err != nil {
 				cfg.Logger.Errorf("invalid upgrade command setup %v", err)
 				return err

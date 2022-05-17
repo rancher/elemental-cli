@@ -21,6 +21,7 @@ import (
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/mount-utils"
@@ -56,15 +57,8 @@ func NewResetCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
 			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
 
-			// Map reset sub viper keys to environment variables
-			// without the ELEMENTAL_RESET prefix
-			keyEnvMap := map[string]string{
-				"target":     "TARGET",
-				"system.uri": "SYSTEM",
-			}
-
 			cmd.SilenceUsage = true
-			spec, err := config.ReadResetSpec(cfg, cmd.Flags(), keyEnvMap)
+			spec, err := config.ReadResetSpec(cfg, cmd.Flags(), constants.GetResetKeyEnvMap())
 			if err != nil {
 				cfg.Logger.Errorf("invalid reset command setup %v", err)
 				return err

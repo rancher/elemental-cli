@@ -22,6 +22,7 @@ import (
 
 	"github.com/rancher-sandbox/elemental/cmd/config"
 	"github.com/rancher-sandbox/elemental/pkg/action"
+	"github.com/rancher-sandbox/elemental/pkg/constants"
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -65,16 +66,8 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			//Adapt 'force-efi' and 'force-gpt' to 'firmware' and 'part-table'
 			adaptEFIAndGPTFlags(cmd.Flags())
 
-			// Map install sub viper keys to environment variables
-			// without the ELEMENTAL_INSTALL prefix
-			keyEnvMap := map[string]string{
-				"target":              "TARGET",
-				"system.uri":          "SYSTEM",
-				"recovery-system.uri": "RECOVERY",
-			}
-
 			cmd.SilenceUsage = true
-			spec, err := config.ReadInstallSpec(cfg, cmd.Flags(), keyEnvMap)
+			spec, err := config.ReadInstallSpec(cfg, cmd.Flags(), constants.GetInstallKeyEnvMap())
 			if err != nil {
 				cfg.Logger.Errorf("invalid install command setup %v", err)
 				return err

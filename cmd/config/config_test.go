@@ -188,11 +188,7 @@ var _ = Describe("Config", Label("config"), func() {
 				err = os.Setenv("ELEMENTAL_INSTALL_SYSTEM", "itwillbeignored")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				spec, err := ReadInstallSpec(cfg, flags, map[string]string{
-					"target":              "TARGET",
-					"system.uri":          "SYSTEM",
-					"recovery-system.uri": "RECOVERY",
-				})
+				spec, err := ReadInstallSpec(cfg, flags, constants.GetInstallKeyEnvMap())
 				Expect(err).ShouldNot(HaveOccurred())
 				// Overwrites target from environment variables
 				Expect(spec.Target == "/env/disk")
@@ -248,13 +244,10 @@ var _ = Describe("Config", Label("config"), func() {
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("reset can only be called from the recovery system"))
 			})
-			It("inits an install spec according to given configs", func() {
+			It("inits a reset spec according to given configs", func() {
 				err := os.Setenv("ELEMENTAL_RESET_TARGET", "/special/disk")
 				Expect(err).ShouldNot(HaveOccurred())
-				spec, err := ReadResetSpec(cfg, nil, map[string]string{
-					"target":     "TARGET",
-					"system.uri": "SYSTEM",
-				})
+				spec, err := ReadResetSpec(cfg, nil, constants.GetResetKeyEnvMap())
 				Expect(err).ShouldNot(HaveOccurred())
 				// Overwrites target from environment variables
 				Expect(spec.Target == "/special/disk")
@@ -302,11 +295,7 @@ var _ = Describe("Config", Label("config"), func() {
 				defer ghwTest.Clean()
 
 				err := os.Setenv("ELEMENTAL_UPGRADE_RECOVERY", "true")
-				spec, err := ReadUpgradeSpec(cfg, nil, map[string]string{
-					"recovery":            "RECOVERY",
-					"system.uri":          "SYSTEM",
-					"recovery-system.uri": "RECOVERY_SYSTEM",
-				})
+				spec, err := ReadUpgradeSpec(cfg, nil, constants.GetUpgradeKeyEnvMap())
 				Expect(err).ShouldNot(HaveOccurred())
 				// Overwrites recovery-system image, flags have priority over files and env vars
 				Expect(spec.Recovery.Source.Value() == "image/from:flag")

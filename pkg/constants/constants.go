@@ -192,3 +192,26 @@ func GetBuildDiskDefaultPackages() map[string]string {
 		"recovery/cos-img":       "root/cOS",
 	}
 }
+
+func GetInstallKeyEnvMap() map[string]string {
+	return map[string]string{
+		"target":              "TARGET",
+		"system.uri":          "SYSTEM",
+		"recovery-system.uri": "RECOVERY_SYSTEM",
+	}
+}
+
+func GetResetKeyEnvMap() map[string]string {
+	return map[string]string{
+		"target":     "TARGET",
+		"system.uri": "SYSTEM",
+	}
+}
+
+func GetUpgradeKeyEnvMap() map[string]string {
+	return map[string]string{
+		"recovery":            "RECOVERY",
+		"system.uri":          "SYSTEM",
+		"recovery-system.uri": "RECOVERY_SYSTEM",
+	}
+}
