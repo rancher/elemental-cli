@@ -24,7 +24,6 @@ import (
 	v1 "github.com/rancher-sandbox/elemental/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 // addCosignFlags adds flags related to cosign
@@ -43,6 +42,7 @@ func addPowerFlags(cmd *cobra.Command) {
 func addSharedInstallUpgradeFlags(cmd *cobra.Command) {
 	addResetFlags(cmd)
 	cmd.Flags().String("recovery-system.uri", "", "Sets the recovery image source and its type (e.g. 'docker:registry.org/image:tag')")
+	addSquashFsCompressionFlags(cmd)
 }
 
 // addResetFlags add flags shared between reset, install and upgrade
@@ -186,9 +186,4 @@ func (a *enum) Type() string {
 
 func addSquashFsCompressionFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArrayP("squash-compression", "x", []string{}, "cmd options for compression to pass to mksquashfs. Full cmd including --comp as the whole values will be passed to mksquashfs. For a full list of options please check mksquashfs manual. (default value: '-comp xz -Xbcj ARCH')")
-}
-
-func bindSquashFsCompressionFlags(cmd *cobra.Command) {
-	// Flag is under RunConfig.Config so we need to bind it properly
-	_ = viper.BindPFlag("Config.SquashFsCompressionConfig", cmd.Flags().Lookup("squash-compression"))
 }

@@ -39,7 +39,6 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 		Short: "builds bootable installation media ISOs",
 		Args:  cobra.MaximumNArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			bindSquashFsCompressionFlags(cmd)
 			_ = viper.BindPFlags(cmd.Flags())
 			if addCheckRoot {
 				return CheckRoot()
