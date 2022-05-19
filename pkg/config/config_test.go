@@ -391,6 +391,19 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(build.Repos[0].URI).To(ContainSubstring(constants.LuetDefaultRepoURI))
 			})
 		})
+		Describe("LiveISO", Label("iso"), func() {
+			It("initiates a new LiveISO", func() {
+				iso := config.NewISO()
+				Expect(iso.Label).To(Equal(constants.ISOLabel))
+				Expect(iso.Image).To(Equal(constants.GetDefaultISOImage()))
+			})
+		})
+		Describe("RawDisk", Label("disk"), func() {
+			It("initiates a new RawDisk", func() {
+				disk := config.NewRawDisk(*c)
+				Expect(len((*disk)[c.Arch].Packages)).To(Equal(len(constants.GetBuildDiskDefaultPackages())))
+			})
+		})
 	})
 
 })
