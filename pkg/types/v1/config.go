@@ -334,9 +334,16 @@ type LiveISO struct {
 	UEFI        []string `yaml:"uefi,omitempty" mapstructure:"uefi"`
 	Image       []string `yaml:"image,omitempty" mapstructure:"image"`
 	Label       string   `yaml:"label,omitempty" mapstructure:"label"`
-	BootCatalog string   `yaml:"boot_catalog,omitempty" mapstructure:"boot_catalog"`
-	BootFile    string   `yaml:"boot_file,omitempty" mapstructure:"boot_file"`
-	HybridMBR   string   `yaml:"hybrid_mbr,omitempty" mapstructure:"hybrid_mbr,omitempty"`
+	BootCatalog string   `yaml:"boot-catalog,omitempty" mapstructure:"boot-catalog"`
+	BootFile    string   `yaml:"boot-file,omitempty" mapstructure:"boot-file"`
+	HybridMBR   string   `yaml:"hybrid-mbr,omitempty" mapstructure:"hybrid-mbr,omitempty"`
+}
+
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (i *LiveISO) Sanitize() error {
+	// No checks for the time being
+	return nil
 }
 
 // Repository represents the basic configuration for a package repository
@@ -351,13 +358,22 @@ type Repository struct {
 
 // BuildConfig represents the config we need for building isos, raw images, artifacts
 type BuildConfig struct {
-	ISO     *LiveISO                     `yaml:"iso,omitempty" mapstructure:"iso"`
-	Date    bool                         `yaml:"date,omitempty" mapstructure:"date"`
-	Name    string                       `yaml:"name,omitempty" mapstructure:"name"`
-	RawDisk map[string]*RawDiskArchEntry `yaml:"raw_disk,omitempty" mapstructure:"raw_disk"`
-	OutDir  string                       `yaml:"output,omitempty" mapstructure:"output"`
-	// Generic runtime configuration
+	Date   bool   `yaml:"date,omitempty" mapstructure:"date"`
+	Name   string `yaml:"name,omitempty" mapstructure:"name"`
+	OutDir string `yaml:"output,omitempty" mapstructure:"output"`
+
+	// 'inline' and 'squash' labels ensure config fields
+	// are embedded from a yaml and map PoV
 	Config `yaml:",inline" mapstructure:",squash"`
+}
+
+type RawDisk map[string]*RawDiskArchEntry
+
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (d *RawDisk) Sanitize() error {
+	// No checks for the time being
+	return nil
 }
 
 // RawDiskArchEntry represents an arch entry in raw_disk

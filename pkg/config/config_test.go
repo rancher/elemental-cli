@@ -383,10 +383,13 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				})
 			})
 		})
-		Describe("BuildConfig", func() {
-			build := config.NewBuildConfig()
-			Expect(build.Name).To(Equal(constants.BuildImgName))
-			Expect(build.ISO.BootCatalog).To(Equal(constants.IsoBootCatalog))
+		Describe("BuildConfig", Label("build"), func() {
+			It("initiates a new build config", func() {
+				build := config.NewBuildConfig()
+				Expect(build.Name).To(Equal(constants.BuildImgName))
+				Expect(len(build.Repos)).To(Equal(1))
+				Expect(build.Repos[0].URI).To(ContainSubstring(constants.LuetDefaultRepoURI))
+			})
 		})
 	})
 
