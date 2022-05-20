@@ -278,7 +278,7 @@ func ReadBuildISO(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.LiveISO, error) 
 		b.Logger.Warnf("error unmarshalling LiveISO: %s", err)
 	}
 	err = iso.Sanitize()
-	b.Logger.Debugf("Loaded LiveISO: %+v", iso)
+	b.Logger.Debugf("Loaded LiveISO: %s", litter.Sdump(iso))
 	return iso, err
 }
 
@@ -288,9 +288,9 @@ func ReadBuildDisk(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.RawDisk, error)
 	if vp == nil {
 		vp = viper.New()
 	}
-	// Bind build-iso cmd flags
+	// Bind build-disk cmd flags
 	bindGivenFlags(vp, flags)
-	// Bind build-iso env vars
+	// Bind build-disk env vars
 	viperReadEnv(vp, "RAWDISK", constants.GetDiskKeyEnvMap())
 
 	err := vp.Unmarshal(disk, setDecoder, decodeHook)
@@ -298,7 +298,7 @@ func ReadBuildDisk(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.RawDisk, error)
 		b.Logger.Warnf("error unmarshalling RawDisk: %s", err)
 	}
 	err = disk.Sanitize()
-	b.Logger.Debugf("Loaded RawDisk: %+v", disk)
+	b.Logger.Debugf("Loaded RawDisk: %s", litter.Sdump(disk))
 	return disk, err
 }
 
