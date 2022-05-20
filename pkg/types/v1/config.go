@@ -152,9 +152,15 @@ func (u *UpgradeSpec) Sanitize() error {
 		if u.Partitions.Recovery == nil || u.Partitions.Recovery.MountPoint == "" {
 			return fmt.Errorf("undefined recovery partition")
 		}
+		if u.Recovery.Source.IsEmpty() {
+			return fmt.Errorf("undefined upgrade source")
+		}
 	} else {
 		if u.Partitions.State == nil || u.Partitions.State.MountPoint == "" {
 			return fmt.Errorf("undefined state partition")
+		}
+		if u.Active.Source.IsEmpty() {
+			return fmt.Errorf("undefined upgrade source")
 		}
 	}
 	return nil
