@@ -138,9 +138,10 @@ func (r *ResetSpec) Sanitize() error {
 }
 
 type UpgradeSpec struct {
-	RecoveryUpgrade bool  `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	Active          Image `yaml:"system,omitempty" mapstructure:"system"`
-	Recovery        Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	RecoveryUpgrade bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	Active          Image  `yaml:"system,omitempty" mapstructure:"system"`
+	Recovery        Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	GrubDefEntry    string `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
 	Passive         Image
 	Partitions      ElementalPartitions
 }
