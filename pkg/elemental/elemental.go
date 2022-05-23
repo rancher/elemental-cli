@@ -514,7 +514,7 @@ func (e Elemental) SetDefaultGrubEntry(partMountPoint string, imgMountPoint stri
 			e.config.Logger.Warnf("Could not load os-release file: %v", err)
 			return nil
 		}
-		defaultEntry, _ = osRelease["GRUB_ENTRY_NAME"]
+		defaultEntry = osRelease["GRUB_ENTRY_NAME"]
 		if defaultEntry == "" {
 			e.config.Logger.Debug("unset grub default entry")
 			return nil
