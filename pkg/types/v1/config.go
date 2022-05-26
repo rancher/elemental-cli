@@ -46,7 +46,7 @@ type Config struct {
 	Luet                      LuetInterface
 	Client                    HTTPClient
 	Cosign                    bool         `yaml:"cosign,omitempty" mapstructure:"cosign"`
-	NoVerify                  bool         `yaml:"no-verify,omitempty" mapstructure:"no-verify"`
+	Verify                    bool         `yaml:"verify,omitempty" mapstructure:"verify"`
 	CosignPubKey              string       `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
 	LocalImage                bool         `yaml:"local,omitempty" mapstructure:"local"`
 	Repos                     []Repository `yaml:"repositories,omitempty" mapstructure:"repositories"`
@@ -58,7 +58,7 @@ type Config struct {
 // if unsolvable inconsistencies are found
 func (c *Config) Sanitize() error {
 	// Set Luet plugins, we only use the mtree plugin for now
-	if !c.NoVerify {
+	if c.Verify {
 		c.Luet.SetPlugins(constants.LuetMtreePlugin)
 	}
 	return nil
@@ -92,7 +92,7 @@ type InstallSpec struct {
 	Force        bool                `yaml:"force,omitempty" mapstructure:"force"`
 	CloudInit    string              `yaml:"cloud-init,omitempty" mapstructure:"cloud-init"`
 	Iso          string              `yaml:"iso,omitempty" mapstructure:"iso"`
-	GrubDefEntry string              `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
+	GrubDefEntry string              `yaml:"grub-entry-name,omitempty" mapstructure:"grub-default-entry"`
 	Tty          string              `yaml:"tty,omitempty" mapstructure:"tty"`
 	Active       Image               `yaml:"system,omitempty" mapstructure:"system"`
 	Recovery     Image               `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
@@ -115,7 +115,7 @@ func (i *InstallSpec) Sanitize() error {
 // ResetSpec struct represents all the reset action details
 type ResetSpec struct {
 	FormatPersistent bool   `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
-	GrubDefEntry     string `yaml:"grub-default-entry,omitempty" mapstructure:"grub-default-entry"`
+	GrubDefEntry     string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-default-entry"`
 	Tty              string `yaml:"tty,omitempty" mapstructure:"tty"`
 	Active           Image  `yaml:"system,omitempty" mapstructure:"system"`
 	Passive          Image
@@ -138,9 +138,10 @@ func (r *ResetSpec) Sanitize() error {
 }
 
 type UpgradeSpec struct {
-	RecoveryUpgrade bool  `yaml:"recovery,omitempty" mapstructure:"recovery"`
-	Active          Image `yaml:"system,omitempty" mapstructure:"system"`
-	Recovery        Image `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	RecoveryUpgrade bool   `yaml:"recovery,omitempty" mapstructure:"recovery"`
+	Active          Image  `yaml:"system,omitempty" mapstructure:"system"`
+	Recovery        Image  `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
+	GrubDefEntry    string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-default-entry"`
 	Passive         Image
 	Partitions      ElementalPartitions
 }
@@ -152,9 +153,15 @@ func (u *UpgradeSpec) Sanitize() error {
 		if u.Partitions.Recovery == nil || u.Partitions.Recovery.MountPoint == "" {
 			return fmt.Errorf("undefined recovery partition")
 		}
+		if u.Recovery.Source.IsEmpty() {
+			return fmt.Errorf("undefined upgrade source")
+		}
 	} else {
 		if u.Partitions.State == nil || u.Partitions.State.MountPoint == "" {
 			return fmt.Errorf("undefined state partition")
+		}
+		if u.Active.Source.IsEmpty() {
+			return fmt.Errorf("undefined upgrade source")
 		}
 	}
 	return nil
@@ -334,9 +341,16 @@ type LiveISO struct {
 	UEFI        []string `yaml:"uefi,omitempty" mapstructure:"uefi"`
 	Image       []string `yaml:"image,omitempty" mapstructure:"image"`
 	Label       string   `yaml:"label,omitempty" mapstructure:"label"`
-	BootCatalog string   `yaml:"boot_catalog,omitempty" mapstructure:"boot_catalog"`
-	BootFile    string   `yaml:"boot_file,omitempty" mapstructure:"boot_file"`
-	HybridMBR   string   `yaml:"hybrid_mbr,omitempty" mapstructure:"hybrid_mbr,omitempty"`
+	BootCatalog string   `yaml:"boot-catalog,omitempty" mapstructure:"boot-catalog"`
+	BootFile    string   `yaml:"boot-file,omitempty" mapstructure:"boot-file"`
+	HybridMBR   string   `yaml:"hybrid-mbr,omitempty" mapstructure:"hybrid-mbr,omitempty"`
+}
+
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (i *LiveISO) Sanitize() error {
+	// No checks for the time being
+	return nil
 }
 
 // Repository represents the basic configuration for a package repository
@@ -351,13 +365,22 @@ type Repository struct {
 
 // BuildConfig represents the config we need for building isos, raw images, artifacts
 type BuildConfig struct {
-	ISO     *LiveISO                     `yaml:"iso,omitempty" mapstructure:"iso"`
-	Date    bool                         `yaml:"date,omitempty" mapstructure:"date"`
-	Name    string                       `yaml:"name,omitempty" mapstructure:"name"`
-	RawDisk map[string]*RawDiskArchEntry `yaml:"raw_disk,omitempty" mapstructure:"raw_disk"`
-	OutDir  string                       `yaml:"output,omitempty" mapstructure:"output"`
-	// Generic runtime configuration
+	Date   bool   `yaml:"date,omitempty" mapstructure:"date"`
+	Name   string `yaml:"name,omitempty" mapstructure:"name"`
+	OutDir string `yaml:"output,omitempty" mapstructure:"output"`
+
+	// 'inline' and 'squash' labels ensure config fields
+	// are embedded from a yaml and map PoV
 	Config `yaml:",inline" mapstructure:",squash"`
+}
+
+type RawDisk map[string]*RawDiskArchEntry
+
+// Sanitize checks the consistency of the struct, returns error
+// if unsolvable inconsistencies are found
+func (d *RawDisk) Sanitize() error {
+	// No checks for the time being
+	return nil
 }
 
 // RawDiskArchEntry represents an arch entry in raw_disk

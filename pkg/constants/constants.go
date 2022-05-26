@@ -195,25 +195,65 @@ func GetBuildDiskDefaultPackages() map[string]string {
 	}
 }
 
+// GetRunKeyEnvMap returns environment variable bindings to RunConfig data
+func GetRunKeyEnvMap() map[string]string {
+	return map[string]string{
+		"poweroff": "POWEROFF",
+		"reboot":   "REBOOT",
+		"strict":   "STRICT",
+	}
+}
+
+// GetInstallKeyEnvMap returns environment variable bindings to InstallSpec data
 func GetInstallKeyEnvMap() map[string]string {
 	return map[string]string{
 		"target":              "TARGET",
 		"system.uri":          "SYSTEM",
 		"recovery-system.uri": "RECOVERY_SYSTEM",
+		"cloud-init":          "CLOUD_INIT",
+		"iso":                 "ISO",
+		"firmware":            "FIRMWARE",
+		"part-table":          "PART_TABLE",
+		"no-format":           "NO_FORMAT",
+		"tty":                 "TTY",
+		"grub-entry-name":     "GRUB_ENTRY_NAME",
 	}
 }
 
+// GetResetKeyEnvMap returns environment variable bindings to ResetSpec data
 func GetResetKeyEnvMap() map[string]string {
 	return map[string]string{
-		"target":     "TARGET",
-		"system.uri": "SYSTEM",
+		"target":          "TARGET",
+		"system.uri":      "SYSTEM",
+		"tty":             "TTY",
+		"grub-entry-name": "GRUB_ENTRY_NAME",
 	}
 }
 
+// GetUpgradeKeyEnvMap returns environment variable bindings to UpgradeSpec data
 func GetUpgradeKeyEnvMap() map[string]string {
 	return map[string]string{
 		"recovery":            "RECOVERY",
 		"system.uri":          "SYSTEM",
 		"recovery-system.uri": "RECOVERY_SYSTEM",
 	}
+}
+
+// GetBuildKeyEnvMap returns environment variable bindings to BuildConfig data
+func GetBuildKeyEnvMap() map[string]string {
+	return map[string]string{
+		"name": "NAME",
+	}
+}
+
+// GetISOKeyEnvMap returns environment variable bindings to LiveISO data
+func GetISOKeyEnvMap() map[string]string {
+	// None for the time being
+	return map[string]string{}
+}
+
+// GetDiskKeyEnvMap returns environment variable bindings to RawDisk data
+func GetDiskKeyEnvMap() map[string]string {
+	// None for the time being
+	return map[string]string{}
 }

@@ -17,7 +17,6 @@ limitations under the License.
 package action
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/rancher-sandbox/elemental/pkg/constants"
@@ -92,10 +91,6 @@ func (u *UpgradeAction) Run() (err error) {
 		finalImageFile = filepath.Join(mountPart.MountPoint, "cOS", constants.ActiveImgFile)
 	}
 
-	if upgradeImg.Source.IsEmpty() {
-		return fmt.Errorf("undefined upgrade source")
-	}
-
 	u.Info("mounting %s partition as rw", mountPart.Name)
 	if mnt, _ := utils.IsMounted(&u.config.Config, mountPart); mnt {
 		err = e.MountPartition(mountPart, "remount", "rw")
@@ -161,12 +156,8 @@ func (u *UpgradeAction) Run() (err error) {
 	// Only apply rebrand stage for system upgrades
 	if !u.spec.RecoveryUpgrade {
 		u.Info("rebranding")
-		osRelease, err := utils.LoadEnvFile(u.config.Config.Fs, filepath.Join(upgradeImg.MountPoint, "etc", "os-release"))
-		if err != nil {
-			u.config.Logger.Warnf("Could not load os-release file: %v", err)
-		}
 
-		err = e.SetDefaultGrubEntry(mountPart.MountPoint, osRelease["GRUB_ENTRY_NAME"])
+		err = e.SetDefaultGrubEntry(mountPart.MountPoint, upgradeImg.MountPoint, u.spec.GrubDefEntry)
 		if err != nil {
 			u.Error("failed setting default entry")
 			return err
