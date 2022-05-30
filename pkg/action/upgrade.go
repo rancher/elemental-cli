@@ -143,8 +143,14 @@ func (u *UpgradeAction) Run() (err error) {
 	// Selinux relabel
 	// Doesn't make sense to relabel a readonly filesystem
 	if upgradeImg.FS != constants.SquashFs {
-		// In the original script, any errors are ignored
-		_ = e.SelinuxRelabel(upgradeImg.MountPoint, false)
+		// Relabel SELinux
+		err = utils.ChrootedCallback(
+			&u.config.Config, upgradeImg.MountPoint, map[string]string{},
+			func() error { return e.SelinuxRelabel("/", true) },
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = u.upgradeHook("after-upgrade-chroot", true)

@@ -127,8 +127,15 @@ func (i InstallAction) Run() (err error) {
 	if err != nil {
 		return err
 	}
+
 	// Relabel SELinux
-	_ = e.SelinuxRelabel(cnst.ActiveDir, false)
+	err = utils.ChrootedCallback(
+		&i.cfg.Config, i.spec.Active.MountPoint, map[string]string{},
+		func() error { return e.SelinuxRelabel("/", true) },
+	)
+	if err != nil {
+		return err
+	}
 
 	err = i.installHook(cnst.AfterInstallChrootHook, true)
 	if err != nil {

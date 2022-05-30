@@ -88,6 +88,19 @@ var _ = Describe("Utils", Label("utils"), func() {
 				config,
 			)
 		})
+		Describe("ChrootedCallback method", func() {
+			It("runs a callback in a chroot", func() {
+				err := utils.ChrootedCallback(config, "/somepath", map[string]string{}, func() error {
+					return nil
+				})
+				Expect(err).ShouldNot(HaveOccurred())
+				err = utils.ChrootedCallback(config, "/somepath", map[string]string{}, func() error {
+					return fmt.Errorf("callback error")
+				})
+				Expect(err).Should(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("callback error"))
+			})
+		})
 		Describe("on success", func() {
 			It("command should be called in the chroot", func() {
 				_, err := chroot.Run("chroot-command")

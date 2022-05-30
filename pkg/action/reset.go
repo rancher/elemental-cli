@@ -118,8 +118,15 @@ func (r ResetAction) Run() (err error) {
 	if err != nil {
 		return err
 	}
+
 	// Relabel SELinux
-	_ = e.SelinuxRelabel(cnst.ActiveDir, false)
+	err = utils.ChrootedCallback(
+		&r.cfg.Config, r.spec.Active.MountPoint, map[string]string{},
+		func() error { return e.SelinuxRelabel("/", true) },
+	)
+	if err != nil {
+		return err
+	}
 
 	err = r.resetHook(cnst.AfterResetChrootHook, true)
 	if err != nil {
