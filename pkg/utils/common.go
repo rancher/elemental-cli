@@ -166,12 +166,15 @@ func SyncData(log v1.Logger, fs v1.FS, source string, target string, excludes ..
 		},
 	)
 
+	quit := make(chan bool)
 	if v1.IsDebugLevel(log) {
 		go func() {
 			for {
-				state := task.State()
-				// Only log status if there is still things to copy, otherwise we are finished
-				if state.Remain > 0 {
+				select {
+				case <-quit:
+					return
+				case <-time.After(5 * time.Second):
+					state := task.State()
 					log.Debugf(
 						"progress rsync %s to %s: %.2f / rem. %d / tot. %d / sp. %s",
 						source,
@@ -181,13 +184,13 @@ func SyncData(log v1.Logger, fs v1.FS, source string, target string, excludes ..
 						state.Total,
 						state.Speed,
 					)
-					<-time.After(5 * time.Second)
 				}
 			}
 		}()
 	}
 
 	err := task.Run()
+	quit <- true
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, strings.Join([]string{task.Log().Stderr, task.Log().Stdout}, "\n"))
 	}
