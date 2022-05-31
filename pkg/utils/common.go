@@ -167,27 +167,25 @@ func SyncData(log v1.Logger, fs v1.FS, source string, target string, excludes ..
 	)
 
 	quit := make(chan bool)
-	if v1.IsDebugLevel(log) {
-		go func() {
-			for {
-				select {
-				case <-quit:
-					return
-				case <-time.After(5 * time.Second):
-					state := task.State()
-					log.Debugf(
-						"progress rsync %s to %s: %.2f / rem. %d / tot. %d / sp. %s",
-						source,
-						target,
-						state.Progress,
-						state.Remain,
-						state.Total,
-						state.Speed,
-					)
-				}
+	go func() {
+		for {
+			select {
+			case <-quit:
+				return
+			case <-time.After(5 * time.Second):
+				state := task.State()
+				log.Debugf(
+					"progress rsync %s to %s: %.2f / rem. %d / tot. %d / sp. %s",
+					source,
+					target,
+					state.Progress,
+					state.Remain,
+					state.Total,
+					state.Speed,
+				)
 			}
-		}()
-	}
+		}
+	}()
 
 	err := task.Run()
 	quit <- true
