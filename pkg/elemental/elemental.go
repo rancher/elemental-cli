@@ -403,9 +403,9 @@ func (e *Elemental) SelinuxRelabel(rootDir string, raiseError bool) error {
 		var out []byte
 		var err error
 		if rootDir == "/" || rootDir == "" {
-			out, err = e.config.Runner.Run("setfiles", "-F", "-v", contextFile, rootDir)
+			out, err = e.config.Runner.Run("setfiles", "-F", contextFile, rootDir)
 		} else {
-			out, err = e.config.Runner.Run("setfiles", "-F", "-v", "-r", rootDir, contextFile, rootDir)
+			out, err = e.config.Runner.Run("setfiles", "-F", "-r", rootDir, contextFile, rootDir)
 		}
 		e.config.Logger.Debug("SELinux setfiles output: %s", string(out))
 		if err != nil && raiseError {
