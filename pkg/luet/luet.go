@@ -31,10 +31,12 @@ import (
 	"github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/helpers/docker"
 	"github.com/mudler/luet/pkg/installer"
-	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
-	"github.com/rancher/elemental-cli/pkg/utils"
 	"github.com/twpayne/go-vfs"
 	"gopkg.in/yaml.v3"
+
+	"github.com/rancher/elemental-cli/pkg/constants"
+	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
+	"github.com/rancher/elemental-cli/pkg/utils"
 )
 
 type Luet struct {
@@ -45,6 +47,7 @@ type Luet struct {
 	plugins           []string
 	VerifyImageUnpack bool
 	TmpDir            string
+	Arch              string
 }
 
 type Options func(l *Luet) error
@@ -203,9 +206,14 @@ func (l Luet) initLuetRepository(repo v1.Repository) (luetTypes.LuetRepository, 
 		repo.ReferenceID = "repository.yaml"
 	}
 
+	priority := repo.Priority
+	if repo.Priority == 0 {
+		priority = constants.LuetDefaultRepoPrio
+	}
+
 	return luetTypes.LuetRepository{
 		Name:        name,
-		Priority:    repo.Priority,
+		Priority:    priority,
 		Enable:      true,
 		Urls:        []string{repo.URI},
 		Type:        repoType,
@@ -225,6 +233,11 @@ func (l Luet) UnpackFromChannel(target string, pkg string, repositories ...v1.Re
 	if len(repositories) > 0 {
 		repos = luetTypes.LuetRepositories{}
 		for _, r := range repositories {
+			if l.Arch != r.Arch {
+				l.log.Debugf("skipping repository '%s' for arch '%s'", r.Name, r.Arch)
+				continue
+			}
+
 			repo, err := l.initLuetRepository(r)
 			if err != nil {
 				return err
