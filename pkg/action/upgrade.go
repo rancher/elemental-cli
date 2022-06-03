@@ -113,15 +113,13 @@ func (u *UpgradeAction) Run() (err error) {
 
 	// Recovery does not mount persistent, so try to mount it. Ignore errors, as its not mandatory.
 	persistentPart := u.spec.Partitions.Persistent
-	if persistentPart != nil {
-		if mnt, _ := utils.IsMounted(&u.config.Config, persistentPart); !mnt {
-			u.Debug("mounting persistent partition")
-			err := e.MountPartition(persistentPart, "rw")
-			if err != nil {
-				u.config.Logger.Warn("could not mount persistent partition")
-			} else {
-				cleanup.Push(func() error { return e.UnmountPartition(persistentPart) })
-			}
+	if mnt, err := utils.IsMounted(&u.config.Config, persistentPart); !mnt && err == nil {
+		u.Debug("mounting persistent partition")
+		err := e.MountPartition(persistentPart, "rw")
+		if err != nil {
+			u.config.Logger.Warn("could not mount persistent partition")
+		} else {
+			cleanup.Push(func() error { return e.UnmountPartition(persistentPart) })
 		}
 	}
 

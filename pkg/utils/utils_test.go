@@ -964,6 +964,11 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(mnt).To(BeFalse())
 		})
+		It("checks a nil partitiont", func() {
+			mnt, err := utils.IsMounted(config, nil)
+			Expect(err).Should(HaveOccurred())
+			Expect(mnt).To(BeFalse())
+		})
 	})
 	Describe("HasSquashedRecovery", Label("squashedRec"), func() {
 		var squashedImg string
