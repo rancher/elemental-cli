@@ -632,10 +632,10 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 
 			c := elemental.NewElemental(config)
 			Expect(c.SelinuxRelabel("", true)).To(BeNil())
-			Expect(runner.CmdsMatch([][]string{{"setfiles", constants.SELinuxContextFile, "/"}}))
+			Expect(runner.CmdsMatch([][]string{{"setfiles", "-F", "-v", constants.SELinuxContextFile, "/"}}))
 
 			Expect(c.SelinuxRelabel("/", true)).To(BeNil())
-			Expect(runner.CmdsMatch([][]string{{"setfiles", constants.SELinuxContextFile, "/"}}))
+			Expect(runner.CmdsMatch([][]string{{"setfiles", "-F", "-v", constants.SELinuxContextFile, "/"}}))
 		})
 		It("fails to relabel the current root", func() {
 			err := utils.MkdirAll(fs, filepath.Dir(constants.SELinuxContextFile), constants.DirPerm)
@@ -645,7 +645,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			runner.ReturnError = errors.New("setfiles failure")
 			c := elemental.NewElemental(config)
 			Expect(c.SelinuxRelabel("", true)).NotTo(BeNil())
-			Expect(runner.CmdsMatch([][]string{{"setfiles", constants.SELinuxContextFile, "/"}}))
+			Expect(runner.CmdsMatch([][]string{{"setfiles", "-F", "-v", constants.SELinuxContextFile, "/"}}))
 		})
 		It("ignores relabel failures", func() {
 			err := utils.MkdirAll(fs, filepath.Dir(constants.SELinuxContextFile), constants.DirPerm)
@@ -655,7 +655,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			runner.ReturnError = errors.New("setfiles failure")
 			c := elemental.NewElemental(config)
 			Expect(c.SelinuxRelabel("", false)).To(BeNil())
-			Expect(runner.CmdsMatch([][]string{{"setfiles", constants.SELinuxContextFile, "/"}}))
+			Expect(runner.CmdsMatch([][]string{{"setfiles", "-F", "-v", constants.SELinuxContextFile, "/"}}))
 		})
 		It("relabels the given root-tree path", func() {
 			contextFile := filepath.Join("/root", filepath.Dir(constants.SELinuxContextFile))
@@ -666,7 +666,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 
 			c := elemental.NewElemental(config)
 			Expect(c.SelinuxRelabel("/root", true)).To(BeNil())
-			Expect(runner.CmdsMatch([][]string{{"setfiles", "-r", "/root", constants.SELinuxContextFile, "/root"}}))
+			Expect(runner.CmdsMatch([][]string{{"setfiles", "-F", "-v", "-r", "/root", constants.SELinuxContextFile, "/root"}}))
 		})
 	})
 	Describe("GetIso", Label("GetIso", "iso"), func() {

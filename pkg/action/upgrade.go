@@ -144,8 +144,17 @@ func (u *UpgradeAction) Run() (err error) {
 	// Doesn't make sense to relabel a readonly filesystem
 	if upgradeImg.FS != constants.SquashFs {
 		// Relabel SELinux
+		// TODO probably relabelling persistent volumes should be an opt in feature, it could
+		// have undesired effects in case of failures
+		binds := map[string]string{}
+		if mnt, _ := utils.IsMounted(&u.config.Config, u.spec.Partitions.Persistent); mnt {
+			binds[u.spec.Partitions.Persistent.MountPoint] = constants.UsrLocalPath
+		}
+		if mnt, _ := utils.IsMounted(&u.config.Config, u.spec.Partitions.OEM); mnt {
+			binds[u.spec.Partitions.OEM.MountPoint] = constants.OEMPath
+		}
 		err = utils.ChrootedCallback(
-			&u.config.Config, upgradeImg.MountPoint, map[string]string{},
+			&u.config.Config, upgradeImg.MountPoint, binds,
 			func() error { return e.SelinuxRelabel("/", true) },
 		)
 		if err != nil {

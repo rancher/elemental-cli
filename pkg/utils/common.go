@@ -284,7 +284,7 @@ func LoadEnvFile(fs v1.FS, file string) (map[string]string, error) {
 }
 
 func IsMounted(config *v1.Config, part *v1.Partition) (bool, error) {
-	if part.MountPoint == "" {
+	if part == nil || part.MountPoint == "" {
 		return false, nil
 	}
 	// Using IsLikelyNotMountPoint seams to be safe as we are not checking

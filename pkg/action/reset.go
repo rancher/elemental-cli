@@ -120,8 +120,17 @@ func (r ResetAction) Run() (err error) {
 	}
 
 	// Relabel SELinux
+	// TODO probably relabelling persistent volumes should be an opt in feature, it could
+	// have undesired effects in case of failures
+	binds := map[string]string{}
+	if mnt, _ := utils.IsMounted(&r.cfg.Config, r.spec.Partitions.Persistent); mnt {
+		binds[r.spec.Partitions.Persistent.MountPoint] = cnst.UsrLocalPath
+	}
+	if mnt, _ := utils.IsMounted(&r.cfg.Config, r.spec.Partitions.OEM); mnt {
+		binds[r.spec.Partitions.OEM.MountPoint] = cnst.OEMPath
+	}
 	err = utils.ChrootedCallback(
-		&r.cfg.Config, r.spec.Active.MountPoint, map[string]string{},
+		&r.cfg.Config, r.spec.Active.MountPoint, binds,
 		func() error { return e.SelinuxRelabel("/", true) },
 	)
 	if err != nil {
