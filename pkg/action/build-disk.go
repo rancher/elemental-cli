@@ -174,13 +174,13 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDisk, imgType string, oemLabe
 		if err != nil {
 			return err
 		}
-		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.tar.gz", output))
+		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.vhd", output))
 	case "gce":
 		err = Raw2Gce(output, cfg.Fs, cfg.Logger, false)
 		if err != nil {
 			return err
 		}
-		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.vhd", output))
+		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.tar.gz", output))
 	}
 
 	return err
