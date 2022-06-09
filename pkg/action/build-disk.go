@@ -220,7 +220,10 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 	}
 	defer file.Close()
 	// Create gzip writer
-	gzipWriter := gzip.NewWriter(file)
+	gzipWriter, err := gzip.NewWriterLevel(file, gzip.BestSpeed)
+	if err != nil {
+		return err
+	}
 	defer gzipWriter.Close()
 	// Create tarwriter pointing to our gzip writer
 	tarWriter := tar.NewWriter(gzipWriter)
