@@ -581,8 +581,8 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			ghwTest := v1mock.GhwMock{}
 			disk := block.Disk{Name: "device", Partitions: []*block.Partition{
 				{
-					Name:  "device1",
-					Label: cnst.ActiveLabel,
+					Name:            "device1",
+					FilesystemLabel: cnst.ActiveLabel,
 				},
 			}}
 			ghwTest.AddDisk(disk)

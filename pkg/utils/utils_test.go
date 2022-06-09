@@ -196,8 +196,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 			ghwTest := v1mock.GhwMock{}
 			disk := block.Disk{Name: "device", Partitions: []*block.Partition{
 				{
-					Name:  "device1",
-					Label: "FAKE",
+					Name:            "device1",
+					FilesystemLabel: "FAKE",
 				},
 			}}
 			ghwTest.AddDisk(disk)
@@ -336,11 +336,11 @@ var _ = Describe("Utils", Label("utils"), func() {
 			ghwTest := v1mock.GhwMock{}
 			disk := block.Disk{Name: "device", Partitions: []*block.Partition{
 				{
-					Name:       "device1",
-					Label:      "FAKE",
-					Type:       "fakefs",
-					MountPoint: "/mnt/fake",
-					SizeBytes:  0,
+					Name:            "device1",
+					FilesystemLabel: "FAKE",
+					Type:            "fakefs",
+					MountPoint:      "/mnt/fake",
+					SizeBytes:       0,
 				},
 			}}
 			ghwTest.AddDisk(disk)
