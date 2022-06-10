@@ -97,6 +97,13 @@ func WithLuetTempDir(tmpDir string) func(r *Luet) error {
 	}
 }
 
+func WithArch(arch string) func(r *Luet) error {
+	return func(l *Luet) error {
+		l.Arch = arch
+		return nil
+	}
+}
+
 func NewLuet(opts ...Options) *Luet {
 
 	luet := &Luet{}
@@ -264,12 +271,8 @@ func (l Luet) UnpackFromChannel(target string, pkg string, repositories ...v1.Re
 		Database: database.NewInMemoryDatabase(false),
 		Target:   target,
 	}
-	_, err := inst.SyncRepositories()
-	if err != nil {
-		return err
-	}
-	err = inst.Install(toInstall, system)
-	return err
+
+	return inst.Install(toInstall, system)
 }
 
 func (l Luet) parsePackage(p string) *luetTypes.Package {
