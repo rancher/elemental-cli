@@ -183,7 +183,7 @@ func (u *UpgradeSpec) Sanitize() error {
 // Partition struct represents a partition with its commonly configurable values, size in MiB
 type Partition struct {
 	Name            string
-	FilesystemLabel string   `yaml:"FilesystemLabel,omitempty" mapstructure:"FilesystemLabel"`
+	FilesystemLabel string   `yaml:"label,omitempty" mapstructure:"label"`
 	Size            uint     `yaml:"size,omitempty" mapstructure:"size"`
 	FS              string   `yaml:"fs,omitempty" mapstrcuture:"fs"`
 	Flags           []string `yaml:"flags,omitempty" mapstrcuture:"flags"`
