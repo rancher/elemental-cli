@@ -348,7 +348,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			defer ghwTest.Clean()
 			out, err := utils.GetFullDeviceByLabel(runner, "FAKE", 1)
 			Expect(err).To(BeNil())
-			Expect(out.Label).To(Equal("FAKE"))
+			Expect(out.FilesystemLabel).To(Equal("FAKE"))
 			Expect(out.Size).To(Equal(uint(0)))
 			Expect(out.FS).To(Equal("fakefs"))
 			Expect(out.MountPoint).To(Equal("/mnt/fake"))

@@ -244,9 +244,9 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		It("Reformats an already existing partition", func() {
 			el := elemental.NewElemental(config)
 			part := &v1.Partition{
-				Path:  "/dev/device1",
-				FS:    "ext4",
-				Label: "MY_LABEL",
+				Path:            "/dev/device1",
+				FS:              "ext4",
+				FilesystemLabel: "MY_LABEL",
 			}
 			Expect(el.FormatPartition(part)).To(BeNil())
 		})
