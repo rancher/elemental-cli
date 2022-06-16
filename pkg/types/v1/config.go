@@ -62,6 +62,8 @@ func (c *Config) Sanitize() error {
 	if c.Verify {
 		c.Luet.SetPlugins(constants.LuetMtreePlugin)
 	}
+	// Ensure luet arch matches Config.Arch
+	c.Luet.SetArch(c.Arch)
 	return nil
 }
 

@@ -133,8 +133,6 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Inter
 		cfg.Logger.Warnf("error unmarshalling config: %s", err)
 	}
 
-	l.Arch = cfg.Arch
-
 	cfg.Logger.Debugf("Full config loaded: %s", litter.Sdump(cfg))
 	return cfg, err
 }
