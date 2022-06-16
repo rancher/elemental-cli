@@ -404,6 +404,12 @@ type BuildConfig struct {
 	Config `yaml:",inline" mapstructure:",squash"`
 }
 
+// Sanitize checks the consistency of the struct, returns error
+//if unsolvable inconsistencies are found
+func (b *BuildConfig) Sanitize() error {
+	return b.Config.Sanitize()
+}
+
 type RawDisk struct {
 	X86_64 *RawDiskArchEntry `yaml:"x86_64,omitempty" mapstructure:"x86_64"` //nolint:revive
 	Arm64  *RawDiskArchEntry `yaml:"arm64,omitempty" mapstructure:"arm64"`
