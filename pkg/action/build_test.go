@@ -29,15 +29,16 @@ import (
 	dockerArchive "github.com/docker/docker/pkg/archive"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/twpayne/go-vfs"
+	"github.com/twpayne/go-vfs/vfst"
+
 	"github.com/rancher/elemental-cli/pkg/action"
 	"github.com/rancher/elemental-cli/pkg/config"
 	"github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
 	v1mock "github.com/rancher/elemental-cli/tests/mocks"
-	"github.com/sirupsen/logrus"
-	"github.com/twpayne/go-vfs"
-	"github.com/twpayne/go-vfs/vfst"
 )
 
 var _ = Describe("Runtime Actions", func() {
@@ -273,7 +274,7 @@ var _ = Describe("Runtime Actions", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 		})
-		It("Builds a raw image", func() {
+		It("Builds a raw image", Label("serial"), func() {
 			// temp dir for output, otherwise we write to .
 			outputDir, _ := utils.TempDir(fs, "", "output")
 			// temp dir for package files, create needed file
@@ -309,7 +310,7 @@ var _ = Describe("Runtime Actions", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 		})
-		It("Builds a raw image with GCE output", func() {
+		It("Builds a raw image with GCE output", Label("serial"), func() {
 			// temp dir for output, otherwise we write to .
 			outputDir, _ := utils.TempDir(fs, "", "output")
 			// temp dir for package files, create needed file
@@ -342,7 +343,7 @@ var _ = Describe("Runtime Actions", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 		})
-		It("Builds a raw image with Azure output", func() {
+		It("Builds a raw image with Azure output", Label("serial"), func() {
 			// temp dir for output, otherwise we write to .
 			outputDir, _ := utils.TempDir(fs, "", "output")
 			// temp dir for package files, create needed file
@@ -488,7 +489,7 @@ var _ = Describe("Runtime Actions", func() {
 			cfg.Repos = []v1.Repository{}
 			err := action.BuildDiskRun(cfg, rawDisk.X86_64, "raw", "OEM", "REC", "disk.raw")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("no repositories configured for arch %s", cfg.Arch)))
+			Expect(err.Error()).To(ContainSubstring("no repositories configured"))
 		})
 	})
 })

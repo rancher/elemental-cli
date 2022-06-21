@@ -69,6 +69,8 @@ func (c *Config) Sanitize() error {
 	if c.SquashFsNoCompression {
 		c.SquashFsCompressionConfig = []string{}
 	}
+	// Ensure luet arch matches Config.Arch
+	c.Luet.SetArch(c.Arch)
 	return nil
 }
 
@@ -409,6 +411,12 @@ type BuildConfig struct {
 	Config `yaml:",inline" mapstructure:",squash"`
 }
 
+// Sanitize checks the consistency of the struct, returns error
+//if unsolvable inconsistencies are found
+func (b *BuildConfig) Sanitize() error {
+	return b.Config.Sanitize()
+}
+
 type RawDisk struct {
 	X86_64 *RawDiskArchEntry `yaml:"x86_64,omitempty" mapstructure:"x86_64"` //nolint:revive
 	Arm64  *RawDiskArchEntry `yaml:"arm64,omitempty" mapstructure:"arm64"`
@@ -423,8 +431,7 @@ func (d *RawDisk) Sanitize() error {
 
 // RawDiskArchEntry represents an arch entry in raw_disk
 type RawDiskArchEntry struct {
-	Repositories []Repository     `yaml:"repositories,omitempty" mapstructure:"repositories"`
-	Packages     []RawDiskPackage `yaml:"packages,omitempty"`
+	Packages []RawDiskPackage `yaml:"packages,omitempty"`
 }
 
 // RawDiskPackage represents a package entry for raw_disk, with a package name and a target to install to

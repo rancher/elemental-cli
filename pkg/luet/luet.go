@@ -31,10 +31,12 @@ import (
 	"github.com/mudler/luet/pkg/database"
 	"github.com/mudler/luet/pkg/helpers/docker"
 	"github.com/mudler/luet/pkg/installer"
-	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
-	"github.com/rancher/elemental-cli/pkg/utils"
 	"github.com/twpayne/go-vfs"
 	"gopkg.in/yaml.v3"
+
+	"github.com/rancher/elemental-cli/pkg/constants"
+	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
+	"github.com/rancher/elemental-cli/pkg/utils"
 )
 
 type Luet struct {
@@ -45,6 +47,7 @@ type Luet struct {
 	plugins           []string
 	VerifyImageUnpack bool
 	TmpDir            string
+	arch              string
 }
 
 type Options func(l *Luet) error
@@ -94,6 +97,13 @@ func WithLuetTempDir(tmpDir string) func(r *Luet) error {
 	}
 }
 
+func WithArch(arch string) func(r *Luet) error {
+	return func(l *Luet) error {
+		l.arch = arch
+		return nil
+	}
+}
+
 func NewLuet(opts ...Options) *Luet {
 
 	luet := &Luet{}
@@ -123,6 +133,10 @@ func NewLuet(opts ...Options) *Luet {
 	}
 
 	return luet
+}
+
+func (l *Luet) SetArch(arch string) {
+	l.arch = arch
 }
 
 func (l *Luet) SetPlugins(plugins ...string) {
@@ -176,6 +190,8 @@ func (l Luet) Unpack(target string, image string, local bool) error {
 // 3. Repo type is docker if the URL is of type [<dommain>[:<port>]]/<path>
 // Returns error if the type does not match any of any criteria.
 func (l Luet) initLuetRepository(repo v1.Repository) (luetTypes.LuetRepository, error) {
+	var err error
+
 	if repo.URI == "" {
 		return luetTypes.LuetRepository{}, fmt.Errorf("Invalid repository, no URI is provided: %v", repo)
 	}
@@ -199,17 +215,31 @@ func (l Luet) initLuetRepository(repo v1.Repository) (luetTypes.LuetRepository, 
 		}
 	}
 
+	arch := l.arch
+	if repo.Arch != "" {
+		arch, err = utils.ArchToGolangArch(repo.Arch)
+		if err != nil {
+			return luetTypes.LuetRepository{}, err
+		}
+	}
+
 	if repo.ReferenceID == "" {
 		repo.ReferenceID = "repository.yaml"
 	}
 
+	priority := repo.Priority
+	if repo.Priority == 0 {
+		priority = constants.LuetDefaultRepoPrio
+	}
+
 	return luetTypes.LuetRepository{
 		Name:        name,
-		Priority:    repo.Priority,
+		Priority:    priority,
 		Enable:      true,
 		Urls:        []string{repo.URI},
 		Type:        repoType,
 		ReferenceID: repo.ReferenceID,
+		Arch:        arch,
 	}, nil
 }
 
@@ -225,6 +255,12 @@ func (l Luet) UnpackFromChannel(target string, pkg string, repositories ...v1.Re
 	if len(repositories) > 0 {
 		repos = luetTypes.LuetRepositories{}
 		for _, r := range repositories {
+			// If the repository has no arch assigned matches all
+			if r.Arch != "" && l.arch != r.Arch {
+				l.log.Debugf("skipping repository '%s' for arch '%s'", r.Name, r.Arch)
+				continue
+			}
+
 			repo, err := l.initLuetRepository(r)
 			if err != nil {
 				return err
@@ -251,12 +287,8 @@ func (l Luet) UnpackFromChannel(target string, pkg string, repositories ...v1.Re
 		Database: database.NewInMemoryDatabase(false),
 		Target:   target,
 	}
-	_, err := inst.SyncRepositories()
-	if err != nil {
-		return err
-	}
-	err = inst.Install(toInstall, system)
-	return err
+
+	return inst.Install(toInstall, system)
 }
 
 func (l Luet) parsePackage(p string) *luetTypes.Package {
