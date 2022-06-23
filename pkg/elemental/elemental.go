@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	"github.com/rancher/elemental-cli/pkg/partitioner"
@@ -262,49 +263,47 @@ func (e Elemental) CreateFileSystemImage(img *v1.Image) error {
 	return nil
 }
 
-// DeployImage will deploay the given image into the target. This method
+// DeployImage will deploy the given image into the target. This method
 // creates the filesystem image file, mounts it and unmounts it as needed.
-func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
-	var err error
-
+func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) (info interface{}, err error) {
 	target := img.MountPoint
 	if !img.Source.IsFile() {
 		if img.FS != cnst.SquashFs {
 			err = e.CreateFileSystemImage(img)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			err = e.MountImage(img, "rw")
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			target = utils.GetTempDir(e.config, "")
 			err := utils.MkdirAll(e.config.Fs, target, cnst.DirPerm)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer e.config.Fs.RemoveAll(target) // nolint:errcheck
 		}
 	} else {
 		target = img.File
 	}
-	err = e.DumpSource(target, img.Source)
+	info, err = e.DumpSource(target, img.Source)
 	if err != nil {
 		_ = e.UnmountImage(img)
-		return err
+		return nil, err
 	}
 	if !img.Source.IsFile() {
 		err = utils.CreateDirStructure(e.config.Fs, target)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if img.FS == cnst.SquashFs {
 			squashOptions := append(cnst.GetDefaultSquashfsOptions(), e.config.SquashFsCompressionConfig...)
 			err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, target, img.File, squashOptions)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	} else if img.Label != "" && img.FS != cnst.SquashFs {
@@ -312,28 +311,85 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 		if err != nil {
 			e.config.Logger.Errorf("Failed to apply label %s to $s", img.Label, img.File)
 			_ = e.config.Fs.Remove(img.File)
-			return err
+			return nil, err
 		}
 	}
 	if leaveMounted && img.Source.IsFile() {
 		err = e.MountImage(img, "rw")
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if !leaveMounted {
 		err = e.UnmountImage(img)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
+	return info, nil
+}
+
+// CreateInstallStateYaml creates the state file of the state partition
+func (e *Elemental) CreateInstallStateYaml(i *v1.InstallSpec, systemMeta interface{}, recoveryMeta interface{}) error {
+	state := &v1.PartitionState{
+		Date:    time.Now().Format(time.RFC3339),
+		FSLabel: i.Partitions.State.FilesystemLabel,
+		Active: &v1.ImageState{
+			Source:         i.Active.Source,
+			SourceMetadata: systemMeta,
+			Label:          i.Active.Label,
+			FS:             i.Active.FS,
+			Path:           strings.TrimPrefix(i.Active.File, i.Partitions.State.MountPoint),
+		},
+		// The sources of active and passive are the same right after the installation
+		Passive: &v1.ImageState{
+			Source:         i.Active.Source,
+			SourceMetadata: systemMeta,
+			Label:          i.Passive.Label,
+			FS:             i.Passive.FS,
+			Path:           strings.TrimPrefix(i.Passive.File, i.Partitions.State.MountPoint),
+		},
+	}
+
+	source := i.Recovery.Source
+	meta := recoveryMeta
+	if source.IsFile() && source.Value() == i.Active.File {
+		source = i.Active.Source
+		meta = systemMeta
+	}
+
+	recovery := &v1.PartitionState{
+		Date:    time.Now().Format(time.RFC3339),
+		FSLabel: i.Partitions.Recovery.FilesystemLabel,
+		Recovery: &v1.ImageState{
+			Source:         source,
+			SourceMetadata: meta,
+			Label:          i.Recovery.Label,
+			FS:             i.Recovery.FS,
+			Path:           strings.TrimPrefix(i.Recovery.File, i.Partitions.Recovery.MountPoint),
+		},
+	}
+
+	stateFile := filepath.Join(i.Partitions.State.MountPoint, cnst.StatePartMetadata)
+	err := utils.MarshalToYaml(e.config.Fs, state, stateFile)
+	if err != nil {
+		e.config.Logger.Errorf("Failed writing state partition state file %s", stateFile)
+		return err
+	}
+
+	recoveryFile := filepath.Join(i.Partitions.Recovery.MountPoint, cnst.RecoveryPartMetadata)
+	err = utils.MarshalToYaml(e.config.Fs, recovery, recoveryFile)
+	if err != nil {
+		e.config.Logger.Errorf("Failed writing recovery partition state file %s", recoveryFile)
+		return err
+	}
+
 	return nil
 }
 
 // DumpSource sets the image data according to the image source type
-func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { // nolint:gocyclo
+func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) (info interface{}, err error) { // nolint:gocyclo
 	e.config.Logger.Infof("Copying %s source...", imgSrc.Value())
-	var err error
 
 	if imgSrc.IsDocker() {
 		if e.config.Cosign {
@@ -344,38 +400,38 @@ func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { //
 			)
 			if err != nil {
 				e.config.Logger.Errorf("Cosign verification failed: %s", out)
-				return err
+				return nil, err
 			}
 		}
-		err = e.config.Luet.Unpack(target, imgSrc.Value(), e.config.LocalImage)
+		info, err = e.config.Luet.Unpack(target, imgSrc.Value(), e.config.LocalImage)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if imgSrc.IsDir() {
 		excludes := []string{"/mnt", "/proc", "/sys", "/dev", "/tmp", "/host", "/run"}
 		err = utils.SyncData(e.config.Logger, e.config.Fs, imgSrc.Value(), target, excludes...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if imgSrc.IsChannel() {
-		err = e.config.Luet.UnpackFromChannel(target, imgSrc.Value(), e.config.Repos...)
+		info, err = e.config.Luet.UnpackFromChannel(target, imgSrc.Value(), e.config.Repos...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if imgSrc.IsFile() {
 		err := utils.MkdirAll(e.config.Fs, filepath.Dir(target), cnst.DirPerm)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		err = utils.CopyFile(e.config.Fs, imgSrc.Value(), target)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
-		return fmt.Errorf("unknown image source type")
+		return nil, fmt.Errorf("unknown image source type")
 	}
 	e.config.Logger.Infof("Finished copying %s into %s", imgSrc.Value(), target)
-	return nil
+	return info, nil
 }
 
 // CopyCloudConfig will check if there is a cloud init in the config and store it on the target

@@ -34,6 +34,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/twpayne/go-vfs"
 	"github.com/zloylos/grsync"
+	"gopkg.in/yaml.v3"
 
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
@@ -513,4 +514,17 @@ func CalcFileChecksum(fs v1.FS, fileName string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func MarshalToYaml(fs v1.FS, object interface{}, file string) error {
+	data, err := yaml.Marshal(object)
+	if err != nil {
+		return err
+	}
+
+	err = fs.WriteFile(file, data, cnst.FilePerm)
+	if err != nil {
+		return fmt.Errorf("Failed writing yaml file: %s", file)
+	}
+	return nil
 }

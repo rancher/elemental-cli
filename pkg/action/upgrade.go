@@ -131,7 +131,7 @@ func (u *UpgradeAction) Run() (err error) {
 	}
 
 	u.Info("deploying image %s to %s", upgradeImg.Source.Value(), upgradeImg.File)
-	err = e.DeployImage(&upgradeImg, true)
+	_, err = e.DeployImage(&upgradeImg, true)
 	if err != nil {
 		u.Error("Failed deploying image to file %s", upgradeImg.File)
 		return err

@@ -100,24 +100,24 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 			})
 			It("Fails to unpack with a repository with no URI", func() {
 				repo := v1.Repository{Arch: constants.Archx86}
-				err := l.UnpackFromChannel(target, "utils/gomplate", repo)
+				_, err := l.UnpackFromChannel(target, "utils/gomplate", repo)
 				Expect(err.Error()).To(ContainSubstring("no URI is provided"))
 				Expect(err).NotTo(BeNil())
 			})
 			It("Fails to unpack with a dir repository that doesnt have anything", func() {
 				dir, _ := utils.TempDir(fs, "", "")
 				repo := v1.Repository{URI: dir}
-				err := l.UnpackFromChannel(target, "utils/gomplate", repo)
+				_, err := l.UnpackFromChannel(target, "utils/gomplate", repo)
 				Expect(err).NotTo(BeNil())
 			})
 			It("Fails to unpack with a http repository that doesnt exists", func() {
 				repo := v1.Repository{URI: "http://jojo.bizarre.adventure"}
-				err := l.UnpackFromChannel(target, "utils/gomplate", repo)
+				_, err := l.UnpackFromChannel(target, "utils/gomplate", repo)
 				Expect(err).NotTo(BeNil())
 			})
 			It("Fails to unpack with a strange repository that cant get the type for", func() {
 				repo := v1.Repository{URI: "is:this:real:life", Arch: constants.Archx86}
-				err := l.UnpackFromChannel(target, "utils/gomplate", repo)
+				_, err := l.UnpackFromChannel(target, "utils/gomplate", repo)
 				Expect(err.Error()).To(ContainSubstring("Invalid Luet repository URI"))
 				Expect(err).NotTo(BeNil())
 			})
@@ -127,7 +127,7 @@ var _ = Describe("Types", Label("luet", "types"), func() {
 			})
 			It("Fails to unpack from channel without matching arch", func() {
 				repo := v1.Repository{URI: "quay.io/costoolkit/releases-teal-arm-64", Arch: constants.ArchArm64}
-				err := l.UnpackFromChannel(target, "utils/gomplate", repo)
+				_, err := l.UnpackFromChannel(target, "utils/gomplate", repo)
 				Expect(err.Error()).To(ContainSubstring("package 'utils/gomplate->=0' not found"))
 				Expect(err).NotTo(BeNil())
 			})

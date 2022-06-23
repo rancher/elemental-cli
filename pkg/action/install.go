@@ -103,7 +103,7 @@ func (i InstallAction) Run() (err error) {
 	})
 
 	// Deploy active image
-	err = e.DeployImage(&i.spec.Active, true)
+	systemMeta, err := e.DeployImage(&i.spec.Active, true)
 	if err != nil {
 		return err
 	}
@@ -164,17 +164,22 @@ func (i InstallAction) Run() (err error) {
 		return err
 	}
 	// Install Recovery
-	err = e.DeployImage(&i.spec.Recovery, false)
+	recoveryMeta, err := e.DeployImage(&i.spec.Recovery, false)
 	if err != nil {
 		return err
 	}
 	// Install Passive
-	err = e.DeployImage(&i.spec.Passive, false)
+	_, err = e.DeployImage(&i.spec.Passive, false)
 	if err != nil {
 		return err
 	}
 
 	err = i.installHook(cnst.AfterInstallHook, false)
+	if err != nil {
+		return err
+	}
+
+	err = e.CreateInstallStateYaml(i.spec, systemMeta, recoveryMeta)
 	if err != nil {
 		return err
 	}

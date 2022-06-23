@@ -404,6 +404,39 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			})
 		})
 	})
+	Describe("CreateInstallStateYaml", Label("state"), func() {
+		var el *elemental.Elemental
+		var install *v1.InstallSpec
+		var err error
+		BeforeEach(func() {
+			el = elemental.NewElemental(config)
+			install = conf.NewInstallSpec(*config)
+			err = utils.MkdirAll(fs, install.Partitions.State.MountPoint, constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("creates an image state yaml file from a docker source image data", func() {
+			install.Active.Source, err = v1.NewSrcFromURI("registry.company.org/my/image")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			err = el.CreateInstallStateYaml(
+				install,
+				&v1.DockerImageMeta{
+					Size:   134134,
+					Digest: "sha256:13241234123414",
+				},
+				&v1.DockerImageMeta{
+					Size:   234134,
+					Digest: "sha256:3241234123414",
+				},
+			)
+			Expect(err).ShouldNot(HaveOccurred())
+			exists, _ := utils.Exists(fs, filepath.Join(install.Partitions.State.MountPoint, cnst.StatePartMetadata))
+			Expect(exists).To(BeTrue())
+			exists, _ = utils.Exists(fs, filepath.Join(install.Partitions.Recovery.MountPoint, cnst.RecoveryPartMetadata))
+			Expect(exists).To(BeTrue())
+		})
+	})
+
 	Describe("DeployImage", Label("DeployImage"), func() {
 		var el *elemental.Elemental
 		var img *v1.Image

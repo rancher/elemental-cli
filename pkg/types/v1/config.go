@@ -439,3 +439,37 @@ type RawDiskPackage struct {
 	Name   string `yaml:"name,omitempty"`
 	Target string `yaml:"target,omitempty"`
 }
+
+// PartState tracks installation data of a partition
+type PartitionState struct {
+	Date     string      `yaml:"date,omitempty"`
+	FSLabel  string      `yaml:"label,omitempty"`
+	Active   *ImageState `yaml:"active,omitempty"`
+	Passive  *ImageState `yaml:"passive,omitempty"`
+	Recovery *ImageState `yaml:"recovery,omitempty"`
+}
+
+// ImageState represents data of a deployed image
+type ImageState struct {
+	Source         *ImageSource `yaml:"source,omitempty"`
+	SourceMetadata interface{}  `yaml:"source-metadata,omitempty"`
+	Label          string       `yaml:"label,omitempty"`
+	FS             string       `yaml:"fs,omitempty"`
+	Path           string       `yaml:"path,omitempty"`
+}
+
+// DockerImageMeta represents metadata of a docker container image type
+type DockerImageMeta struct {
+	Digest string `yaml:"digest,omitempty"`
+	Size   int64  `yaml:"size,omitempty"`
+}
+
+// ChannelImageMeta represents metadata of a channel image type
+type ChannelImageMeta struct {
+	Category    string       `yaml:"category,omitempty"`
+	Name        string       `yaml:"name,omitempty"`
+	Version     string       `yaml:"version,omitempty"`
+	FingerPrint string       `yaml:"finger-print,omitempty"`
+	Uri         string       `yaml:"uri,omitempty"`
+	Repos       []Repository `yaml:"repositories,omitempty"`
+}

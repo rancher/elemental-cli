@@ -103,7 +103,7 @@ func (r ResetAction) Run() (err error) {
 	})
 
 	// Deploy active image
-	err = e.DeployImage(&r.spec.Active, true)
+	_, err = e.DeployImage(&r.spec.Active, true)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (r ResetAction) Run() (err error) {
 	}
 
 	// Install Passive
-	err = e.DeployImage(&r.spec.Passive, false)
+	_, err = e.DeployImage(&r.spec.Passive, false)
 	if err != nil {
 		return err
 	}
