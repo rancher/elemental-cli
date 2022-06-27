@@ -18,6 +18,7 @@ package utils
 
 import (
 	"github.com/hashicorp/go-multierror"
+	"github.com/schollz/progressbar/v3"
 )
 
 type CleanJob func() error
@@ -55,12 +56,15 @@ func (clean *CleanStack) Cleanup(err error) error {
 	if err != nil {
 		errs = multierror.Append(errs, err)
 	}
+	bar := progressbar.NewOptions(clean.count, progressbar.OptionSetDescription("Cleaning"), progressbar.OptionSetVisibility(clean.count > 0), progressbar.OptionSetPredictTime(false))
 	for clean.count > 0 {
 		job := clean.Pop()
 		err = job()
+		_ = bar.Set(bar.GetMax() - clean.count)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	_ = bar.Clear()
 	return errs
 }

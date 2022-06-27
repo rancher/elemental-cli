@@ -30,6 +30,7 @@ import (
 	"github.com/rancher/elemental-cli/pkg/partitioner"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
+	"github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -315,14 +316,16 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 	}
 	// Seek to the end of the file, so we start copying the files at the end of those 3Mb that we truncated before
 	_, _ = actImg.Seek(0, io.SeekEnd)
+	bar := progressbar.Default(100)
 	for _, p := range parts {
 		c.Logger.Debugf("Copying %s", p)
 		toRead, _ := c.Fs.Open(p)
-		_, err = io.Copy(actImg, toRead)
+		_, err = io.Copy(io.MultiWriter(actImg, bar), toRead)
 		if err != nil {
 			return err
 		}
 	}
+	_ = bar.Clear()
 
 	info, _ := actImg.Stat()
 	finalSize := info.Size() + (1 * MB)

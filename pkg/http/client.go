@@ -23,6 +23,7 @@ import (
 	"github.com/cavaliergopher/grab/v3"
 	"github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
+	"github.com/schollz/progressbar/v3"
 )
 
 type Client struct {
@@ -45,7 +46,12 @@ func (c Client) GetURL(log v1.Logger, url string, destination string) error { //
 
 	// start download
 	log.Infof("Downloading %v...\n", req.URL())
+
 	resp := c.client.Do(req)
+	bar := progressbar.DefaultBytes(
+		resp.Size(),
+		"downloading",
+	)
 
 	// start UI loop
 	t := time.NewTicker(500 * time.Millisecond)
@@ -55,13 +61,10 @@ Loop:
 	for {
 		select {
 		case <-t.C:
-			log.Debugf("  transferred %v / %v bytes (%.2f%%)\n",
-				resp.BytesComplete(),
-				resp.Size,
-				100*resp.Progress())
-
+			_ = bar.Set64(resp.BytesComplete())
 		case <-resp.Done:
 			// download is complete
+			_ = bar.Clear()
 			break Loop
 		}
 	}

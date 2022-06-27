@@ -27,6 +27,7 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/packethost/packngo v0.21.0 // indirect
 	github.com/sanity-io/litter v1.5.5
+	github.com/schollz/progressbar/v3 v3.8.6
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
@@ -38,9 +39,10 @@ require (
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/zcalusic/sysinfo v0.0.0-20210905121133-6fa2f969a900 // indirect
 	github.com/zloylos/grsync v1.6.1
-	golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8 // indirect
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
-	golang.org/x/sys v0.0.0-20220608164250-635b8c9b7f68 // indirect
+	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect
+	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/mount-utils v0.23.0

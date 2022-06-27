@@ -32,6 +32,7 @@ import (
 
 	"github.com/distribution/distribution/reference"
 	"github.com/joho/godotenv"
+	"github.com/schollz/progressbar/v3"
 	"github.com/twpayne/go-vfs"
 	"github.com/zloylos/grsync"
 
@@ -105,8 +106,13 @@ func CopyFile(fs v1.FS, source string, target string) (err error) {
 			err = targetFile.Close()
 		}
 	}()
-
-	_, err = io.Copy(targetFile, sourceFile)
+	sourceFileInfo, err := fs.Stat(source)
+	bar := progressbar.DefaultBytes(
+		sourceFileInfo.Size(),
+		"copying",
+	)
+	_, err = io.Copy(io.MultiWriter(targetFile, bar), sourceFile)
+	_ = bar.Clear()
 	return err
 }
 
@@ -169,28 +175,22 @@ func SyncData(log v1.Logger, fs v1.FS, source string, target string, excludes ..
 	)
 
 	quit := make(chan bool)
+	bar := progressbar.New(100)
 	go func() {
 		for {
 			select {
 			case <-quit:
 				return
-			case <-time.After(5 * time.Second):
+			case <-time.After(1 * time.Millisecond):
 				state := task.State()
-				log.Debugf(
-					"progress rsync %s to %s: %.2f / rem. %d / tot. %d / sp. %s",
-					source,
-					target,
-					state.Progress,
-					state.Remain,
-					state.Total,
-					state.Speed,
-				)
+				_ = bar.Set(int(state.Progress))
 			}
 		}
 	}()
 
 	err := task.Run()
 	quit <- true
+	_ = bar.Clear()
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, strings.Join([]string{task.Log().Stderr, task.Log().Stdout}, "\n"))
 	}

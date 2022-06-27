@@ -26,6 +26,8 @@ import (
 	"github.com/rancher/elemental-cli/pkg/partitioner"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
+	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
 )
 
 // Elemental is the struct meant to self-contain most utils and actions related to Elemental, like installing or applying selinux
@@ -104,12 +106,17 @@ func (e *Elemental) createAndFormatPartition(disk *partitioner.Disk, part *v1.Pa
 }
 
 func (e *Elemental) createPartitions(disk *partitioner.Disk, parts v1.PartitionList) error {
-	for _, part := range parts {
+	debug := e.config.Logger.GetLevel() == logrus.DebugLevel
+	// Set it visible based on debug. With debug enabled there is no need for the bar, there is already info
+	bar := progressbar.NewOptions(len(parts), progressbar.OptionSetVisibility(!debug))
+	for index, part := range parts {
+		_ = bar.Set(index)
 		err := e.createAndFormatPartition(disk, part)
 		if err != nil {
 			return err
 		}
 	}
+	_ = bar.Clear()
 	return nil
 }
 
