@@ -19,6 +19,7 @@ package elemental
 import (
 	"errors"
 	"fmt"
+	"github.com/rancher/elemental-cli/pkg/cosign"
 	"path/filepath"
 	"strings"
 
@@ -338,12 +339,9 @@ func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) error { //
 	if imgSrc.IsDocker() {
 		if e.config.Cosign {
 			e.config.Logger.Infof("Running cosing verification for %s", imgSrc.Value())
-			out, err := utils.CosignVerify(
-				e.config.Fs, e.config.Runner, imgSrc.Value(),
-				e.config.CosignPubKey, v1.IsDebugLevel(e.config.Logger),
-			)
-			if err != nil {
-				e.config.Logger.Errorf("Cosign verification failed: %s", out)
+			verified, err := cosign.Verify(imgSrc.Value(), e.config.CosignPubKey)
+			if verified == false && err != nil {
+				e.config.Logger.Errorf("Cosign verification failed: %s", err)
 				return err
 			}
 		}

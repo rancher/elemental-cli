@@ -27,7 +27,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/fulcioroots"
 )
 
-func VerifyKeyless(image string) (bool, error) {
+func Verify(image string, key string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
@@ -44,6 +44,10 @@ func VerifyKeyless(image string) (bool, error) {
 		RootCerts:         root,
 		IntermediateCerts: inter,
 		RekorClient:       rekorClient,
+	}
+
+	if key != "" {
+		co.SignatureRef = key
 	}
 
 	ref, err := name.ParseReference(image)
