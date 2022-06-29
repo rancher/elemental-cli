@@ -21,6 +21,8 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/distribution/distribution/reference"
 )
 
@@ -77,6 +79,10 @@ func (i ImageSource) String() string {
 
 func (i ImageSource) MarshalYAML() (interface{}, error) {
 	return i.String(), nil
+}
+
+func (i *ImageSource) UnmarshalYAML(value *yaml.Node) error {
+	return i.updateFromURI(value.Value)
 }
 
 func (i *ImageSource) CustomUnmarshal(data interface{}) (bool, error) {

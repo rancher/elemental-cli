@@ -1011,6 +1011,38 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(squash).To(BeFalse())
 		})
 	})
+	Describe("Write and read partition state metadata", Label("state"), func() {
+		var mountPoint string
+		var ps *v1.PartitionState
+		BeforeEach(func() {
+			mountPoint = "/partition"
+			err := utils.MkdirAll(fs, mountPoint, constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			ps = &v1.PartitionState{
+				Date: "somedate",
+				Recovery: &v1.ImageState{
+					Source: v1.NewDirSrc("/some/dir"),
+					Label:  "RECOVERY_LABEL",
+				},
+			}
+		})
+		It("writes the partition state meta-file and reads it back", func() {
+			err := utils.WritePartitionState(fs, mountPoint, ps)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			state, err := utils.LoadPartitionState(fs, mountPoint)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(*state).To(Equal(*ps))
+		})
+		It("fails writing to a non-existing mountpoint", func() {
+			err := utils.WritePartitionState(fs, "/non-existing", ps)
+			Expect(err).Should(HaveOccurred())
+		})
+		It("fails loading from a non-existing mountpoint", func() {
+			_, err := utils.LoadPartitionState(fs, "/non-existing")
+			Expect(err).Should(HaveOccurred())
+		})
+	})
 	Describe("CleanStack", Label("CleanStack"), func() {
 		var cleaner *utils.CleanStack
 		BeforeEach(func() {

@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/rancher/elemental-cli/pkg/constants"
+	"gopkg.in/yaml.v3"
 	"k8s.io/mount-utils"
 )
 
@@ -456,6 +457,45 @@ type ImageState struct {
 	Label          string       `yaml:"label,omitempty"`
 	FS             string       `yaml:"fs,omitempty"`
 	Path           string       `yaml:"path,omitempty"`
+}
+
+func (i *ImageState) UnmarshalYAML(value *yaml.Node) error {
+	type iState ImageState
+	var srcMeta *yaml.Node
+
+	err := value.Decode((*iState)(i))
+	if err != nil {
+		return err
+	}
+
+	if i.SourceMetadata != nil {
+		for i, n := range value.Content {
+			if n.Value == "source-metadata" && n.Kind == yaml.ScalarNode {
+				if len(value.Content) >= i+1 && value.Content[i+1].Kind == yaml.MappingNode {
+					srcMeta = value.Content[i+1]
+				}
+				break
+			}
+		}
+	}
+
+	i.SourceMetadata = nil
+	if srcMeta != nil {
+		d := &DockerImageMeta{}
+		err = srcMeta.Decode(d)
+		if err == nil && d.Digest != "" {
+			i.SourceMetadata = d
+			return nil
+		}
+		c := &ChannelImageMeta{}
+		err = srcMeta.Decode(c)
+		if err != nil {
+			return err
+		}
+		i.SourceMetadata = c
+	}
+
+	return nil
 }
 
 // DockerImageMeta represents metadata of a docker container image type
