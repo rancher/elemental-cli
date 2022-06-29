@@ -470,6 +470,5 @@ type ChannelImageMeta struct {
 	Name        string       `yaml:"name,omitempty"`
 	Version     string       `yaml:"version,omitempty"`
 	FingerPrint string       `yaml:"finger-print,omitempty"`
-	Uri         string       `yaml:"uri,omitempty"`
 	Repos       []Repository `yaml:"repositories,omitempty"`
 }

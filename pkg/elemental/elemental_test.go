@@ -430,9 +430,9 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 				},
 			)
 			Expect(err).ShouldNot(HaveOccurred())
-			exists, _ := utils.Exists(fs, filepath.Join(install.Partitions.State.MountPoint, cnst.StatePartMetadata))
+			exists, _ := utils.Exists(fs, filepath.Join(install.Partitions.State.MountPoint, cnst.PartitionMetaFile))
 			Expect(exists).To(BeTrue())
-			exists, _ = utils.Exists(fs, filepath.Join(install.Partitions.Recovery.MountPoint, cnst.RecoveryPartMetadata))
+			exists, _ = utils.Exists(fs, filepath.Join(install.Partitions.Recovery.MountPoint, cnst.PartitionMetaFile))
 			Expect(exists).To(BeTrue())
 		})
 	})

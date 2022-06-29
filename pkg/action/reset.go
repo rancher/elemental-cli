@@ -103,7 +103,7 @@ func (r ResetAction) Run() (err error) {
 	})
 
 	// Deploy active image
-	_, err = e.DeployImage(&r.spec.Active, true)
+	meta, err := e.DeployImage(&r.spec.Active, true)
 	if err != nil {
 		return err
 	}
@@ -169,6 +169,12 @@ func (r ResetAction) Run() (err error) {
 	}
 
 	err = r.resetHook(cnst.AfterResetHook, false)
+	if err != nil {
+		return err
+	}
+
+	// Add state.yaml file on state partition
+	err = e.CreateStateYaml(meta, r.spec.Partitions.State, r.spec.Active, r.spec.Passive)
 	if err != nil {
 		return err
 	}

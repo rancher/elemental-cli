@@ -131,7 +131,7 @@ func (u *UpgradeAction) Run() (err error) {
 	}
 
 	u.Info("deploying image %s to %s", upgradeImg.Source.Value(), upgradeImg.File)
-	_, err = e.DeployImage(&upgradeImg, true)
+	upgradeMeta, err := e.DeployImage(&upgradeImg, true)
 	if err != nil {
 		u.Error("Failed deploying image to file %s", upgradeImg.File)
 		return err
@@ -221,6 +221,12 @@ func (u *UpgradeAction) Run() (err error) {
 	u.Info("Finished moving %s to %s", upgradeImg.File, finalImageFile)
 
 	_, _ = u.config.Runner.Run("sync")
+
+	// Update state.yaml file on the upgraded partition
+	err = e.UpgradeStateYaml(upgradeMeta, mountPart, upgradeImg, u.spec.RecoveryUpgrade)
+	if err != nil {
+		return err
+	}
 
 	u.Info("Upgrade completed")
 

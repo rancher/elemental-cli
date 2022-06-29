@@ -179,6 +179,7 @@ func (i InstallAction) Run() (err error) {
 		return err
 	}
 
+	// Add state.yaml file on state and recovery partitions
 	err = e.CreateInstallStateYaml(i.spec, systemMeta, recoveryMeta)
 	if err != nil {
 		return err
