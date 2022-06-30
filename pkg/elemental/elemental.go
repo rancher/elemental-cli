@@ -301,6 +301,11 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) error {
 			return err
 		}
 		if img.FS == cnst.SquashFs {
+			err = utils.MkdirAll(e.config.Fs, filepath.Dir(img.File), cnst.DirPerm)
+			if err != nil {
+				e.config.Logger.Errorf("failed creating target folder for the squashfs image %s", img.File)
+				return err
+			}
 			squashOptions := append(cnst.GetDefaultSquashfsOptions(), e.config.SquashFsCompressionConfig...)
 			err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, target, img.File, squashOptions)
 			if err != nil {
