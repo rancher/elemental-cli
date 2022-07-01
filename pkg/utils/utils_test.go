@@ -792,49 +792,27 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("installs with default values", func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, false)
 				Expect(err).To(BeNil())
 
 				Expect(buf).To(ContainSubstring("Installing GRUB.."))
 				Expect(buf).To(ContainSubstring("Grub install to device /dev/test complete"))
 				Expect(buf).ToNot(ContainSubstring("efi"))
-				Expect(buf.String()).ToNot(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
-				targetGrub, err := fs.ReadFile(fmt.Sprintf("%s/grub2/grub.cfg", bootDir))
-				Expect(err).To(BeNil())
-				// Should not be modified at all
-				Expect(targetGrub).To(ContainSubstring("console=tty1"))
-
 			})
 			It("installs with efi firmware", Label("efi"), func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, true)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(buf.String()).To(ContainSubstring("--target=x86_64-efi"))
 				Expect(buf.String()).To(ContainSubstring("--efi-directory"))
 				Expect(buf.String()).To(ContainSubstring("Installing grub efi for arch x86_64"))
 			})
-			It("installs with extra tty", func() {
-				err := fs.Mkdir("/dev", constants.DirPerm)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				_, err = fs.Create("/dev/serial")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "serial", false)
-				Expect(err).To(BeNil())
-
-				Expect(buf.String()).To(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
-				targetGrub, err := fs.ReadFile(fmt.Sprintf("%s/grub2/grub.cfg", bootDir))
-				Expect(err).To(BeNil())
-				Expect(targetGrub).To(ContainSubstring("console=tty1 console=serial"))
-			})
 			It("Fails if it can't read grub config file", func() {
 				err := fs.RemoveAll(filepath.Join(rootDir, constants.GrubConf))
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false)).NotTo(BeNil())
+				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, false)).NotTo(BeNil())
 
 				Expect(buf).To(ContainSubstring("Failed reading grub config file"))
 			})
@@ -859,6 +837,36 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(runner.CmdsMatch([][]string{
 					{"grub2-editenv", "somefile", "set", "key1=value1"},
 				})).To(BeNil())
+			})
+		})
+		Describe("SetDefaultEntry", Label("SetDefaultGrubEntry", "grub"), func() {
+			It("Sets the default grub entry without issues", func() {
+				grub := utils.NewGrub(config)
+				Expect(grub.SetDefaultEntry("/rootdir", "/bootdir", "default_entry")).To(BeNil())
+			})
+			It("does nothing on empty default entry and no /etc/os-release", func() {
+				grub := utils.NewGrub(config)
+				Expect(grub.SetDefaultEntry("/rootdir", "/bootdir", "")).To(BeNil())
+				// No grub2-editenv command called
+				Expect(runner.CmdsMatch([][]string{{"grub2-editenv"}})).NotTo(BeNil())
+			})
+			It("loads /etc/os-release on empty default entry", func() {
+				err := utils.MkdirAll(config.Fs, "/rootdir/etc", constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = config.Fs.WriteFile("/rootdir/etc/os-release", []byte("GRUB_ENTRY_NAME=test"), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				grub := utils.NewGrub(config)
+				Expect(grub.SetDefaultEntry("/rootdir", "/bootdir", "")).To(BeNil())
+				// Calls grub2-editenv with the loaded content from /etc/os-release
+				Expect(runner.CmdsMatch([][]string{
+					{"grub2-editenv", "/bootdir/grub_oem_env", "set", "default_menu_entry=test"},
+				})).To(BeNil())
+			})
+			It("Fails setting grubenv", func() {
+				runner.ReturnError = errors.New("failure")
+				grub := utils.NewGrub(config)
+				Expect(grub.SetDefaultEntry("/rootdir", "/bootdir", "default_entry")).NotTo(BeNil())
 			})
 		})
 	})

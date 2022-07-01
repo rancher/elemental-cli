@@ -224,7 +224,6 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 		Partitions:   NewInstallElementalParitions(),
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
-		Tty:          constants.DefaultTty,
 		Active:       activeImg,
 		Recovery:     recoveryImg,
 		Passive:      passiveImg,
@@ -337,6 +336,7 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 		Recovery:   recovery,
 		Passive:    passive,
 		Partitions: ep,
+		GrubConf:   constants.GrubConf,
 	}, nil
 }
 
@@ -344,9 +344,8 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	var imgSource *v1.ImageSource
 
-	//TODO find a way to pre-load current state values such as labels
 	if !utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) &&
-		!utils.BootedFrom(cfg.Runner, constants.SystemLabel) {
+		!utils.BootedFrom(cfg.Runner, constants.RecoveryImgFile) {
 		return nil, fmt.Errorf("reset can only be called from the recovery system")
 	}
 
@@ -417,7 +416,6 @@ func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 		Efi:          efiExists,
 		GrubDefEntry: constants.GrubDefEntry,
 		GrubConf:     constants.GrubConf,
-		Tty:          constants.DefaultTty,
 		Active: v1.Image{
 			Label:      constants.ActiveLabel,
 			Size:       constants.ImgSize,

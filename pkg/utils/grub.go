@@ -19,9 +19,7 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
-	"github.com/rancher/elemental-cli/pkg/constants"
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 )
@@ -39,22 +37,11 @@ func NewGrub(config *v1.Config) *Grub {
 	return g
 }
 
-// Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) (err error) { // nolint:gocyclo
+// Install installs grub into the device and copies the config file
+func (g Grub) Install(target, rootDir, bootDir, grubConf string, efi bool) (err error) { // nolint:gocyclo
 	var grubargs []string
-	var grubdir, finalContent string
 
 	g.config.Logger.Info("Installing GRUB..")
-
-	if tty == "" {
-		// Get current tty and remove /dev/ from its name
-		out, err := g.config.Runner.Run("tty")
-		tty = strings.TrimPrefix(strings.TrimSpace(string(out)), "/dev/")
-		if err != nil {
-			g.config.Logger.Warnf("failed to find current tty, leaving it unset")
-			tty = ""
-		}
-	}
 
 	if efi {
 		g.config.Logger.Infof("Installing grub efi for arch %s", g.config.Arch)
@@ -83,17 +70,30 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 		return err
 	}
 
-	grub1dir := filepath.Join(bootDir, "grub")
-	grub2dir := filepath.Join(bootDir, "grub2")
+	err = g.CopyConfigFile(rootDir, bootDir, grubConf)
+	if err != nil {
+		return err
+	}
+
+	g.config.Logger.Infof("Grub install to device %s complete", target)
+	return nil
+}
+
+// CopyConfigFile copies the grub configuration file from the image root to the
+// partition boot directory
+func (g Grub) CopyConfigFile(rootDir, bootDir, grubConf string) error {
+	var grubDir string
 
 	// Select the proper dir for grub
-	if ok, _ := IsDir(g.config.Fs, grub1dir); ok {
-		grubdir = grub1dir
+	if ok, _ := IsDir(g.config.Fs, filepath.Join(bootDir, "grub")); ok {
+		grubDir = filepath.Join(bootDir, "grub")
+	} else if ok, _ := IsDir(g.config.Fs, filepath.Join(bootDir, "grub2")); ok {
+		grubDir = filepath.Join(bootDir, "grub2")
+	} else {
+		return fmt.Errorf("no grub directory found in %s", bootDir)
 	}
-	if ok, _ := IsDir(g.config.Fs, grub2dir); ok {
-		grubdir = grub2dir
-	}
-	g.config.Logger.Infof("Found grub config dir %s", grubdir)
+
+	g.config.Logger.Infof("Found grub config dir %s", grubDir)
 
 	grubCfg, err := g.config.Fs.ReadFile(filepath.Join(rootDir, grubConf))
 	if err != nil {
@@ -101,32 +101,18 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool) 
 		return err
 	}
 
-	grubConfTarget, err := g.config.Fs.Create(fmt.Sprintf("%s/grub.cfg", grubdir))
+	grubConfTarget, err := g.config.Fs.Create(fmt.Sprintf("%s/grub.cfg", grubDir))
 	if err != nil {
 		return err
 	}
 
 	defer grubConfTarget.Close()
 
-	ttyExists, _ := Exists(g.config.Fs, fmt.Sprintf("/dev/%s", tty))
-
-	if ttyExists && tty != "" && tty != "console" && tty != constants.DefaultTty {
-		// We need to add a tty to the grub file
-		g.config.Logger.Infof("Adding extra tty (%s) to grub.cfg", tty)
-		defConsole := fmt.Sprintf("console=%s", constants.DefaultTty)
-		finalContent = strings.Replace(string(grubCfg), defConsole, fmt.Sprintf("%s console=%s", defConsole, tty), -1)
-	} else {
-		// We don't add anything, just read the file
-		finalContent = string(grubCfg)
-	}
-
-	g.config.Logger.Infof("Copying grub contents from %s to %s", grubConf, fmt.Sprintf("%s/grub.cfg", grubdir))
-	_, err = grubConfTarget.WriteString(finalContent)
+	g.config.Logger.Infof("Copying grub contents from %s to %s", grubConf, fmt.Sprintf("%s/grub.cfg", grubDir))
+	_, err = grubConfTarget.WriteString(string(grubCfg))
 	if err != nil {
 		return err
 	}
-
-	g.config.Logger.Infof("Grub install to device %s complete", target)
 	return nil
 }
 
@@ -141,4 +127,25 @@ func (g Grub) SetPersistentVariables(grubEnvFile string, vars map[string]string)
 		}
 	}
 	return nil
+}
+
+// SetDefaultEntry sets the default_meny_entry value in RunConfig.GrubOEMEnv file
+func (g Grub) SetDefaultEntry(rootDir string, bootDir string, defaultEntry string) error {
+	if defaultEntry == "" {
+		osRelease, err := LoadEnvFile(g.config.Fs, filepath.Join(rootDir, "etc", "os-release"))
+		if err != nil {
+			g.config.Logger.Warnf("Could not load os-release file: %v", err)
+			return nil
+		}
+		defaultEntry = osRelease["GRUB_ENTRY_NAME"]
+		if defaultEntry == "" {
+			g.config.Logger.Debug("unset grub default entry")
+			return nil
+		}
+	}
+
+	return g.SetPersistentVariables(
+		filepath.Join(bootDir, cnst.GrubOEMEnv),
+		map[string]string{"default_menu_entry": defaultEntry},
+	)
 }

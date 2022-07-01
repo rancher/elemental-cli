@@ -166,11 +166,19 @@ func (u *UpgradeAction) Run() (err error) {
 		return err
 	}
 
-	// Only apply rebrand stage for system upgrades
 	if !u.spec.RecoveryUpgrade {
-		u.Info("rebranding")
+		g := utils.NewGrub(&u.config.Config)
+		if u.spec.UpgradeGrubConf {
+			u.Info("update grub configuration file")
+			err = g.CopyConfigFile(upgradeImg.MountPoint, mountPart.MountPoint, u.spec.GrubConf)
+			if err != nil {
+				u.Error("failed copying grub configuration file")
+				return err
+			}
+		}
 
-		err = e.SetDefaultGrubEntry(mountPart.MountPoint, upgradeImg.MountPoint, u.spec.GrubDefEntry)
+		u.Info("grub rebranding")
+		err = g.SetDefaultEntry(upgradeImg.MountPoint, mountPart.MountPoint, u.spec.GrubDefEntry)
 		if err != nil {
 			u.Error("failed setting default entry")
 			return err

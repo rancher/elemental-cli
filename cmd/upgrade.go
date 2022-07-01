@@ -47,24 +47,25 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				return err
 			}
 			mounter := mount.New(path)
+			flags := cmd.Flags()
 
-			cfg, err := config.ReadConfigRun(viper.GetString("config-dir"), cmd.Flags(), mounter)
+			cfg, err := config.ReadConfigRun(viper.GetString("config-dir"), flags, mounter)
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
 
-			if err := validateInstallUpgradeFlags(cfg.Logger, cmd.Flags()); err != nil {
+			if err := validateInstallUpgradeFlags(cfg.Logger, flags); err != nil {
 				return err
 			}
 
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
-			adaptDockerImageAndDirectoryFlagsToSystem(cmd.Flags())
+			adaptDockerImageAndDirectoryFlagsToSystem(flags)
 
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			spec, err := config.ReadUpgradeSpec(cfg, cmd.Flags())
+			spec, err := config.ReadUpgradeSpec(cfg, flags)
 			if err != nil {
 				cfg.Logger.Errorf("invalid upgrade command setup %v", err)
 				return err
@@ -77,6 +78,7 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	}
 	root.AddCommand(c)
 	c.Flags().Bool("recovery", false, "Upgrade the recovery")
+	c.Flags().Bool("upgrade-grub-conf", false, "Upgrade grub2 configuration file")
 	addSharedInstallUpgradeFlags(c)
 	addLocalImageFlag(c)
 	return c

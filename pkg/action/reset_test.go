@@ -117,7 +117,7 @@ var _ = Describe("Reset action tests", func() {
 			ghwTest.CreateDevices()
 
 			fs.Create(constants.EfiDevice)
-			bootedFrom = constants.SystemLabel
+			bootedFrom = constants.RecoveryImgFile
 			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
 				if cmd == cmdFail {
 					return []byte{}, errors.New("Command failed")
@@ -140,6 +140,8 @@ var _ = Describe("Reset action tests", func() {
 			err = utils.MkdirAll(fs, filepath.Dir(grubCfg), constants.DirPerm)
 			Expect(err).To(BeNil())
 			_, err = fs.Create(grubCfg)
+			Expect(err).To(BeNil())
+			err = utils.MkdirAll(fs, filepath.Join(constants.StateDir, "grub2"), constants.DirPerm)
 			Expect(err).To(BeNil())
 
 			runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {

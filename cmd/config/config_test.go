@@ -348,8 +348,6 @@ var _ = Describe("Config", Label("config"), func() {
 				Expect(spec.Target == "/special/disk")
 				// Overwrites system image, flags have priority over files and env vars
 				Expect(spec.Active.Source.Value() == "image/from:flag")
-				// From config files
-				Expect(spec.Tty == "ttyS1")
 			})
 		})
 		Describe("Read UpgradeSpec", Label("install"), func() {

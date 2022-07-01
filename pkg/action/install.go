@@ -121,7 +121,6 @@ func (i InstallAction) Run() (err error) {
 		i.spec.Active.MountPoint,
 		i.spec.Partitions.State.MountPoint,
 		i.spec.GrubConf,
-		i.spec.Tty,
 		i.spec.Firmware == v1.EFI,
 	)
 	if err != nil {
@@ -149,9 +148,9 @@ func (i InstallAction) Run() (err error) {
 	}
 
 	// Installation rebrand (only grub for now)
-	err = e.SetDefaultGrubEntry(
-		i.spec.Partitions.State.MountPoint,
+	err = grub.SetDefaultEntry(
 		i.spec.Active.MountPoint,
+		i.spec.Partitions.State.MountPoint,
 		i.spec.GrubDefEntry,
 	)
 	if err != nil {

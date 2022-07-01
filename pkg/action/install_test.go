@@ -61,7 +61,6 @@ var _ = Describe("Install action tests", func() {
 		client = &v1mock.FakeHTTPClient{}
 		memLog = &bytes.Buffer{}
 		logger = v1.NewBufferLogger(memLog)
-		//logger.SetLevel(v1.DebugLevel())
 		var err error
 		fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 		Expect(err).Should(BeNil())
@@ -149,6 +148,8 @@ var _ = Describe("Install action tests", func() {
 			err = utils.MkdirAll(fs, filepath.Dir(grubCfg), constants.DirPerm)
 			Expect(err).To(BeNil())
 			_, err = fs.Create(grubCfg)
+			Expect(err).To(BeNil())
+			err = utils.MkdirAll(fs, filepath.Join(constants.StateDir, "grub2"), constants.DirPerm)
 			Expect(err).To(BeNil())
 
 			// Set default cmdline function so we dont panic :o

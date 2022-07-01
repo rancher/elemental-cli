@@ -93,7 +93,9 @@ var _ = Describe("Runtime Actions", func() {
 
 			// Create paths used by tests
 			utils.MkdirAll(fs, fmt.Sprintf("%s/cOS", constants.RunningStateDir), constants.DirPerm)
+			utils.MkdirAll(fs, fmt.Sprintf("%s/grub2", constants.RunningStateDir), constants.DirPerm)
 			utils.MkdirAll(fs, fmt.Sprintf("%s/cOS", constants.LiveDir), constants.DirPerm)
+			utils.MkdirAll(fs, fmt.Sprintf("%s/etc/cos", constants.TransitionDir), constants.DirPerm)
 
 			mainDisk := block.Disk{
 				Name: "device",
@@ -146,6 +148,8 @@ var _ = Describe("Runtime Actions", func() {
 				err = utils.MkdirAll(config.Fs, filepath.Join(spec.Active.MountPoint, "etc"), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
+				_, err = fs.Create(fmt.Sprintf("%s/etc/cos/grub.cfg", constants.TransitionDir))
+				Expect(err).ShouldNot(HaveOccurred())
 				err = fs.WriteFile(
 					filepath.Join(spec.Active.MountPoint, "etc", "os-release"),
 					[]byte("GRUB_ENTRY_NAME=TESTOS"),
@@ -155,7 +159,7 @@ var _ = Describe("Runtime Actions", func() {
 
 				runner.SideEffect = func(command string, args ...string) ([]byte, error) {
 					if command == "cat" && args[0] == "/proc/cmdline" {
-						return []byte(constants.ActiveLabel), nil
+						return []byte(constants.ActiveImgFile), nil
 					}
 					if command == "mv" && args[0] == "-f" && args[1] == activeImg && args[2] == passiveImg {
 						// we doing backup, do the "move"
@@ -391,6 +395,8 @@ var _ = Describe("Runtime Actions", func() {
 				err = utils.MkdirAll(config.Fs, filepath.Join(spec.Active.MountPoint, "etc"), constants.DirPerm)
 				Expect(err).ShouldNot(HaveOccurred())
 
+				_, err = fs.Create(fmt.Sprintf("%s/etc/cos/grub.cfg", constants.TransitionDir))
+				Expect(err).ShouldNot(HaveOccurred())
 				err = fs.WriteFile(
 					filepath.Join(spec.Active.MountPoint, "etc", "os-release"),
 					[]byte("GRUB_ENTRY_NAME=TESTOS"),

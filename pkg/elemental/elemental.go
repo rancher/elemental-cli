@@ -513,28 +513,6 @@ func (e Elemental) UpdateSourcesFormDownloadedISO(workDir string, activeImg *v1.
 	return nil
 }
 
-// Sets the default_meny_entry value in RunConfig.GrubOEMEnv file at in
-// State partition mountpoint.
-func (e Elemental) SetDefaultGrubEntry(partMountPoint string, imgMountPoint string, defaultEntry string) error {
-	if defaultEntry == "" {
-		osRelease, err := utils.LoadEnvFile(e.config.Fs, filepath.Join(imgMountPoint, "etc", "os-release"))
-		if err != nil {
-			e.config.Logger.Warnf("Could not load os-release file: %v", err)
-			return nil
-		}
-		defaultEntry = osRelease["GRUB_ENTRY_NAME"]
-		if defaultEntry == "" {
-			e.config.Logger.Debug("unset grub default entry")
-			return nil
-		}
-	}
-	grub := utils.NewGrub(e.config)
-	return grub.SetPersistentVariables(
-		filepath.Join(partMountPoint, cnst.GrubOEMEnv),
-		map[string]string{"default_menu_entry": defaultEntry},
-	)
-}
-
 // FindKernelInitrd finds for kernel and intird files inside the /boot directory of a given
 // root tree path. It assumes kernel and initrd files match certain file name prefixes.
 func (e Elemental) FindKernelInitrd(rootDir string) (kernel string, initrd string, err error) {

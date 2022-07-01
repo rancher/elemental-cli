@@ -107,7 +107,6 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	_ = c.Flags().MarkDeprecated("force-gpt", "'force-gpt' is deprecated please use 'part-table' instead")
 	c.Flags().Var(pTableType, "part-table", "Partition table type to use")
 
-	c.Flags().String("tty", "", "Add named tty to grub")
 	c.Flags().Bool("force", false, "Force install")
 	c.Flags().Bool("eject-cd", false, "Try to eject the cd on reboot, only valid if booting from iso")
 	addSharedInstallUpgradeFlags(c)
