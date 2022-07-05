@@ -509,6 +509,7 @@ type ImageState struct {
 	SourceMetadata interface{}  `yaml:"source-metadata,omitempty"`
 	Label          string       `yaml:"label,omitempty"`
 	FS             string       `yaml:"fs,omitempty"`
+	Path           string       `yaml:"path,omitempty"`
 }
 
 func (i *ImageState) UnmarshalYAML(value *yaml.Node) error {
@@ -545,6 +546,12 @@ func (i *ImageState) UnmarshalYAML(value *yaml.Node) error {
 		if err == nil && c.Name != "" {
 			i.SourceMetadata = c
 		}
+<<<<<<< HEAD
+=======
+		if c.Name != "" {
+			i.SourceMetadata = c
+		}
+>>>>>>> 1f2dacb (Consider coverage beyond the package the test belongs to)
 	}
 
 	return err

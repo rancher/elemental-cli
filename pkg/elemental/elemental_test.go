@@ -74,6 +74,70 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		)
 	})
 	AfterEach(func() { cleanup() })
+	Describe("MountRWPartition", Label("mount"), func() {
+		var el *elemental.Elemental
+		var parts v1.ElementalPartitions
+		BeforeEach(func() {
+			parts = conf.NewInstallElementalParitions()
+
+			err := utils.MkdirAll(fs, "/some", cnst.DirPerm)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = fs.Create("/some/device")
+			Expect(err).ToNot(HaveOccurred())
+
+			parts.OEM.Path = "/dev/device1"
+
+			el = elemental.NewElemental(config)
+		})
+
+		It("Mounts and umounts a partition with RW", func() {
+			umount, err := el.MountRWPartition(parts.OEM)
+			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			Expect(len(lst)).To(Equal(1))
+			Expect(lst[0].Opts).To(Equal([]string{"rw"}))
+
+			Expect(umount()).ShouldNot(HaveOccurred())
+			lst, _ = mounter.List()
+			Expect(len(lst)).To(Equal(0))
+		})
+		It("Remounts a partition with RW", func() {
+			err := el.MountPartition(parts.OEM)
+			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			Expect(len(lst)).To(Equal(1))
+
+			umount, err := el.MountRWPartition(parts.OEM)
+			Expect(err).To(BeNil())
+			lst, _ = mounter.List()
+			// fake mounter is not merging remounts it just appends
+			Expect(len(lst)).To(Equal(2))
+			Expect(lst[1].Opts).To(Equal([]string{"remount", "rw"}))
+
+			Expect(umount()).ShouldNot(HaveOccurred())
+			lst, _ = mounter.List()
+			// Increased once more to remount read-onply
+			Expect(len(lst)).To(Equal(3))
+			Expect(lst[2].Opts).To(Equal([]string{"remount", "ro"}))
+		})
+		It("Fails to mount a partition", func() {
+			mounter.ErrorOnMount = true
+			_, err := el.MountRWPartition(parts.OEM)
+			Expect(err).Should(HaveOccurred())
+		})
+		It("Fails to remount a partition", func() {
+			err := el.MountPartition(parts.OEM)
+			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			Expect(len(lst)).To(Equal(1))
+
+			mounter.ErrorOnMount = true
+			_, err = el.MountRWPartition(parts.OEM)
+			Expect(err).Should(HaveOccurred())
+			lst, _ = mounter.List()
+			Expect(len(lst)).To(Equal(1))
+		})
+	})
 	Describe("MountPartitions", Label("MountPartitions", "disk", "partition", "mount"), func() {
 		var el *elemental.Elemental
 		var parts v1.ElementalPartitions
@@ -98,6 +162,15 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			Expect(err).To(BeNil())
 			lst, _ := mounter.List()
 			Expect(len(lst)).To(Equal(4))
+		})
+
+		It("Mounts disk partitions excluding recovery", func() {
+			err := el.MountPartitions(parts.PartitionsByMountPoint(false, parts.Recovery))
+			Expect(err).To(BeNil())
+			lst, _ := mounter.List()
+			for _, i := range lst {
+				Expect(i.Path).NotTo(Equal("/dev/device3"))
+			}
 		})
 
 		It("Fails if some partition resists to mount ", func() {
@@ -404,112 +477,6 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			})
 		})
 	})
-	Describe("CreateInstallStateYaml", Label("state"), func() {
-		var el *elemental.Elemental
-		var install *v1.InstallSpec
-		var err error
-		BeforeEach(func() {
-			el = elemental.NewElemental(config)
-			install = conf.NewInstallSpec(*config)
-			err = utils.MkdirAll(fs, install.Partitions.State.MountPoint, constants.DirPerm)
-			Expect(err).ShouldNot(HaveOccurred())
-			err = utils.MkdirAll(fs, install.Partitions.Recovery.MountPoint, constants.DirPerm)
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-		It("creates partition metadata yaml files with different recovery and active sources", func() {
-			install.Active.Source, err = v1.NewSrcFromURI("registry.company.org/my/image")
-			Expect(err).ShouldNot(HaveOccurred())
-			install.Recovery.Source, err = v1.NewSrcFromURI("channel:system/myos")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = el.CreateInstallStateYaml(
-				install,
-				&v1.DockerImageMeta{
-					Size:   134134,
-					Digest: "sha256:13241234123414",
-				},
-				&v1.ChannelImageMeta{
-					Category: "system",
-					Name:     "myos",
-					Version:  "0.1",
-				},
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			ps, err := utils.LoadPartitionState(fs, install.Partitions.State.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-			sysMeta, ok := ps.Active.SourceMetadata.(*v1.DockerImageMeta)
-			Expect(ok).To(BeTrue())
-			Expect(sysMeta.Size).To(Equal(int64(134134)))
-
-			ps, err = utils.LoadPartitionState(fs, install.Partitions.Recovery.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-			recMeta, ok := ps.Recovery.SourceMetadata.(*v1.ChannelImageMeta)
-			Expect(ok).To(BeTrue())
-			Expect(recMeta.Version).To(Equal("0.1"))
-		})
-		It("creates partition metadata yaml files with the same recovery and active sources", func() {
-			install.Active.Source, err = v1.NewSrcFromURI("registry.company.org/my/image")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = el.CreateInstallStateYaml(
-				install,
-				&v1.DockerImageMeta{
-					Size:   134134,
-					Digest: "sha256:13241234123414",
-				},
-				nil,
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			ps, err := utils.LoadPartitionState(fs, install.Partitions.State.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-			meta, ok := ps.Active.SourceMetadata.(*v1.DockerImageMeta)
-			Expect(ok).To(BeTrue())
-			Expect(meta.Size).To(Equal(int64(134134)))
-
-			ps, err = utils.LoadPartitionState(fs, install.Partitions.Recovery.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-			meta, ok = ps.Recovery.SourceMetadata.(*v1.DockerImageMeta)
-			Expect(ok).To(BeTrue())
-			Expect(meta.Size).To(Equal(int64(134134)))
-		})
-		It("fails creating metadata file for state partition", func() {
-			install.Active.Source, err = v1.NewSrcFromURI("registry.company.org/my/image")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = fs.RemoveAll(install.Partitions.State.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = el.CreateInstallStateYaml(
-				install,
-				&v1.DockerImageMeta{
-					Size:   134134,
-					Digest: "sha256:13241234123414",
-				},
-				nil,
-			)
-			Expect(err).Should(HaveOccurred())
-		})
-		It("fails creating metadata file for recovery partition", func() {
-			install.Active.Source, err = v1.NewSrcFromURI("registry.company.org/my/image")
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = fs.RemoveAll(install.Partitions.Recovery.MountPoint)
-			Expect(err).ShouldNot(HaveOccurred())
-
-			err = el.CreateInstallStateYaml(
-				install,
-				&v1.DockerImageMeta{
-					Size:   134134,
-					Digest: "sha256:13241234123414",
-				},
-				nil,
-			)
-			Expect(err).Should(HaveOccurred())
-		})
-	})
-
 	Describe("DeployImage", Label("DeployImage"), func() {
 		var el *elemental.Elemental
 		var img *v1.Image

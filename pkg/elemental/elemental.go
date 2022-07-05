@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	"github.com/rancher/elemental-cli/pkg/partitioner"
@@ -154,6 +153,26 @@ func (e Elemental) UnmountPartitions(parts v1.PartitionList) error {
 		return errors.New(errMsg)
 	}
 	return nil
+}
+
+// MountRWPartition mounts, or remounts if needed, a partition with RW permissions
+func (e Elemental) MountRWPartition(part *v1.Partition) (umount func() error, err error) {
+	if mnt, _ := utils.IsMounted(e.config, part); mnt {
+		err = e.MountPartition(part, "remount", "rw")
+		if err != nil {
+			e.config.Logger.Errorf("failed mounting %s partition: %v", part.Name, err)
+			return nil, err
+		}
+		umount = func() error { return e.MountPartition(part, "remount", "ro") }
+	} else {
+		err = e.MountPartition(part, "rw")
+		if err != nil {
+			e.config.Logger.Error("failed mounting %s partition: %v", part.Name, err)
+			return nil, err
+		}
+		umount = func() error { return e.UnmountPartition(part) }
+	}
+	return umount, nil
 }
 
 // MountPartition mounts a partition with the given mount options
@@ -327,104 +346,6 @@ func (e *Elemental) DeployImage(img *v1.Image, leaveMounted bool) (info interfac
 		}
 	}
 	return info, nil
-}
-
-// CreateInstallStateYaml creates the state metadata files for recovery and state partitions for a clean install
-func (e Elemental) CreateInstallStateYaml(spec *v1.InstallSpec, systemMeta interface{}, recoveryMeta interface{}) error {
-	err := e.CreateStateYaml(systemMeta, spec.Partitions.State, spec.Active, spec.Passive)
-	if err != nil {
-		return err
-	}
-	// If recovery is a file copied from active reuse active image metadata and source
-	recoveryImg := spec.Recovery
-	if spec.Recovery.Source.IsFile() && spec.Recovery.Source.Value() == spec.Active.File {
-		recoveryImg.Source = spec.Active.Source
-		recoveryMeta = systemMeta
-	}
-	err = e.CreateRecoveryStateYaml(recoveryMeta, spec.Partitions.Recovery, recoveryImg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// CreateStateYaml creates the state file of the state partition of a clean install
-func (e Elemental) CreateStateYaml(meta interface{}, part *v1.Partition, active v1.Image, passive v1.Image) error {
-	state := &v1.PartitionState{
-		Date:    time.Now().Format(time.RFC3339),
-		FSLabel: part.FilesystemLabel,
-		Active: &v1.ImageState{
-			Source:         active.Source,
-			SourceMetadata: meta,
-			Label:          active.Label,
-			FS:             active.FS,
-			Path:           strings.TrimPrefix(active.File, part.MountPoint),
-		},
-		// The sources of active and passive are the same right after the installation
-		Passive: &v1.ImageState{
-			Source:         active.Source,
-			SourceMetadata: meta,
-			Label:          passive.Label,
-			FS:             passive.FS,
-			Path:           strings.TrimPrefix(passive.File, part.MountPoint),
-		},
-	}
-
-	err := utils.WritePartitionState(e.config.Fs, part.MountPoint, state)
-	if err != nil {
-		e.config.Logger.Errorf("Failed writing state partition state file: %s", err.Error())
-		return err
-	}
-	return nil
-}
-
-// CreateRecoveryStateYaml creates the state file of the recovery partition of clean install
-func (e Elemental) CreateRecoveryStateYaml(meta interface{}, part *v1.Partition, img v1.Image) error {
-	recovery := &v1.PartitionState{
-		Date:    time.Now().Format(time.RFC3339),
-		FSLabel: part.FilesystemLabel,
-		Recovery: &v1.ImageState{
-			Source:         img.Source,
-			SourceMetadata: meta,
-			Label:          img.Label,
-			FS:             img.FS,
-			Path:           strings.TrimPrefix(img.File, part.MountPoint),
-		},
-	}
-
-	err := utils.WritePartitionState(e.config.Fs, part.MountPoint, recovery)
-	if err != nil {
-		e.config.Logger.Errorf("Failed writing recovery partition state file: %s", err.Error())
-		return err
-	}
-
-	return nil
-}
-
-// UpgradeStateYaml upgrades the partition state meta-file for the given partition with the image data
-func (e Elemental) UpgradeStateYaml(meta interface{}, part *v1.Partition, img v1.Image, isRecovery bool) error {
-	partState, err := utils.LoadPartitionState(e.config.Fs, part.MountPoint)
-	if err != nil {
-		e.config.Logger.Warnf("failed to load partition state meta-file")
-		partState = &v1.PartitionState{
-			FSLabel: part.FilesystemLabel,
-		}
-	}
-	partState.Date = time.Now().Format(time.RFC3339)
-	imgState := &v1.ImageState{
-		Source:         img.Source,
-		SourceMetadata: meta,
-		Label:          img.Label,
-		FS:             img.FS,
-		Path:           strings.TrimPrefix(img.File, part.MountPoint),
-	}
-	if isRecovery {
-		partState.Recovery = imgState
-	} else {
-		partState.Passive = partState.Active
-		partState.Active = imgState
-	}
-	return utils.WritePartitionState(e.config.Fs, part.MountPoint, partState)
 }
 
 // DumpSource sets the image data according to the image source type
