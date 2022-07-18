@@ -217,6 +217,16 @@ func (dev *Disk) NewPartitionTable(label string) (string, error) {
 	if err != nil {
 		return out, err
 	}
+
+	// Wait for any pending event in udev queue. Note we have no way to
+	// ensure we are not missing any event triggered by the creation of
+	// the partition table since udev events are included within the queue
+	// asynchronously, because of that we wait for half a second to give
+	// some time to populate events queue of udev.
+	// Hack added to fix https://github.com/rancher/elemental-operator/issues/50
+	time.Sleep(500 * time.Millisecond)
+	_, _ = dev.runner.Run("udevadm", "settle")
+
 	err = dev.Reload()
 	if err != nil {
 		dev.logger.Errorf("Failed analyzing disk: %v\n", err)

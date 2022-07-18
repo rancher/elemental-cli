@@ -281,7 +281,7 @@ var _ = Describe("Partitioner", Label("disk", "partition", "partitioner"), func(
 				cmds = [][]string{{
 					"parted", "--script", "--machine", "--", "/dev/device",
 					"unit", "s", "mklabel", "gpt",
-				}, printCmd}
+				}, {"udevadm", "settle"}, printCmd}
 				runner.ReturnValue = []byte(printOutput)
 				_, err := dev.NewPartitionTable("gpt")
 				Expect(err).To(BeNil())
