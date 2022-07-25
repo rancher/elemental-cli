@@ -17,7 +17,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/mudler/go-pluggable v0.0.0-20211206135551-9263b05c562e
 	github.com/mudler/luet v0.0.0-20220526130937-264bf53fe7ab
-	github.com/mudler/yip v0.0.0-20220704150701-30d215fa4ab0
+	github.com/mudler/yip v0.0.0-20220725150231-976737b2353c
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
 	github.com/sanity-io/litter v1.5.5
