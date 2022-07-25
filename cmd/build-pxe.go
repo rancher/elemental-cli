@@ -31,14 +31,14 @@ import (
 	"github.com/rancher/elemental-cli/pkg/utils"
 )
 
-// NewBuildISO returns a new instance of the build-iso subcommand and appends it to
-// the root command. requireRoot is to initiate it with or without the CheckRoot
-// pre-run check. This method is mostly used for testing purposes.
-func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobra.Command {
+// NewBuildPXE returns a new instance of the build-pxe subcommand and appends it to
+// the passed command. requireRoot is to initiate it with or without the CheckRoot
+// pre-run check.
+func NewBuildPXE(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	c := &cobra.Command{
-		Use:   fmt.Sprintf("%siso SOURCE", cmdPrefix),
-		Short: "Build bootable installation media ISOs",
-		Long: "Build bootable installation media ISOs\n\n" +
+		Use:   "pxe SOURCE",
+		Short: "Build PXE bootable installation media files",
+		Long: "build PXE bootable installation media files\n\n" +
 			"SOURCE - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\", \"channel\"], as default is \"docker\"\n" +
 			"    * <sourceName> - is path to file or directory, image name with tag version or channel name",
@@ -70,7 +70,7 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
-			spec, err := config.ReadBuildISO(cfg, flags)
+			spec, err := config.ReadBuildPXE(cfg, flags)
 			if err != nil {
 				cfg.Logger.Errorf("invalid install command setup %v", err)
 				return err
@@ -92,8 +92,6 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 			// Repos and overlays can't be unmarshaled directly as they require
 			// to be merged on top and flags do not match any config value key
 			oRootfs, _ := flags.GetString("overlay-rootfs")
-			oUEFI, _ := flags.GetString("overlay-uefi")
-			oISO, _ := flags.GetString("overlay-iso")
 			repoURIs, _ := flags.GetStringArray("repo")
 
 			if oRootfs != "" {
@@ -104,29 +102,13 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 					return fmt.Errorf("Invalid path '%s': %v", oRootfs, err)
 				}
 			}
-			if oUEFI != "" {
-				if ok, err := utils.Exists(cfg.Fs, oUEFI); ok {
-					spec.UEFI = append(spec.UEFI, v1.NewDirSrc(oUEFI))
-				} else {
-					cfg.Logger.Errorf("Invalid value for overlay-uefi")
-					return fmt.Errorf("Invalid path '%s': %v", oUEFI, err)
-				}
-			}
-			if oISO != "" {
-				if ok, err := utils.Exists(cfg.Fs, oISO); ok {
-					spec.Image = append(spec.Image, v1.NewDirSrc(oISO))
-				} else {
-					cfg.Logger.Errorf("Invalid value for overlay-iso")
-					return fmt.Errorf("Invalid path '%s': %v", oISO, err)
-				}
-			}
 
 			for _, u := range repoURIs {
 				cfg.Repos = append(cfg.Repos, v1.Repository{URI: u, Priority: constants.LuetRepoMaxPrio, Arch: cfg.Arch})
 			}
 
-			buildISO := action.NewBuildISOAction(cfg, spec)
-			err = buildISO.ISORun()
+			builder := action.NewBuildPXEAction(cfg, spec)
+			err = builder.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
 				return err
@@ -136,13 +118,11 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 		},
 	}
 	root.AddCommand(c)
-	c.Flags().StringP("name", "n", "", "Basename of the generated ISO file")
+	c.Flags().StringP("name", "n", "", "Basename of the generated pxe files")
 	c.Flags().StringP("output", "o", "", "Output directory (defaults to current directory)")
 	c.Flags().Bool("date", false, "Adds a date suffix into the generated ISO file")
 	c.Flags().String("overlay-rootfs", "", "Path of the overlayed rootfs data")
-	c.Flags().String("overlay-uefi", "", "Path of the overlayed uefi data")
-	c.Flags().String("overlay-iso", "", "Path of the overlayed iso data")
-	c.Flags().String("label", "", "Label of the ISO volume")
+	c.Flags().String("pxe-boot-url", "tftp://10.0.2.2/isos", "HTTP/TFTP URL used to generate PXE config")
 	c.Flags().StringArray("repo", []string{}, "A repository URI for luet. Can be repeated to add more than one source.")
 	addArchFlags(c)
 	addCosignFlags(c)
@@ -151,6 +131,4 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 	return c
 }
 
-// register the subcommand into rootCmd
-var _ = NewBuildISO(rootCmd, "build-", true)
-var _ = NewBuildISO(buildCmd, "", true)
+var _ = NewBuildPXE(buildCmd, true)

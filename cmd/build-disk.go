@@ -32,9 +32,9 @@ import (
 // NewBuildDisk returns a new instance of the build-disk subcommand and appends it to
 // the root command. requireRoot is to initiate it with or without the CheckRoot
 // pre-run check. This method is mostly used for testing purposes.
-func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
+func NewBuildDisk(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobra.Command {
 	c := &cobra.Command{
-		Use:   "build-disk",
+		Use:   fmt.Sprintf("%sdisk", cmdPrefix),
 		Short: "Build a raw recovery image",
 		Args:  cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -112,4 +112,5 @@ func NewBuildDisk(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 }
 
 // register the subcommand into rootCmd
-var _ = NewBuildDisk(rootCmd, true)
+var _ = NewBuildDisk(rootCmd, "build-", true)
+var _ = NewBuildDisk(buildCmd, "", true)

@@ -118,6 +118,11 @@ const (
 	IsoBootCatalog = "/boot/x86_64/boot.catalog"
 	IsoBootFile    = "/boot/x86_64/loader/eltorito.img"
 
+	PxeKernelSuffix = "-kernel"
+	PxeInitrdSuffix = "-initrd"
+	PxeRootfsSuffix = ".squashfs"
+	PxeConfigSuffix = ".ipxe"
+
 	// Default directory and file fileModes
 	DirPerm        = os.ModeDir | os.ModePerm
 	FilePerm       = 0666

@@ -286,6 +286,26 @@ func ReadBuildISO(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.LiveISO, error) 
 	return iso, err
 }
 
+func ReadBuildPXE(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.PXEConf, error) {
+	pxe := config.NewPXE()
+	vp := viper.Sub("pxe")
+	if vp == nil {
+		vp = viper.New()
+	}
+	// Bind build-pxe cmd flags
+	bindGivenFlags(vp, flags)
+	// Bind build-pxe env vars
+	viperReadEnv(vp, "PXE", constants.GetISOKeyEnvMap())
+
+	err := vp.Unmarshal(pxe, setDecoder, decodeHook)
+	if err != nil {
+		b.Logger.Warnf("error unmarshalling LiveISO: %s", err)
+	}
+
+	b.Logger.Debugf("Loaded PXEConf: %s", litter.Sdump(pxe))
+	return pxe, err
+}
+
 func ReadBuildDisk(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.RawDisk, error) {
 	disk := config.NewRawDisk()
 	vp := viper.Sub("raw_disk")

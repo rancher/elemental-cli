@@ -489,6 +489,20 @@ func NewISO() *v1.LiveISO {
 	}
 }
 
+func NewPXE() *v1.PXEConf {
+	var imageSrc []*v1.ImageSource
+
+	defaultImage := constants.GetDefaultISOImage()
+	for _, imgSrc := range defaultImage {
+		src, _ := v1.NewSrcFromURI(imgSrc)
+		imageSrc = append(imageSrc, src)
+	}
+
+	return &v1.PXEConf{
+		Image: imageSrc,
+	}
+}
+
 func NewBuildConfig(opts ...GenericOptions) *v1.BuildConfig {
 	b := &v1.BuildConfig{
 		Config: *NewConfig(opts...),

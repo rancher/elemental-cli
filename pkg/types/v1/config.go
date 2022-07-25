@@ -21,9 +21,10 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/rancher/elemental-cli/pkg/constants"
 	"gopkg.in/yaml.v3"
 	"k8s.io/mount-utils"
+
+	"github.com/rancher/elemental-cli/pkg/constants"
 )
 
 const (
@@ -404,6 +405,13 @@ type Image struct {
 	Source     *ImageSource `yaml:"uri,omitempty" mapstructure:"uri"`
 	MountPoint string
 	LoopDevice string
+}
+
+// PXEConf represents the configurations needed to generate a PXE boot environment
+type PXEConf struct {
+	RootFS     []*ImageSource `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
+	Image      []*ImageSource `yaml:"image,omitempty" mapstructure:"image"`
+	PxeBootUrl string         `yaml:"pxe-boot-url,omitempty" mapstructure:"pxe-boot-url"`
 }
 
 // LiveISO represents the configurations needed for a live ISO image

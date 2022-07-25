@@ -41,7 +41,7 @@ func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO) *BuildISOAction {
 	}
 }
 
-// BuildISORun will install the system from a given configuration
+// BuildISORun will build an ISO from a given configuration
 func (b *BuildISOAction) ISORun() (err error) {
 	cleanup := utils.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()

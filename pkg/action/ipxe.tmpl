@@ -1,0 +1,12 @@
+#!ipxe
+
+set os {{ .Name }}
+set url {{ .Url }}
+
+set kernel ${os}-kernel
+set initrd ${os}-initrd
+set rootfs ${os}.squashfs
+
+echo Booting ${os}
+initrd ${url}/${initrd}
+chain --autofree --replace ${url}/${kernel} initrd=${initrd} ip=dhcp rd.cos.disable root=live:${url}/${rootfs} elemental.install.iso_url=${url}/${iso} console=tty1 console=ttyS0 ${cmdline}
