@@ -504,4 +504,17 @@ var _ = Describe("Runtime Actions", func() {
 			Expect(err.Error()).To(ContainSubstring("no repositories configured"))
 		})
 	})
+	Describe("Build pxe", Label("pxe", "build"), func() {
+		var pxeConf *v1.PXEConfig
+		BeforeEach(func() {
+			pxeConf = config.NewPXE()
+		})
+		It("Fails if config has no repos", func() {
+			cfg.Repos = []v1.Repository{}
+			a := action.NewBuildPXEAction(cfg, pxeConf)
+			err := a.Run()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("No file found with prefixes:"))
+		})
+	})
 })
