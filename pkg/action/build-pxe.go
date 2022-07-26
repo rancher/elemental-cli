@@ -113,7 +113,7 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 		currTime := time.Now()
 		baseFileName = fmt.Sprintf("%s.%s", b.cfg.Name, currTime.Format("20060102"))
 	} else {
-		baseFileName = fmt.Sprintf("%s", b.cfg.Name)
+		baseFileName = b.cfg.Name
 	}
 
 	kernel, initrd, err := b.e.FindKernelInitrd(rootDir)
@@ -151,14 +151,6 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 		return err
 	}
 
-	data := struct {
-		Name string
-		Url  string
-	}{
-		Name: baseFileName,
-		Url:  b.spec.PxeBootUrl,
-	}
-
 	ipxeFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("%s%s", baseFileName, constants.PxeConfigSuffix)))
 	if err != nil {
 		b.cfg.Logger.Error("Could not create iPXE config file", err)
@@ -166,7 +158,13 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 	}
 
 	b.cfg.Logger.Info("Writing iPXE config")
-	err = ipxe.Execute(ipxeFile, data)
+	err = ipxe.Execute(ipxeFile, struct {
+		Name string
+		URL  string
+	}{
+		Name: baseFileName,
+		URL:  b.spec.PxeBootURL,
+	})
 	if err != nil {
 		b.cfg.Logger.Error("Could not write config", err)
 		return err

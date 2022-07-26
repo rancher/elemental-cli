@@ -28,7 +28,7 @@ var _ = Describe("BuildDisk", Label("disk", "raw", "cmd"), func() {
 	var buf *bytes.Buffer
 	BeforeEach(func() {
 		rootCmd = NewRootCmd()
-		_ = NewBuildDisk(rootCmd, false)
+		_ = NewBuildDisk(rootCmd, "build-", false)
 		buf = new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)

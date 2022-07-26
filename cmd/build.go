@@ -20,10 +20,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewBuild returns a new instance of the build-iso subcommand and appends it to
+// NewBuildCmd returns a new instance of the build-iso subcommand and appends it to
 // the root command. requireRoot is to initiate it with or without the CheckRoot
 // pre-run check. This method is mostly used for testing purposes.
-func NewBuild(root *cobra.Command, addCheckRoot bool) *cobra.Command {
+func NewBuildCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "build",
 		Short: "Build bootable installation media",
@@ -33,4 +33,4 @@ func NewBuild(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	return c
 }
 
-var buildCmd = NewBuild(rootCmd, false)
+var buildCmd = NewBuildCmd(rootCmd, false)

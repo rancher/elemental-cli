@@ -411,7 +411,7 @@ type Image struct {
 type PXEConf struct {
 	RootFS     []*ImageSource `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
 	Image      []*ImageSource `yaml:"image,omitempty" mapstructure:"image"`
-	PxeBootUrl string         `yaml:"pxe-boot-url,omitempty" mapstructure:"pxe-boot-url"`
+	PxeBootURL string         `yaml:"pxe-boot-url,omitempty" mapstructure:"pxe-boot-url"`
 }
 
 // LiveISO represents the configurations needed for a live ISO image

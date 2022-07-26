@@ -20,17 +20,22 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rancher/elemental-cli/cmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
+	"github.com/rancher/elemental-cli/cmd"
 )
 
 func main() {
 	rootCmd := cmd.NewRootCmd()
+	buildCmd := cmd.NewBuildCmd(rootCmd, false)
 	for _, command := range []*cobra.Command{
 		rootCmd,
-		cmd.NewBuildDisk(rootCmd, false),
-		cmd.NewBuildISO(rootCmd, false),
+		buildCmd,
+		cmd.NewBuildDisk(rootCmd, "build-", false),
+		cmd.NewBuildISO(rootCmd, "build-", false),
+		cmd.NewBuildDisk(buildCmd, "", false),
+		cmd.NewBuildISO(buildCmd, "", false),
 		cmd.NewCloudInitCmd(rootCmd),
 		cmd.NewConvertDisk(rootCmd, false),
 		cmd.NewInstallCmd(rootCmd, false),

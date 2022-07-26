@@ -28,7 +28,7 @@ var _ = Describe("BuidISO", Label("iso", "cmd"), func() {
 	var buf *bytes.Buffer
 	BeforeEach(func() {
 		rootCmd = NewRootCmd()
-		_ = NewBuildISO(rootCmd, false)
+		_ = NewBuildISO(rootCmd, "build-", false)
 		buf = new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
