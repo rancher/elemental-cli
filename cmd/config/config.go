@@ -286,7 +286,7 @@ func ReadBuildISO(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.LiveISO, error) 
 	return iso, err
 }
 
-func ReadBuildPXE(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.PXEConf, error) {
+func ReadBuildPXE(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.PXEConfig, error) {
 	pxe := config.NewPXE()
 	vp := viper.Sub("pxe")
 	if vp == nil {

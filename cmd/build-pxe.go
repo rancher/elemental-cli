@@ -120,7 +120,7 @@ func NewBuildPXE(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	root.AddCommand(c)
 	c.Flags().StringP("name", "n", "", "Basename of the generated pxe files")
 	c.Flags().StringP("output", "o", "", "Output directory (defaults to current directory)")
-	c.Flags().Bool("date", false, "Adds a date suffix into the generated ISO file")
+	c.Flags().Bool("date", false, "Adds a date suffix into the generated file names")
 	c.Flags().String("overlay-rootfs", "", "Path of the overlayed rootfs data")
 	c.Flags().String("pxe-boot-url", "tftp://10.0.2.2/isos", "HTTP/TFTP URL used to generate PXE config")
 	c.Flags().StringArray("repo", []string{}, "A repository URI for luet. Can be repeated to add more than one source.")

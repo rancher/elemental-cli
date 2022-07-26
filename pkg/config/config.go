@@ -489,7 +489,7 @@ func NewISO() *v1.LiveISO {
 	}
 }
 
-func NewPXE() *v1.PXEConf {
+func NewPXE() *v1.PXEConfig {
 	var imageSrc []*v1.ImageSource
 
 	defaultImage := constants.GetDefaultISOImage()
@@ -498,7 +498,7 @@ func NewPXE() *v1.PXEConf {
 		imageSrc = append(imageSrc, src)
 	}
 
-	return &v1.PXEConf{
+	return &v1.PXEConfig{
 		Image: imageSrc,
 	}
 }

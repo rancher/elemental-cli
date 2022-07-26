@@ -35,11 +35,11 @@ var ipxeTemplate string
 
 type BuildPXEAction struct {
 	cfg  *v1.BuildConfig
-	spec *v1.PXEConf
+	spec *v1.PXEConfig
 	e    *elemental.Elemental
 }
 
-func NewBuildPXEAction(cfg *v1.BuildConfig, spec *v1.PXEConf) *BuildPXEAction {
+func NewBuildPXEAction(cfg *v1.BuildConfig, spec *v1.PXEConfig) *BuildPXEAction {
 	return &BuildPXEAction{
 		cfg:  cfg,
 		e:    elemental.NewElemental(&cfg.Config),
@@ -60,12 +60,6 @@ func (b *BuildPXEAction) Run() (err error) {
 
 	rootDir := filepath.Join(pxeTmpDir, "rootfs")
 	err = utils.MkdirAll(b.cfg.Fs, rootDir, constants.DirPerm)
-	if err != nil {
-		return err
-	}
-
-	uefiDir := filepath.Join(pxeTmpDir, "uefi")
-	err = utils.MkdirAll(b.cfg.Fs, uefiDir, constants.DirPerm)
 	if err != nil {
 		return err
 	}
@@ -129,7 +123,7 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 		return err
 	}
 
-	b.cfg.Logger.Debugf("Copying initrd file %s to iso root tree", initrd)
+	b.cfg.Logger.Debugf("Copying initrd file %s to root tree", initrd)
 	err = utils.CopyFile(b.cfg.Fs, initrd, filepath.Join(outDir, fmt.Sprintf("%s%s", baseFileName, constants.PxeInitrdSuffix)))
 	if err != nil {
 		b.cfg.Logger.Error("Could not copy initrd", err)
