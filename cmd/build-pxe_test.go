@@ -24,11 +24,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-var _ = Describe("BuildISO", Label("iso", "cmd"), func() {
+var _ = Describe("BuildPXE", Label("pxe", "cmd", "build"), func() {
 	var buf *bytes.Buffer
 	BeforeEach(func() {
 		rootCmd = NewRootCmd()
-		_ = NewBuildISO(rootCmd, false)
+		buildCmd = NewBuildCmd(rootCmd, false)
+		_ = NewBuildPXE(buildCmd, false)
 		buf = new(bytes.Buffer)
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
@@ -37,38 +38,24 @@ var _ = Describe("BuildISO", Label("iso", "cmd"), func() {
 		viper.Reset()
 	})
 	It("Errors out setting consign-key without setting cosign", Label("flags"), func() {
-		_, _, err := executeCommandC(rootCmd, "build-iso", "--cosign-key", "pubKey.url")
+		_, _, err := executeCommandC(rootCmd, "build", "pxe", "--cosign-key", "pubKey.url")
 		Expect(err).ToNot(BeNil())
 		Expect(buf.String()).To(ContainSubstring("Usage:"))
 		Expect(err.Error()).To(ContainSubstring("'cosign-key' requires 'cosign' option to be enabled"))
 	})
 	It("Errors out if no rootfs sources are defined", Label("flags"), func() {
-		_, _, err := executeCommandC(rootCmd, "build-iso")
+		_, _, err := executeCommandC(rootCmd, "build", "pxe")
 		Expect(err).ToNot(BeNil())
 		Expect(err.Error()).To(ContainSubstring("rootfs source image for building ISO was not provided"))
 	})
 	It("Errors out if rootfs is a non valid argument", Label("flags"), func() {
-		_, _, err := executeCommandC(rootCmd, "build-iso", "/no/image/reference")
+		_, _, err := executeCommandC(rootCmd, "build", "pxe", "/no/image/reference")
 		Expect(err).ToNot(BeNil())
 		Expect(err.Error()).To(ContainSubstring("invalid image reference"))
 	})
 	It("Errors out if overlay roofs path does not exist", Label("flags"), func() {
 		_, _, err := executeCommandC(
-			rootCmd, "build-iso", "system/cos", "--overlay-rootfs", "/nonexistingpath",
-		)
-		Expect(err).ToNot(BeNil())
-		Expect(err.Error()).To(ContainSubstring("Invalid path"))
-	})
-	It("Errors out if overlay uefi path does not exist", Label("flags"), func() {
-		_, _, err := executeCommandC(
-			rootCmd, "build-iso", "someimage:latest", "--overlay-uefi", "/nonexistingpath",
-		)
-		Expect(err).ToNot(BeNil())
-		Expect(err.Error()).To(ContainSubstring("Invalid path"))
-	})
-	It("Errors out if overlay iso path does not exist", Label("flags"), func() {
-		_, _, err := executeCommandC(
-			rootCmd, "build-iso", "some/image:latest", "--overlay-iso", "/nonexistingpath",
+			rootCmd, "build", "pxe", "system/cos", "--overlay-rootfs", "/nonexistingpath",
 		)
 		Expect(err).ToNot(BeNil())
 		Expect(err.Error()).To(ContainSubstring("Invalid path"))

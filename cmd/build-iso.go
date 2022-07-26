@@ -34,9 +34,14 @@ import (
 // NewBuildISO returns a new instance of the build-iso subcommand and appends it to
 // the root command. requireRoot is to initiate it with or without the CheckRoot
 // pre-run check. This method is mostly used for testing purposes.
-func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobra.Command {
+func NewBuildISO(parent *cobra.Command, addCheckRoot bool) *cobra.Command {
+	cmdName := "build-iso"
+	if parent == buildCmd {
+		cmdName = "iso"
+	}
+
 	c := &cobra.Command{
-		Use:   fmt.Sprintf("%siso SOURCE", cmdPrefix),
+		Use:   fmt.Sprintf("%s SOURCE", cmdName),
 		Short: "Build bootable installation media ISOs",
 		Long: "Build bootable installation media ISOs\n\n" +
 			"SOURCE - should be provided as uri in following format <sourceType>:<sourceName>\n" +
@@ -135,7 +140,7 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 			return nil
 		},
 	}
-	root.AddCommand(c)
+	parent.AddCommand(c)
 	c.Flags().StringP("name", "n", "", "Basename of the generated ISO file")
 	c.Flags().StringP("output", "o", "", "Output directory (defaults to current directory)")
 	c.Flags().Bool("date", false, "Adds a date suffix into the generated ISO file")
@@ -152,5 +157,5 @@ func NewBuildISO(root *cobra.Command, cmdPrefix string, addCheckRoot bool) *cobr
 }
 
 // register the subcommand into rootCmd
-var _ = NewBuildISO(rootCmd, "build-", true)
-var _ = NewBuildISO(buildCmd, "", true)
+var _ = NewBuildISO(rootCmd, true)
+var _ = NewBuildISO(buildCmd, true)
