@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -73,7 +72,7 @@ func (b *BuildPXEAction) Run() (err error) {
 	}
 
 	b.cfg.Logger.Infof("Preparing squashfs root...")
-	err = b.applySources(rootDir, b.spec.RootFS...)
+	err = applySources(b.e, rootDir, b.spec.RootFS...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing OS packages: %v", err)
 		return err
@@ -81,13 +80,6 @@ func (b *BuildPXEAction) Run() (err error) {
 	err = utils.CreateDirStructure(b.cfg.Fs, rootDir)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed creating root directory structure: %v", err)
-		return err
-	}
-
-	b.cfg.Logger.Infof("Preparing PXE-files root tree...")
-	err = b.applySources(b.cfg.OutDir, b.spec.Image...)
-	if err != nil {
-		b.cfg.Logger.Errorf("Failed installing packages: %v", err)
 		return err
 	}
 
@@ -145,7 +137,7 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 		return err
 	}
 
-	ipxeFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("%s%s", baseFileName, constants.PxeConfigSuffix)))
+	ipxeFile, err := b.cfg.Fs.Create(filepath.Join(outDir, fmt.Sprintf("%s%s", baseFileName, constants.PxeConfigSuffix)))
 	if err != nil {
 		b.cfg.Logger.Error("Could not create iPXE config file", err)
 		return err
@@ -164,15 +156,5 @@ func (b BuildPXEAction) writeFiles(outDir, rootDir string) error {
 		return err
 	}
 
-	return nil
-}
-
-func (b BuildPXEAction) applySources(target string, sources ...*v1.ImageSource) error {
-	for _, src := range sources {
-		_, err := b.e.DumpSource(target, src)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

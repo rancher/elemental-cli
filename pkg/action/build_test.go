@@ -506,15 +506,70 @@ var _ = Describe("Runtime Actions", func() {
 	})
 	Describe("Build pxe", Label("pxe", "build"), func() {
 		var pxeConf *v1.PXEConfig
+		var pxeAction *action.BuildPXEAction
 		BeforeEach(func() {
 			pxeConf = config.NewPXE()
+			pxeAction = action.NewBuildPXEAction(cfg, pxeConf)
 		})
-		It("Fails if config has no repos", func() {
-			cfg.Repos = []v1.Repository{}
-			a := action.NewBuildPXEAction(cfg, pxeConf)
-			err := a.Run()
+		It("Fails if rootfs is empty", func() {
+			err := pxeAction.Run()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("No file found with prefixes:"))
+			// Fails to find kernel
+			Expect(err.Error()).To(ContainSubstring("No file found with prefixes: [uImage Image zImage vmlinuz image]"))
+		})
+		It("Fails if initrd is not found", func() {
+			tmpDir, err := utils.TempDir(fs, "", "elemental-pxe-test")
+			Expect(err).ToNot(HaveOccurred())
+
+			bootDir := filepath.Join(tmpDir, "boot")
+			err = utils.MkdirAll(fs, bootDir, constants.DirPerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			kernel, err := fs.Create(filepath.Join(bootDir, "vmlinuz"))
+			Expect(err).ToNot(HaveOccurred())
+			_, err = kernel.WriteString("Hi, this is a kernel")
+
+			pxeConf.RootFS = append(pxeConf.RootFS, v1.NewDirSrc(tmpDir))
+
+			err = pxeAction.Run()
+			Expect(err).To(HaveOccurred())
+			// Fails to find initrd
+			Expect(err.Error()).To(ContainSubstring("No file found with prefixes: [initrd initramfs]"))
+		})
+		It("Writes pxe-files to output-dir", func() {
+			tmpDir, err := utils.TempDir(fs, "", "elemental-pxe-test")
+			Expect(err).ToNot(HaveOccurred())
+
+			tmpInDir := filepath.Join(tmpDir, "in")
+			bootDir := filepath.Join(tmpInDir, "boot")
+			err = utils.MkdirAll(fs, bootDir, constants.DirPerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			tmpOutDir := filepath.Join(tmpDir, "out")
+			err = utils.MkdirAll(fs, tmpOutDir, constants.DirPerm)
+			Expect(err).ToNot(HaveOccurred())
+
+			cfg.OutDir = tmpOutDir
+			cfg.Name = "elemental"
+
+			kernel, err := fs.Create(filepath.Join(bootDir, "vmlinuz"))
+			Expect(err).ToNot(HaveOccurred())
+			_, err = kernel.WriteString("Hi, this is a kernel")
+			Expect(err).ToNot(HaveOccurred())
+
+			initrd, err := fs.Create(filepath.Join(bootDir, "initrd"))
+			Expect(err).ToNot(HaveOccurred())
+			_, err = initrd.WriteString("Hi, this is a initrd")
+			Expect(err).ToNot(HaveOccurred())
+
+			pxeConf.RootFS = append(pxeConf.RootFS, v1.NewDirSrc(tmpInDir))
+
+			err = pxeAction.Run()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(utils.Exists(fs, filepath.Join(tmpOutDir, "elemental-kernel"))).To(BeTrue())
+			Expect(utils.Exists(fs, filepath.Join(tmpOutDir, "elemental-initrd"))).To(BeTrue())
+			Expect(utils.Exists(fs, filepath.Join(tmpOutDir, "elemental.ipxe"))).To(BeTrue())
 		})
 	})
 })

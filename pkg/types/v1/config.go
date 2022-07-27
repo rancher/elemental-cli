@@ -410,7 +410,6 @@ type Image struct {
 // PXEConfig represents the configurations needed to generate a PXE boot environment
 type PXEConfig struct {
 	RootFS     []*ImageSource `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
-	Image      []*ImageSource `yaml:"image,omitempty" mapstructure:"image"`
 	PxeBootURL string         `yaml:"pxe-boot-url,omitempty" mapstructure:"pxe-boot-url"`
 }
 

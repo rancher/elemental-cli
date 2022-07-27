@@ -79,7 +79,7 @@ func (b *BuildISOAction) ISORun() (err error) {
 	}
 
 	b.cfg.Logger.Infof("Preparing squashfs root...")
-	err = b.applySources(rootDir, b.spec.RootFS...)
+	err = applySources(b.e, rootDir, b.spec.RootFS...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing OS packages: %v", err)
 		return err
@@ -91,14 +91,14 @@ func (b *BuildISOAction) ISORun() (err error) {
 	}
 
 	b.cfg.Logger.Infof("Preparing EFI image...")
-	err = b.applySources(uefiDir, b.spec.UEFI...)
+	err = applySources(b.e, uefiDir, b.spec.UEFI...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing EFI packages: %v", err)
 		return err
 	}
 
 	b.cfg.Logger.Infof("Preparing ISO image root tree...")
-	err = b.applySources(isoDir, b.spec.Image...)
+	err = applySources(b.e, isoDir, b.spec.Image...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing ISO image packages: %v", err)
 		return err
@@ -250,9 +250,9 @@ func (b BuildISOAction) burnISO(root string) error {
 	return nil
 }
 
-func (b BuildISOAction) applySources(target string, sources ...*v1.ImageSource) error {
+func applySources(e *elemental.Elemental, target string, sources ...*v1.ImageSource) error {
 	for _, src := range sources {
-		_, err := b.e.DumpSource(target, src)
+		_, err := e.DumpSource(target, src)
 		if err != nil {
 			return err
 		}
