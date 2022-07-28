@@ -84,7 +84,7 @@ func NewBuildPXE(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				}
 				spec.RootFS = []*v1.ImageSource{imgSource}
 			} else if len(spec.RootFS) == 0 {
-				errmsg := "rootfs source image for building ISO was not provided"
+				errmsg := "rootfs source image for building PXE was not provided"
 				cfg.Logger.Errorf(errmsg)
 				return fmt.Errorf(errmsg)
 			}

@@ -36,7 +36,7 @@ var _ = Describe("BuildISO", Label("iso", "cmd"), func() {
 	AfterEach(func() {
 		viper.Reset()
 	})
-	It("Errors out setting consign-key without setting cosign", Label("flags"), func() {
+	It("Errors out setting cosign-key without setting cosign", Label("flags"), func() {
 		_, _, err := executeCommandC(rootCmd, "build-iso", "--cosign-key", "pubKey.url")
 		Expect(err).ToNot(BeNil())
 		Expect(buf.String()).To(ContainSubstring("Usage:"))

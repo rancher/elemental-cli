@@ -46,7 +46,7 @@ var _ = Describe("BuildPXE", Label("pxe", "cmd", "build"), func() {
 	It("Errors out if no rootfs sources are defined", Label("flags"), func() {
 		_, _, err := executeCommandC(rootCmd, "build", "pxe")
 		Expect(err).ToNot(BeNil())
-		Expect(err.Error()).To(ContainSubstring("rootfs source image for building ISO was not provided"))
+		Expect(err.Error()).To(ContainSubstring("rootfs source image for building PXE was not provided"))
 	})
 	It("Errors out if rootfs is a non valid argument", Label("flags"), func() {
 		_, _, err := executeCommandC(rootCmd, "build", "pxe", "/no/image/reference")
