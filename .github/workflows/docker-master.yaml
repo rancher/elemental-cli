@@ -1,12 +1,6 @@
 name: Docker build and push
 on:
-  pull_request:
-    paths:
-      - Dockerfile
-      - .github/workflows/docker.yaml
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 jobs:
@@ -27,18 +21,7 @@ jobs:
           echo "Using tag $(git describe --tags `git rev-list --tags --max-count=1`  2>/dev/null || echo 'v0.0.1')"
           TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null || echo "v0.0.1")
           echo "::set-output name=elemental_tag::$TAG"
-      - name: Docker meta for tag
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: |
-            quay.io/costoolkit/elemental-cli
-          tags: |
-            type=semver,pattern=v{{version}}
-            type=raw,value=latest
       - name: Docker meta for master/PR
-        if: !contains(github.ref, 'refs/tags/')
         id: meta
         uses: docker/metadata-action@v3
         with:
@@ -93,7 +76,7 @@ jobs:
           rm disk.img
       - name: Push image  # should be a free build as everything has been cached and loaded
         uses: docker/build-push-action@v2
-        if: ${{ github.event_name != 'pull_request' }}  # push on tag and main merge
+        if: ${{ github.event_name != 'pull_request' }}  # push on main merge
         with:
           context: .
           push: true
