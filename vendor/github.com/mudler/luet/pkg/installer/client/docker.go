@@ -156,7 +156,7 @@ func (c *DockerClient) DownloadFile(name string) (string, error) {
 		}
 
 		imageName := fmt.Sprintf("%s:%s", uri, helpers.SanitizeImageString(name))
-		c.context.Info("Downloading", imageName)
+		c.context.Info("Downloading ", imageName)
 
 		info, err := docker.DownloadAndExtractDockerImage(c.context, imageName, temp, c.auth, c.RepoData.Verify)
 		if err != nil {
