@@ -205,7 +205,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 			Expect(ep.State == nil).To(BeTrue())
 			Expect(ep.Recovery == nil).To(BeTrue())
 		})
-		Describe("returns a partition list by install order", Focus, func() {
+		Describe("returns a partition list by install order", func() {
 			It("with no extra parts", func() {
 				ep := v1.NewElementalPartitionsFromList(p)
 				lst := ep.PartitionsByInstallOrder([]*v1.Partition{})
@@ -397,6 +397,10 @@ var _ = Describe("Types", Label("types", "config"), func() {
 				Expect(err).Should(HaveOccurred())
 			})
 			Describe("with extra partitions", func() {
+				BeforeEach(func() {
+					// Set a source for the install
+					spec.Active.Source = v1.NewDirSrc("/dir")
+				})
 				It("fails if persistent and an extra partition have size == 0", func() {
 					spec.ExtraPartitions = append(spec.ExtraPartitions, &v1.Partition{Size: 0})
 					err := spec.Sanitize()
