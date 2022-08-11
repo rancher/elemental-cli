@@ -1,12 +1,6 @@
-name: Docker build and push
+name: Docker build and push on tag
 on:
-  pull_request:
-    paths:
-      - Dockerfile
-      - .github/workflows/docker.yaml
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 jobs:
@@ -17,6 +11,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: cosign-installer
+        uses: sigstore/cosign-installer@v2.0.0
       - name: Install qemu-tools
         run: |
           sudo apt-get update
@@ -27,7 +23,7 @@ jobs:
           echo "Using tag $(git describe --tags `git rev-list --tags --max-count=1`  2>/dev/null || echo 'v0.0.1')"
           TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null || echo "v0.0.1")
           echo "::set-output name=elemental_tag::$TAG"
-      - name: Docker meta
+      - name: Docker meta for tag
         id: meta
         uses: docker/metadata-action@v3
         with:
@@ -35,12 +31,11 @@ jobs:
             quay.io/costoolkit/elemental-cli
           tags: |
             type=semver,pattern=v{{version}}
-            type=sha,format=short,prefix=${{ steps.export_tag.outputs.elemental_tag }}-
+            type=raw,value=latest
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to Quay
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v1
         with:
           registry: quay.io
@@ -82,7 +77,6 @@ jobs:
           rm disk.img
       - name: Push image  # should be a free build as everything has been cached and loaded
         uses: docker/build-push-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
         with:
           context: .
           push: true
@@ -94,3 +88,10 @@ jobs:
           build-args: |
             ELEMENTAL_VERSION=${{ steps.export_tag.outputs.elemental_tag }}
             ELEMENTAL_COMMIT=${{ github.sha }}
+      - name: Sign image
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run:
+          for value in ${{ steps.meta.outputs.tags }};do
+            cosign sign $value
+          done
