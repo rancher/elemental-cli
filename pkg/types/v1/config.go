@@ -385,7 +385,6 @@ func (ep ElementalPartitions) PartitionsByInstallOrder(extraPartitions []*Partit
 	if ep.Persistent != nil && !inExcludes(ep.Persistent, excludes...) {
 		// Check if we have to set this partition the latest due size == 0
 		if ep.Persistent.Size == 0 {
-			fmt.Printf("Setting persistent to latest")
 			lastPartition = ep.Persistent
 		} else {
 			partitions = append(partitions, ep.Persistent)
@@ -399,10 +398,8 @@ func (ep ElementalPartitions) PartitionsByInstallOrder(extraPartitions []*Partit
 			if lastPartition != nil {
 				// Ignore this part, we are not setting 2 parts to have 0 size!
 				continue
-			} else {
-				fmt.Printf("Setting %s to latest", p.Name)
-				lastPartition = p
 			}
+			lastPartition = p
 		} else {
 			partitions = append(partitions, p)
 		}
