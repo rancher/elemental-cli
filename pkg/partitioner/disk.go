@@ -226,6 +226,7 @@ func (dev *Disk) NewPartitionTable(label string) (string, error) {
 }
 
 // AddPartition adds a partition. Size is expressed in MiB here
+// Size is expressed in MiB here
 func (dev *Disk) AddPartition(size uint, fileSystem string, pLabel string, flags ...string) (int, error) {
 	pc := NewPartedCall(dev.String(), dev.runner)
 
@@ -324,6 +325,7 @@ func (dev Disk) FindPartitionDevice(partNum int) (string, error) {
 }
 
 // ExpandLastPartition expands the latest partition in the disk. Size is expressed in MiB here
+// Size is expressed in MiB here
 func (dev *Disk) ExpandLastPartition(size uint) (string, error) {
 	pc := NewPartedCall(dev.String(), dev.runner)
 
