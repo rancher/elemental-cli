@@ -107,10 +107,9 @@ const (
 	SELinuxTargetedContextFile = SELinuxTargetedPath + "/contexts/files/file_contexts"
 	SELinuxTargetedPolicyPath  = SELinuxTargetedPath + "/policy"
 
-	//TODO these paths are abitrary, coupled to package live/grub2 and assuming xz
-	// I'd suggest using `/boot/kernel` and `/boot/initrd`
-	IsoKernelPath = "/boot/kernel.xz"
-	IsoInitrdPath = "/boot/rootfs.xz"
+	//TODO document these paths. They are arbitrary but coupled to grub.cfg
+	IsoKernelPath = "/boot/kernel"
+	IsoInitrdPath = "/boot/initrd"
 
 	// TODO would be nice to discover these ISO loader values instead of hardcoding them
 	// These values are coupled with package live/grub2
@@ -186,19 +185,6 @@ func GetDefaultXorrisoBooloaderArgs(root, bootFile, bootCatalog, hybridMBR strin
 		"-boot_image", "any", "emul_type=no_emulation",
 	}...)
 	return args
-}
-
-func GetDefaultISOImage() []string {
-	return []string{
-		"channel:live/grub2",
-		"channel:live/grub2-efi-image",
-	}
-}
-
-func GetDefaultISOUEFI() []string {
-	return []string{
-		"channel:live/grub2-efi-image",
-	}
 }
 
 func GetBuildDiskDefaultPackages() map[string]string {

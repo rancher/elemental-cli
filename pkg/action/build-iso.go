@@ -23,21 +23,29 @@ import (
 
 	"github.com/rancher/elemental-cli/pkg/constants"
 	"github.com/rancher/elemental-cli/pkg/elemental"
+	"github.com/rancher/elemental-cli/pkg/live"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
 )
 
+type LiveBootloader interface {
+	PrepareEFI(rootDir, uefiDir string) error
+	PrepareISO(rootDir, isoDir, label, menuEntry string) error
+}
+
 type BuildISOAction struct {
-	cfg  *v1.BuildConfig
-	spec *v1.LiveISO
-	e    *elemental.Elemental
+	cfg      *v1.BuildConfig
+	spec     *v1.LiveISO
+	liveBoot LiveBootloader
+	e        *elemental.Elemental
 }
 
 func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO) *BuildISOAction {
 	return &BuildISOAction{
-		cfg:  cfg,
-		e:    elemental.NewElemental(&cfg.Config),
-		spec: spec,
+		cfg:      cfg,
+		e:        elemental.NewElemental(&cfg.Config),
+		spec:     spec,
+		liveBoot: live.NewGreenLiveBootLoader(cfg),
 	}
 }
 
@@ -91,6 +99,13 @@ func (b *BuildISOAction) ISORun() (err error) {
 	}
 
 	b.cfg.Logger.Infof("Preparing EFI image...")
+	if b.spec.BootloaderInRootFs {
+		err = b.liveBoot.PrepareEFI(rootDir, uefiDir)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed fetching EFI data: %v", err)
+			return err
+		}
+	}
 	err = b.applySources(uefiDir, b.spec.UEFI...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing EFI packages: %v", err)
@@ -98,6 +113,13 @@ func (b *BuildISOAction) ISORun() (err error) {
 	}
 
 	b.cfg.Logger.Infof("Preparing ISO image root tree...")
+	if b.spec.BootloaderInRootFs {
+		err = b.liveBoot.PrepareISO(rootDir, isoDir, b.spec.Label, b.spec.GrubDefEntry)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed fetching bootloader binaries: %v", err)
+			return err
+		}
+	}
 	err = b.applySources(isoDir, b.spec.Image...)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed installing ISO image packages: %v", err)
