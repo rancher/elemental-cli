@@ -17,7 +17,6 @@ limitations under the License.
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -136,18 +135,20 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 
 				fileContent, err := g.config.Fs.ReadFile(fileReadName)
 				if err != nil {
-					return errors.New(fmt.Sprintf("error reading %s: %s", fileReadName, err))
+					return fmt.Errorf("error reading %s: %s", fileReadName, err)
 				}
 				err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
 				if err != nil {
-					return errors.New(fmt.Sprintf("error writing %s: %s", fileWriteName, err))
+					return fmt.Errorf("error writing %s: %s", fileWriteName, err)
 				}
 			}
 
 			// Add grub.cfg in EFI that chainloads the grub.cfg in recovery
 			grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
 			err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/elemental/grub.cfg"), grubCfgContent, cnst.FilePerm)
-
+			if err != nil {
+				return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/elemental/grub.cfg"), err)
+			}
 			// Create entry in bootmanager
 			// -c create
 			// -d disk
@@ -163,7 +164,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 				return err
 			}
 		} else {
-			return errors.New(fmt.Sprintf("shim files do not exist at %s", filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s", g.config.Arch))))
+			return fmt.Errorf("shim files do not exist at %s", filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s", g.config.Arch)))
 		}
 	}
 	return nil
