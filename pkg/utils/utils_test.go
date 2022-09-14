@@ -792,7 +792,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("installs with default values", func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "")
 				Expect(err).To(BeNil())
 
 				Expect(buf).To(ContainSubstring("Installing GRUB.."))
@@ -807,7 +807,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("installs with efi firmware", Label("efi"), func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(buf.String()).To(ContainSubstring("--target=x86_64-efi"))
@@ -822,7 +822,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "serial", false)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "serial", false, "")
 				Expect(err).To(BeNil())
 
 				Expect(buf.String()).To(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
@@ -834,7 +834,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err := fs.RemoveAll(filepath.Join(rootDir, constants.GrubConf))
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false)).NotTo(BeNil())
+				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "")).NotTo(BeNil())
 
 				Expect(buf).To(ContainSubstring("Failed reading grub config file"))
 			})
