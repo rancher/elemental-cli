@@ -806,13 +806,38 @@ var _ = Describe("Utils", Label("utils"), func() {
 
 			})
 			It("installs with efi firmware", Label("efi"), func() {
+				err := utils.MkdirAll(fs, filepath.Join(rootDir, "/usr/share/efi/x86_64/"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/usr/share/efi/x86_64/shim.efi"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/usr/share/efi/x86_64/MokManager.efi"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/usr/share/efi/x86_64/grub.efi"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(buf.String()).To(ContainSubstring("--target=x86_64-efi"))
-				Expect(buf.String()).To(ContainSubstring("--efi-directory"))
-				Expect(buf.String()).To(ContainSubstring("Installing grub efi for arch x86_64"))
+				// Check everything was copied
+				_, err = fs.ReadFile(fmt.Sprintf("%s/grub2/grub.cfg", bootDir))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI"))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental"))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/shim.efi"))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/MokManager.efi"))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/grub.efi"))
+				Expect(err).To(BeNil())
+
+			})
+			It("fails with efi if no shim files exist", func() {
+				grub := utils.NewGrub(config)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("shim"))
 			})
 			It("installs with extra tty", func() {
 				err := fs.Mkdir("/dev", constants.DirPerm)
