@@ -17,10 +17,14 @@ limitations under the License.
 package live
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/rancher/elemental-cli/pkg/constants"
 )
 
 const (
+	isoEFIPath            = "/boot/uefi.img"
 	efiBootPath           = "/EFI/BOOT"
 	isoLoaderPath         = "/boot/x86_64/loader"
 	grubArm64Path         = grubPrefixDir + "/arm64-efi"
@@ -28,6 +32,13 @@ const (
 	grubEfiImageArm64Dest = efiBootPath + "/bootaa64.efi"
 	grubCfg               = "grub.cfg"
 	grubPrefixDir         = "/boot/grub2"
+
+	// TODO document any custom bootloader must match this setup as these are not configurable
+	// and coupled with the xorriso call
+	isoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
+	isoBootCatalog = "/boot/x86_64/boot.catalog"
+	isoBootFile    = "/boot/x86_64/loader/eltorito.img"
+
 	//TODO use some identifer known to be unique
 	grubEfiCfg = "search --no-floppy --file --set=root " + constants.IsoKernelPath +
 		"\nset prefix=($root)" + grubPrefixDir +
@@ -69,3 +80,24 @@ const (
 		}                                                                           
 	fi`
 )
+
+func XorrisoBooloaderArgs(root string) []string {
+	args := []string{
+		"-boot_image", "grub", fmt.Sprintf("bin_path=%s", isoBootFile),
+		"-boot_image", "grub", fmt.Sprintf("grub2_mbr=%s/%s", root, isoHybridMBR),
+		"-boot_image", "grub", "grub2_boot_info=on",
+		"-boot_image", "any", "partition_offset=16",
+		"-boot_image", "any", fmt.Sprintf("cat_path=%s", isoBootCatalog),
+		"-boot_image", "any", "cat_hidden=on",
+		"-boot_image", "any", "boot_info_table=on",
+		"-boot_image", "any", "platform_id=0x00",
+		"-boot_image", "any", "emul_type=no_emulation",
+		"-boot_image", "any", "load_size=2048",
+		"-append_partition", "2", "0xef", filepath.Join(root, isoEFIPath),
+		"-boot_image", "any", "next",
+		"-boot_image", "any", "efi_path=--interval:appended_partition_2:all::",
+		"-boot_image", "any", "platform_id=0xef",
+		"-boot_image", "any", "emul_type=no_emulation",
+	}
+	return args
+}

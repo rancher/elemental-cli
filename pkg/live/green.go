@@ -29,10 +29,11 @@ import (
 
 type GreenLiveBootLoader struct {
 	buildCfg *v1.BuildConfig
+	spec     *v1.LiveISO
 }
 
-func NewGreenLiveBootLoader(cfg *v1.BuildConfig) *GreenLiveBootLoader {
-	return &GreenLiveBootLoader{buildCfg: cfg}
+func NewGreenLiveBootLoader(cfg *v1.BuildConfig, spec *v1.LiveISO) *GreenLiveBootLoader {
+	return &GreenLiveBootLoader{buildCfg: cfg, spec: spec}
 }
 
 func (g *GreenLiveBootLoader) PrepareEFI(rootDir, uefiDir string) error {
@@ -69,7 +70,7 @@ func (g *GreenLiveBootLoader) PrepareEFI(rootDir, uefiDir string) error {
 	return g.buildCfg.Fs.WriteFile(filepath.Join(uefiDir, efiBootPath, grubCfg), []byte(grubEfiCfg), constants.FilePerm)
 }
 
-func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir, label, menuEntry string) error {
+func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 	const (
 		grubFont          = "/usr/share/grub2/unicode.pf2"
 		grubBootHybridImg = "/usr/share/grub2/i386-pc/boot_hybrid.img"
@@ -124,7 +125,7 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir, label, menuEntry str
 	// Write grub.cfg file
 	err = g.buildCfg.Fs.WriteFile(
 		filepath.Join(imageDir, grubPrefixDir, grubCfg),
-		[]byte(fmt.Sprintf(grubCfgTemplate, menuEntry, label)),
+		[]byte(fmt.Sprintf(grubCfgTemplate, g.spec.GrubEntry, g.spec.Label)),
 		constants.FilePerm,
 	)
 	if err != nil {

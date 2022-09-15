@@ -111,12 +111,6 @@ const (
 	IsoKernelPath = "/boot/kernel"
 	IsoInitrdPath = "/boot/initrd"
 
-	// TODO would be nice to discover these ISO loader values instead of hardcoding them
-	// These values are coupled with package live/grub2
-	IsoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
-	IsoBootCatalog = "/boot/x86_64/boot.catalog"
-	IsoBootFile    = "/boot/x86_64/loader/eltorito.img"
-
 	// Default directory and file fileModes
 	DirPerm        = os.ModeDir | os.ModePerm
 	FilePerm       = 0666

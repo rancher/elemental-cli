@@ -30,7 +30,7 @@ import (
 
 type LiveBootloader interface {
 	PrepareEFI(rootDir, uefiDir string) error
-	PrepareISO(rootDir, isoDir, label, menuEntry string) error
+	PrepareISO(rootDir, isoDir string) error
 }
 
 type BuildISOAction struct {
@@ -45,7 +45,7 @@ func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO) *BuildISOAction {
 		cfg:      cfg,
 		e:        elemental.NewElemental(&cfg.Config),
 		spec:     spec,
-		liveBoot: live.NewGreenLiveBootLoader(cfg),
+		liveBoot: live.NewGreenLiveBootLoader(cfg, spec),
 	}
 }
 
@@ -114,7 +114,7 @@ func (b *BuildISOAction) ISORun() (err error) {
 
 	b.cfg.Logger.Infof("Preparing ISO image root tree...")
 	if b.spec.BootloaderInRootFs {
-		err = b.liveBoot.PrepareISO(rootDir, isoDir, b.spec.Label, b.spec.GrubDefEntry)
+		err = b.liveBoot.PrepareISO(rootDir, isoDir)
 		if err != nil {
 			b.cfg.Logger.Errorf("Failed fetching bootloader binaries: %v", err)
 			return err
@@ -244,9 +244,7 @@ func (b BuildISOAction) burnISO(root string) error {
 		"-volid", b.spec.Label, "-joliet", "on", "-padding", "0",
 		"-outdev", outputFile, "-map", root, "/", "-chmod", "0755", "--",
 	}
-	args = append(args, constants.GetDefaultXorrisoBooloaderArgs(
-		root, b.spec.BootFile, b.spec.BootCatalog, b.spec.HybridMBR,
-	)...)
+	args = append(args, live.XorrisoBooloaderArgs(root)...)
 
 	out, err := b.cfg.Runner.Run(cmd, args...)
 	b.cfg.Logger.Debugf("Xorriso: %s", string(out))

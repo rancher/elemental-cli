@@ -454,10 +454,7 @@ type LiveISO struct {
 	UEFI               []*ImageSource `yaml:"uefi,omitempty" mapstructure:"uefi"`
 	Image              []*ImageSource `yaml:"image,omitempty" mapstructure:"image"`
 	Label              string         `yaml:"label,omitempty" mapstructure:"label"`
-	GrubDefEntry       string         `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
-	BootCatalog        string         `yaml:"boot-catalog,omitempty" mapstructure:"boot-catalog"`
-	BootFile           string         `yaml:"boot-file,omitempty" mapstructure:"boot-file"`
-	HybridMBR          string         `yaml:"hybrid-mbr,omitempty" mapstructure:"hybrid-mbr,omitempty"`
+	GrubEntry          string         `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
 	BootloaderInRootFs bool           `yaml:"bootloader-in-rootfs" mapstructure:"bootloader-in-rootfs"`
 }
 
