@@ -88,7 +88,7 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 	switch g.buildCfg.Arch {
 	case constants.ArchAmd64, constants.Archx86:
 		// Create eltorito image
-		eltorito, err := g.buildEltoritoImg(rootDir)
+		eltorito, err := g.BuildEltoritoImg(rootDir)
 		if err != nil {
 			return err
 		}
@@ -136,7 +136,7 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 	return g.PrepareEFI(rootDir, imageDir)
 }
 
-func (g *GreenLiveBootLoader) buildEltoritoImg(rootDir string) (string, error) {
+func (g *GreenLiveBootLoader) BuildEltoritoImg(rootDir string) (string, error) {
 	const (
 		grubBiosTarget  = "i386-pc"
 		grubI386BinDir  = "/usr/share/grub2/i386-pc"
