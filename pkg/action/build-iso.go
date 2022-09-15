@@ -34,19 +34,31 @@ type LiveBootloader interface {
 }
 
 type BuildISOAction struct {
+	liveBoot LiveBootloader
 	cfg      *v1.BuildConfig
 	spec     *v1.LiveISO
-	liveBoot LiveBootloader
 	e        *elemental.Elemental
 }
 
-func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO) *BuildISOAction {
-	return &BuildISOAction{
+type BuildISOActionOption func(a *BuildISOAction)
+
+func WithLiveBoot(l LiveBootloader) BuildISOActionOption {
+	return func(a *BuildISOAction) {
+		a.liveBoot = l
+	}
+}
+
+func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO, opts ...BuildISOActionOption) *BuildISOAction {
+	b := &BuildISOAction{
 		cfg:      cfg,
 		e:        elemental.NewElemental(&cfg.Config),
 		spec:     spec,
 		liveBoot: live.NewGreenLiveBootLoader(cfg, spec),
 	}
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b
 }
 
 // BuildISORun will install the system from a given configuration
@@ -252,19 +264,13 @@ func (b BuildISOAction) burnISO(root string) error {
 		return err
 	}
 
-	// When we start Xorriso we expect either building the ISO img file or returning
-	// an error. During tests anyway we use the FakeRunner Runner: the Xorriso cmd is
-	// not run and we land here with no ISO img file and no error.
-	// Let's skip the checksum computation if the ISO img file is missing.
-	if exists, _ := utils.Exists(b.cfg.Fs, outputFile); exists {
-		checksum, err := utils.CalcFileChecksum(b.cfg.Fs, outputFile)
-		if err != nil {
-			return fmt.Errorf("checksum computation failed: %w", err)
-		}
-		err = b.cfg.Fs.WriteFile(fmt.Sprintf("%s.sha256", outputFile), []byte(fmt.Sprintf("%s %s\n", checksum, isoFileName)), 0644)
-		if err != nil {
-			return fmt.Errorf("cannot write checksum file: %w", err)
-		}
+	checksum, err := utils.CalcFileChecksum(b.cfg.Fs, outputFile)
+	if err != nil {
+		return fmt.Errorf("checksum computation failed: %w", err)
+	}
+	err = b.cfg.Fs.WriteFile(fmt.Sprintf("%s.sha256", outputFile), []byte(fmt.Sprintf("%s %s\n", checksum, isoFileName)), 0644)
+	if err != nil {
+		return fmt.Errorf("cannot write checksum file: %w", err)
 	}
 
 	return nil
