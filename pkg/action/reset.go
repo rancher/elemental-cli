@@ -176,7 +176,6 @@ func (r ResetAction) Run() (err error) {
 		r.spec.Tty,
 		r.spec.Efi,
 		r.spec.Partitions.State.FilesystemLabel,
-		r.spec.BootloaderName,
 	)
 	if err != nil {
 		return err

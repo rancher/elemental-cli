@@ -41,7 +41,7 @@ func NewGrub(config *v1.Config) *Grub {
 }
 
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, bootloaderName string) (err error) { // nolint:gocyclo
+func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string) (err error) { // nolint:gocyclo
 	var grubargs []string
 	var grubdir, finalContent string
 	// only install grub on non-efi systems
@@ -147,7 +147,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 			}
 		}
 
-		err = MkdirAll(g.config.Fs, filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/", bootloaderName)), cnst.DirPerm)
+		err = MkdirAll(g.config.Fs, filepath.Join(cnst.EfiDir, "EFI/boot/"), cnst.DirPerm)
 		if err != nil {
 			g.config.Logger.Errorf("Error creating dirs: %s", err)
 			return err
@@ -194,7 +194,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 						return nil
 					}
 
-					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/%s", bootloaderName, f))
+					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/boot/%s", f))
 
 					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
 
@@ -215,31 +215,39 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 				return fmt.Errorf("did not find efi artifacts under %s", rootDir)
 			}
 		}
+		
+		// Rename the shimName to the fallback name so the system boots from fallback. This means that we do not create
+		// any bootloader entries, so our recent installation has the lower priority if something else is on the bootloader
+		var writeShim string
+
+		switch g.config.Arch {
+		case cnst.ArchArm64:
+			writeShim = "bootaa64.efi"
+		default:
+			writeShim = "bootx64.efi"
+
+		}
+
+		readShim, err := g.config.Fs.ReadFile(filepath.Join(cnst.EfiDir, "EFI/boot/", shimName))
+		if err != nil {
+			return fmt.Errorf("could not read shim file %s at dir %s", shimName, cnst.EfiDir)
+		}
+
+		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/boot/", writeShim), readShim, cnst.FilePerm)
+		if err != nil {
+			return fmt.Errorf("could nto write shim file %s at dir %s", shimName, cnst.EfiDir)
+		}
 
 		// Add grub.cfg in EFI that chainloads the grub.cfg in recovery
 		// Notice that we set the config to /grub2/grub.cfg which means the above we need to copy the file from
 		// the installation source into that dir
 		grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
-		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), grubCfgContent, cnst.FilePerm)
+		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), grubCfgContent, cnst.FilePerm)
 		if err != nil {
-			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), err)
-		}
-		// Create entry in bootmanager
-		// -c create
-		// -d disk
-		// -p partition containing loader
-		// -w write unique sig to MBR if needed
-		// -L label
-		// -l loader (inverted slashes!)
-		efibootmgrArgs := []string{"-c", "-d", target, "-p", "1", "-w", "-L", bootloaderName, "-l", fmt.Sprintf("\\EFI\\%s\\%s.efi", bootloaderName, shimName)}
-		out, err := g.config.Runner.Run("efibootmgr", efibootmgrArgs...)
-		if err != nil {
-			g.config.Logger.Errorf("error running efibootmgr: %s", err)
-			g.config.Logger.Debugf("error running efibootmgr: %s", out)
-			return err
+			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/boot/grub.cfg")), err)
 		}
 	}
-	
+
 	return nil
 }
 

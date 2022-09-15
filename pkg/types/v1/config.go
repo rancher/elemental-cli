@@ -146,7 +146,6 @@ type InstallSpec struct {
 	Recovery        Image               `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
 	Passive         Image
 	GrubConf        string
-	BootloaderName  string
 }
 
 // Sanitize checks the consistency of the struct, returns error
@@ -184,9 +183,6 @@ func (i *InstallSpec) Sanitize() error {
 	if extraPartsSizeCheck == 1 && i.Partitions.Persistent.Size == 0 {
 		return fmt.Errorf("both persistent partition and extra partitions have size set to 0. Only one partition can have its size set to 0 which means that it will take all the available disk space in the device")
 	}
-	if i.BootloaderName == "" {
-		i.BootloaderName = "elemental-shim"
-	}
 	return i.Partitions.SetFirmwarePartitions(i.Firmware, i.PartTable)
 }
 
@@ -195,16 +191,15 @@ type ResetSpec struct {
 	FormatPersistent bool `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
 	FormatOEM        bool `yaml:"reset-oem,omitempty" mapstructure:"reset-oem"`
 
-	GrubDefEntry   string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
-	Tty            string `yaml:"tty,omitempty" mapstructure:"tty"`
-	Active         Image  `yaml:"system,omitempty" mapstructure:"system"`
-	Passive        Image
-	Partitions     ElementalPartitions
-	Target         string
-	Efi            bool
-	GrubConf       string
-	State          *InstallState
-	BootloaderName string
+	GrubDefEntry string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
+	Tty          string `yaml:"tty,omitempty" mapstructure:"tty"`
+	Active       Image  `yaml:"system,omitempty" mapstructure:"system"`
+	Passive      Image
+	Partitions   ElementalPartitions
+	Target       string
+	Efi          bool
+	GrubConf     string
+	State        *InstallState
 }
 
 // Sanitize checks the consistency of the struct, returns error
@@ -215,9 +210,6 @@ func (r *ResetSpec) Sanitize() error {
 	}
 	if r.Partitions.State == nil || r.Partitions.State.MountPoint == "" {
 		return fmt.Errorf("undefined state partition")
-	}
-	if r.BootloaderName == "" {
-		r.BootloaderName = "elemental-shim"
 	}
 	return nil
 }
