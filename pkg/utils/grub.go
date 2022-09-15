@@ -238,9 +238,8 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 			g.config.Logger.Debugf("error running efibootmgr: %s", out)
 			return err
 		}
-	} else {
-		return fmt.Errorf("shim files do not exist at %s", filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s", g.config.Arch)))
 	}
+	
 	return nil
 }
 
