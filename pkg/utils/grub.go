@@ -154,9 +154,46 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		}
 
 		// Copy needed files for efi boot
-		for _, f := range []string{"shim.efi", "MokManager.efi", "grub.efi"} {
+		system, err := IdentifySourceSystem(rootDir)
+		if err != nil {
+			return err
+		}
+
+		var shimFiles []string
+		var shimName string
+
+		switch system {
+		case cnst.Fedora:
+			switch g.config.Arch {
+			case cnst.ArchArm64:
+				shimFiles = []string{"shimaa64.efi", "mmaa64.efi", "grubx64.efi"}
+				shimName = "shimaa64.efi"
+			default:
+				shimFiles = []string{"shimx64.efi", "mmx64.efi", "grubx64.efi"}
+				shimName = "shimx64.efi"
+			}
+		case cnst.Ubuntu:
+			switch g.config.Arch {
+			case cnst.ArchArm64:
+				shimFiles = []string{"shimaa64.efi.signed", "mmaa64.efi", "grubx64.efi.signed"}
+				shimName = "shimaa64.efi.signed"
+			default:
+				shimFiles = []string{"shimx64.efi.signed", "mmx64.efi", "grubx64.efi.signed"}
+				shimName = "shimx64.efi.signed"
+			}
+		case cnst.Suse:
+			shimFiles = []string{"shim.efi", "MokManager.efi", "grub.efi"}
+			shimName = "shim.efi"
+		}
+
+		for _, f := range shimFiles {
 			err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
-				if d.Name() == f && strings.Contains(path, g.config.Arch) {
+				if d.Name() == f {
+					// On suse systems check if the path contains the proper arch
+					if system == cnst.Suse && !strings.Contains(path, g.config.Arch) {
+						return nil
+					}
+
 					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/%s", bootloaderName, f))
 
 					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
@@ -194,7 +231,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		// -w write unique sig to MBR if needed
 		// -L label
 		// -l loader (inverted slashes!)
-		efibootmgrArgs := []string{"-c", "-d", target, "-p", "1", "-w", "-L", bootloaderName, "-l", fmt.Sprintf("\\EFI\\%s\\shim.efi", bootloaderName)}
+		efibootmgrArgs := []string{"-c", "-d", target, "-p", "1", "-w", "-L", bootloaderName, "-l", fmt.Sprintf("\\EFI\\%s\\%s.efi", bootloaderName, shimName)}
 		out, err := g.config.Runner.Run("efibootmgr", efibootmgrArgs...)
 		if err != nil {
 			g.config.Logger.Errorf("error running efibootmgr: %s", err)

@@ -17,10 +17,12 @@ limitations under the License.
 package utils
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	random "math/rand"
 	"net/url"
 	"os"
@@ -513,4 +515,61 @@ func CalcFileChecksum(fs v1.FS, fileName string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// IdentifySourceSystem tries to find the os-release file in a given dir and identify the system based on the data in there
+func IdentifySourceSystem(path string) (string, error) {
+	var system string
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if d.Name() == "os-release" {
+			osRelease, err := parseOsRelease(path)
+			if err != nil {
+				return err
+			}
+			switch osRelease["ID"] {
+			case cnst.Fedora:
+				system = cnst.Fedora
+			case cnst.Ubuntu:
+				system = cnst.Ubuntu
+			default:
+				system = cnst.Suse
+			}
+		}
+		return err
+	})
+	return system, err
+}
+
+func parseOsRelease(filename string) (osrelease map[string]string, err error) {
+	var lines []string
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	for _, line := range lines {
+		//key, value, err := parseOsReleaseLine(v)
+		if len(line) == 0 {
+			continue
+		}
+		if line[0] == '#' {
+			continue
+		}
+		splitted := strings.SplitN(line, "=", 2)
+		if len(splitted) != 2 {
+			continue
+		}
+
+		key := strings.Trim(strings.TrimSpace(splitted[0]), "\"")
+		value := strings.Trim(strings.TrimSpace(splitted[1]), "\"")
+		osrelease[key] = value
+	}
+	return
 }
