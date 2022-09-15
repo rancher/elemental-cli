@@ -18,6 +18,7 @@ package utils
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
@@ -120,70 +121,88 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		// otherwise if we insmod it will fail to find them
 		// We no longer call grub-install here so the modules are not setup automatically in the state partition
 		// as they were before. We now use the bundled grub.efi provided by the shim package
+		g.config.Logger.Infof("Generating grub files for efi on %s", target)
+		var foundModules bool
+		var foundEfi bool
 		for _, m := range []string{"loopback.mod", "squash4.mod"} {
-			fileReadName := filepath.Join(rootDir, fmt.Sprintf("/usr/share/grub2/%s-efi/%s", g.config.Arch, m))
-			fileWriteName := filepath.Join(bootDir, fmt.Sprintf("grub2/%s-efi/%s", g.config.Arch, m))
-			g.config.Logger.Debugf("Copying %s to %s", fileReadName, fileWriteName)
-			fileContent, err := g.config.Fs.ReadFile(fileReadName)
-			if err != nil {
-				return fmt.Errorf("error reading %s: %s", fileReadName, err)
-			}
-			err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
-			if err != nil {
-				return fmt.Errorf("error writing %s: %s", fileWriteName, err)
+			err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+				if d.Name() == m && strings.Contains(path, g.config.Arch) {
+					fileWriteName := filepath.Join(bootDir, fmt.Sprintf("grub2/%s-efi/%s", g.config.Arch, m))
+					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
+					fileContent, err := g.config.Fs.ReadFile(path)
+					if err != nil {
+						return fmt.Errorf("error reading %s: %s", path, err)
+					}
+					err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
+					if err != nil {
+						return fmt.Errorf("error writing %s: %s", fileWriteName, err)
+					}
+					foundModules = true
+					return nil
+				}
+				return err
+			})
+			if !foundModules {
+				return fmt.Errorf("did not find grub modules under %s", rootDir)
 			}
 		}
 
-		if exists, _ := Exists(g.config.Fs, filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s/", g.config.Arch))); exists {
-			g.config.Logger.Infof("Generating grub files for efi on %s", target)
-			err = MkdirAll(g.config.Fs, filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/", bootloaderName)), cnst.DirPerm)
-			if err != nil {
-				g.config.Logger.Errorf("Error creating dirs: %s", err)
-				return err
-			}
-
-			// Copy needed files for efi boot
-			for _, f := range []string{"shim.efi", "MokManager.efi", "grub.efi"} {
-				fileReadName := filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s/%s", g.config.Arch, f))
-				fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/%s", bootloaderName, f))
-
-				g.config.Logger.Debugf("Copying %s to %s", fileReadName, fileWriteName)
-
-				fileContent, err := g.config.Fs.ReadFile(fileReadName)
-				if err != nil {
-					return fmt.Errorf("error reading %s: %s", fileReadName, err)
-				}
-				err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
-				if err != nil {
-					return fmt.Errorf("error writing %s: %s", fileWriteName, err)
-				}
-			}
-
-			// Add grub.cfg in EFI that chainloads the grub.cfg in recovery
-			// Notice that we set the config to /grub2/grub.cfg which means the above we need to copy the file from
-			// the installation source into that dir
-			grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
-			err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), grubCfgContent, cnst.FilePerm)
-			if err != nil {
-				return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), err)
-			}
-			// Create entry in bootmanager
-			// -c create
-			// -d disk
-			// -p partition containing loader
-			// -w write unique sig to MBR if needed
-			// -L label
-			// -l loader (inverted slashes!)
-			efibootmgrArgs := []string{"-c", "-d", target, "-p", "1", "-w", "-L", bootloaderName, "-l", fmt.Sprintf("\\EFI\\%s\\shim.efi", bootloaderName)}
-			out, err := g.config.Runner.Run("efibootmgr", efibootmgrArgs...)
-			if err != nil {
-				g.config.Logger.Errorf("error running efibootmgr: %s", err)
-				g.config.Logger.Debugf("error running efibootmgr: %s", out)
-				return err
-			}
-		} else {
-			return fmt.Errorf("shim files do not exist at %s", filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s", g.config.Arch)))
+		err = MkdirAll(g.config.Fs, filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/", bootloaderName)), cnst.DirPerm)
+		if err != nil {
+			g.config.Logger.Errorf("Error creating dirs: %s", err)
+			return err
 		}
+
+		// Copy needed files for efi boot
+		for _, f := range []string{"shim.efi", "MokManager.efi", "grub.efi"} {
+			err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+				if d.Name() == f && strings.Contains(path, g.config.Arch) {
+					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/%s", bootloaderName, f))
+
+					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
+
+					fileContent, err := g.config.Fs.ReadFile(path)
+					if err != nil {
+						return fmt.Errorf("error reading %s: %s", path, err)
+					}
+					err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
+					if err != nil {
+						return fmt.Errorf("error writing %s: %s", fileWriteName, err)
+					}
+					foundEfi = true
+					return nil
+				}
+				return err
+			})
+			if !foundEfi {
+				return fmt.Errorf("did not find efi artifacts under %s", rootDir)
+			}
+		}
+
+		// Add grub.cfg in EFI that chainloads the grub.cfg in recovery
+		// Notice that we set the config to /grub2/grub.cfg which means the above we need to copy the file from
+		// the installation source into that dir
+		grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
+		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), grubCfgContent, cnst.FilePerm)
+		if err != nil {
+			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/%s/grub.cfg", bootloaderName)), err)
+		}
+		// Create entry in bootmanager
+		// -c create
+		// -d disk
+		// -p partition containing loader
+		// -w write unique sig to MBR if needed
+		// -L label
+		// -l loader (inverted slashes!)
+		efibootmgrArgs := []string{"-c", "-d", target, "-p", "1", "-w", "-L", bootloaderName, "-l", fmt.Sprintf("\\EFI\\%s\\shim.efi", bootloaderName)}
+		out, err := g.config.Runner.Run("efibootmgr", efibootmgrArgs...)
+		if err != nil {
+			g.config.Logger.Errorf("error running efibootmgr: %s", err)
+			g.config.Logger.Debugf("error running efibootmgr: %s", out)
+			return err
+		}
+	} else {
+		return fmt.Errorf("shim files do not exist at %s", filepath.Join(rootDir, fmt.Sprintf("/usr/share/efi/%s", g.config.Arch)))
 	}
 	return nil
 }
