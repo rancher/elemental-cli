@@ -127,7 +127,6 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		for _, m := range []string{"loopback.mod", "squash4.mod"} {
 			err = WalkDirFs(g.config.Fs, rootDir, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
-					fmt.Printf(err.Error())
 					return err
 				}
 				if d.Name() == m && strings.Contains(path, g.config.Arch) {
@@ -192,7 +191,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		}
 
 		for _, f := range shimFiles {
-			err = WalkDirFs(g.config.Fs, rootDir, func(path string, d fs.DirEntry, err error) error {
+			_ = WalkDirFs(g.config.Fs, rootDir, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
@@ -253,7 +252,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
 		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), grubCfgContent, cnst.FilePerm)
 		if err != nil {
-			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/boot/grub.cfg")), err)
+			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), err)
 		}
 	}
 
