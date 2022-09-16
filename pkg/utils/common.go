@@ -518,11 +518,15 @@ func CalcFileChecksum(fs v1.FS, fileName string) (string, error) {
 }
 
 // IdentifySourceSystem tries to find the os-release file in a given dir and identify the system based on the data in there
-func IdentifySourceSystem(path string) (string, error) {
+func IdentifySourceSystem(vfs v1.FS, path string) (string, error) {
 	var system string
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	var found bool
+	err := WalkDirFs(vfs, path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if d.Name() == "os-release" {
-			osRelease, err := parseOsRelease(path)
+			osRelease, err := parseOsRelease(vfs, path)
 			if err != nil {
 				return err
 			}
@@ -534,15 +538,20 @@ func IdentifySourceSystem(path string) (string, error) {
 			default:
 				system = cnst.Suse
 			}
+			found = true
 		}
 		return err
 	})
+	if !found {
+		err = fmt.Errorf("could not find os-release file under %s", path)
+	}
 	return system, err
 }
 
-func parseOsRelease(filename string) (osrelease map[string]string, err error) {
+func parseOsRelease(fs v1.FS, filename string) (osrelease map[string]string, err error) {
 	var lines []string
-	file, err := os.Open(filename)
+	osrelease = map[string]string{}
+	file, err := fs.Open(filename)
 	if err != nil {
 		return
 	}

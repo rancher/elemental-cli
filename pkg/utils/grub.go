@@ -125,7 +125,11 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		var foundModules bool
 		var foundEfi bool
 		for _, m := range []string{"loopback.mod", "squash4.mod"} {
-			err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+			err = WalkDirFs(g.config.Fs, rootDir, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					fmt.Printf(err.Error())
+					return err
+				}
 				if d.Name() == m && strings.Contains(path, g.config.Arch) {
 					fileWriteName := filepath.Join(bootDir, fmt.Sprintf("grub2/%s-efi/%s", g.config.Arch, m))
 					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
@@ -154,10 +158,11 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		}
 
 		// Copy needed files for efi boot
-		system, err := IdentifySourceSystem(rootDir)
+		system, err := IdentifySourceSystem(g.config.Fs, rootDir)
 		if err != nil {
 			return err
 		}
+		g.config.Logger.Infof("Identified source system as %s", system)
 
 		var shimFiles []string
 		var shimName string
@@ -187,7 +192,11 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		}
 
 		for _, f := range shimFiles {
-			err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+			err = WalkDirFs(g.config.Fs, rootDir, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+
 				if d.Name() == f {
 					// On suse systems check if the path contains the proper arch
 					if system == cnst.Suse && !strings.Contains(path, g.config.Arch) {
@@ -215,7 +224,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 				return fmt.Errorf("did not find efi artifacts under %s", rootDir)
 			}
 		}
-		
+
 		// Rename the shimName to the fallback name so the system boots from fallback. This means that we do not create
 		// any bootloader entries, so our recent installation has the lower priority if something else is on the bootloader
 		var writeShim string

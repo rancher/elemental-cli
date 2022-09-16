@@ -814,6 +814,14 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				err = fs.WriteFile(filepath.Join(rootDir, "/usr/share/efi/x86_64/grub.efi"), []byte(""), constants.FilePerm)
 				Expect(err).ShouldNot(HaveOccurred())
+				err = utils.MkdirAll(fs, filepath.Join(rootDir, "/x86_64/"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/x86_64/loopback.mod"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = utils.MkdirAll(fs, filepath.Join(rootDir, "/etc/"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"suse\""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
 				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
 				Expect(err).ShouldNot(HaveOccurred())
@@ -823,21 +831,47 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(err).To(BeNil())
 				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI"))
 				Expect(err).To(BeNil())
-				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental"))
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/boot"))
 				Expect(err).To(BeNil())
-				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/shim.efi"))
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/boot/shim.efi"))
 				Expect(err).To(BeNil())
-				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/MokManager.efi"))
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/boot/MokManager.efi"))
 				Expect(err).To(BeNil())
-				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/elemental/grub.efi"))
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/boot/grub.efi"))
+				Expect(err).To(BeNil())
+				_, err = fs.Stat(filepath.Join(constants.EfiDir, "EFI/boot/bootx64.efi"))
 				Expect(err).To(BeNil())
 
 			})
-			It("fails with efi if no shim files exist", func() {
+			It("fails with efi if no modules files exist", Label("efi"), func() {
 				grub := utils.NewGrub(config)
 				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("shim"))
+				Expect(err.Error()).To(ContainSubstring("grub"))
+				Expect(err.Error()).To(ContainSubstring("modules"))
+			})
+			It("fails with efi if no os-release file exist", Label("efi"), func() {
+				err := utils.MkdirAll(fs, filepath.Join(rootDir, "/x86_64/"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/x86_64/loopback.mod"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				grub := utils.NewGrub(config)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("os-release"))
+			})
+			It("fails with efi if no grub files exist", Label("efi"), func() {
+				err := utils.MkdirAll(fs, filepath.Join(rootDir, "/x86_64/"), constants.DirPerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/x86_64/loopback.mod"), []byte(""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				err = fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"suse\""), constants.FilePerm)
+				Expect(err).ShouldNot(HaveOccurred())
+				grub := utils.NewGrub(config)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("efi"))
+				Expect(err.Error()).To(ContainSubstring("artifacts"))
 			})
 			It("installs with extra tty", func() {
 				err := fs.Mkdir("/dev", constants.DirPerm)
@@ -1257,6 +1291,74 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(header.DiskGeometry[2]).To(Equal(uint8(16))) // heads
 				Expect(header.DiskGeometry[3]).To(Equal(uint8(31))) // sectors per track
 			})
+		})
+
+	})
+	Describe("IdentifySourceSystem", Label("fs", "IdentifySourceSystem"), func() {
+		var rootDir string
+		var buf *bytes.Buffer
+		BeforeEach(func() {
+			rootDir = constants.ActiveDir
+			buf = &bytes.Buffer{}
+			logger = v1.NewBufferLogger(buf)
+			logger.SetLevel(v1.DebugLevel())
+			config.Logger = logger
+			err := utils.MkdirAll(fs, filepath.Join(rootDir, "/etc/"), constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("fails if os-release doesnt exist", func() {
+			_, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("os-release"))
+		})
+		It("identifies fedora system", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"fedora\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Fedora))
+		})
+		It("identifies ubuntu system", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"ubuntu\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Ubuntu))
+		})
+		It("identifies suse system", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"suse\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Suse))
+		})
+		It("fallback into suse if its an unknown system", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"sle-micro-for-rancher\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Suse))
+		})
+		It("fallback into suse if os-release is empty", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte(""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Suse))
+		})
+		It("identifies suse system with spaces in the file", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("\n\n\nID=\"suse\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Suse))
+		})
+		It("identifies suse system with comments in the file", func() {
+			err := fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("# this is a comment\nID=\"suse\""), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			system, err := utils.IdentifySourceSystem(fs, rootDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(system).To(Equal(constants.Suse))
 		})
 
 	})
