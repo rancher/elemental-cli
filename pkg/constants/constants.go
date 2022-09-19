@@ -107,7 +107,7 @@ const (
 	SELinuxTargetedContextFile = SELinuxTargetedPath + "/contexts/files/file_contexts"
 	SELinuxTargetedPolicyPath  = SELinuxTargetedPath + "/policy"
 
-	//TODO document these paths. They are arbitrary but coupled to grub.cfg
+	// These paths are arbitrary but coupled to grub.cfg
 	IsoKernelPath = "/boot/kernel"
 	IsoInitrdPath = "/boot/initrd"
 
