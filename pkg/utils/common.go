@@ -536,9 +536,9 @@ func CalcFileChecksum(fs v1.FS, fileName string) (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-// IdentifySourceSystem tries to find the os-release file in a given dir and identify the system based on the data in there
-func IdentifySourceSystem(vfs v1.FS, path string) (string, error) {
-	var system string
+// IdentifySourceSystem tries to find the os-release file in a given dir and return a cnst.OsConfig
+func IdentifySourceSystem(vfs v1.FS, path string, arch string) (cnst.OsConfig, error) {
+	var system cnst.OsConfig
 	var found bool
 	err := WalkDirFs(vfs, path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -551,11 +551,11 @@ func IdentifySourceSystem(vfs v1.FS, path string) (string, error) {
 			}
 			switch osRelease["ID"] {
 			case cnst.Fedora:
-				system = cnst.Fedora
+				system = cnst.NewFedoraOsConfig(arch)
 			case cnst.Ubuntu:
-				system = cnst.Ubuntu
+				system = cnst.NewUbuntuOsConfig(arch)
 			default:
-				system = cnst.Suse
+				system = cnst.NewSuseOsConfig(arch)
 			}
 			found = true
 		}

@@ -127,6 +127,12 @@ const (
 	Fedora = "fedora"
 	Ubuntu = "ubuntu"
 	Suse   = "suse"
+
+	ShimFallbackx86_64 = "bootx64.efi"                                                                                           // Name of the default fallback efi name on x86_64 systems
+	ShimFallbackarm64  = "bootaa64.efi"                                                                                          // Name of the default fallback efi name on aarch64 systems
+	EfiFallbackGrub    = "search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg" // default grub template for efi grub. Chainloads the grub.cfg under the state label partition
+	EfiGrubPath        = EfiDir + "/EFI/boot/"                                                                                   // Efi path for installs
+	EfiGrubPathCfg     = EfiGrubPath + "grub.cfg"                                                                                // Efi grub cfg for installs
 )
 
 func GetCloudInitPaths() []string {
@@ -141,7 +147,7 @@ func GetDefaultSquashfsOptions() []string {
 func GetDefaultSquashfsCompressionOptions() []string {
 	options := []string{"-comp", "xz", "-Xbcj"}
 	// Set the filter based on arch for best compression results
-	if runtime.GOARCH == "arm64" {
+	if runtime.GOARCH == ArchArm64 {
 		options = append(options, "arm")
 	} else {
 		options = append(options, "x86")
@@ -256,4 +262,64 @@ func GetISOKeyEnvMap() map[string]string {
 func GetDiskKeyEnvMap() map[string]string {
 	// None for the time being
 	return map[string]string{}
+}
+
+// OsConfig represents a configuration values for a system
+// So we can use the same methods on different base OS and have those keys point to the proper values
+type OsConfig struct {
+	shimFiles []string // list of the named shim files to be copied into the ESP partition
+	shimName  string   // Specific name of the shim file to boot
+	name      string   // system identifier
+}
+
+func (o OsConfig) Name() string {
+	return o.name
+}
+
+func (o OsConfig) ShimFiles() []string {
+	return o.shimFiles
+}
+
+func (o OsConfig) ShimName() string {
+	return o.shimName
+}
+
+// NewFedoraOsConfig returns the paths and configs for a fedora-based system
+func NewFedoraOsConfig(arch string) OsConfig {
+	var shimFiles []string
+	var shimName string
+
+	switch arch {
+	case ArchArm64:
+		shimFiles = []string{"shimaa64.efi", "mmaa64.efi", "grubx64.efi"}
+		shimName = "shimaa64.efi"
+	default:
+		shimFiles = []string{"shimx64.efi", "mmx64.efi", "grubx64.efi"}
+		shimName = "shimx64.efi"
+	}
+	return OsConfig{shimFiles: shimFiles, shimName: shimName, name: Fedora}
+}
+
+// NewUbuntuOsConfig returns the paths and configs for a ubuntu-based system
+func NewUbuntuOsConfig(arch string) OsConfig {
+	var shimFiles []string
+	var shimName string
+	switch arch {
+	case ArchArm64:
+		shimFiles = []string{"shimaa64.efi.signed", "mmaa64.efi", "grubx64.efi.signed"}
+		shimName = "shimaa64.efi.signed"
+	default:
+		shimFiles = []string{"shimx64.efi.signed", "mmx64.efi", "grubx64.efi.signed"}
+		shimName = "shimx64.efi.signed"
+	}
+	return OsConfig{shimFiles: shimFiles, shimName: shimName, name: Ubuntu}
+}
+
+// NewSuseOsConfig returns the paths and configs for a suse-based system
+func NewSuseOsConfig(arch string) OsConfig {
+	var shimFiles []string
+	var shimName string
+	shimFiles = []string{"shim.efi", "MokManager.efi", "grub.efi"}
+	shimName = "shim.efi"
+	return OsConfig{shimFiles: shimFiles, shimName: shimName, name: Suse}
 }
