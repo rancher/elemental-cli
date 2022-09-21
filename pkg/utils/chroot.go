@@ -150,7 +150,7 @@ func (c *Chroot) RunCallback(callback func() error) (err error) {
 	// Store current root
 	oldRootF, err = c.config.Fs.Open("/")
 	if err != nil {
-		c.config.Logger.Errorf("Can't open current rooy")
+		c.config.Logger.Errorf("Can't open current root")
 		return err
 	}
 	defer oldRootF.Close()
