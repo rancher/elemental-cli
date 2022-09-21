@@ -18,6 +18,8 @@ package mocks
 
 import "errors"
 
+const workDir = "/workingDir"
+
 // FakeSyscall is a test helper method to track calls to syscall
 // It can also fail on Chroot command
 type FakeSyscall struct {
@@ -37,6 +39,10 @@ func (f *FakeSyscall) Chroot(path string) error {
 
 func (f *FakeSyscall) Chdir(path string) error {
 	return nil
+}
+
+func (f *FakeSyscall) Getwd() (string, error) {
+	return workDir, nil
 }
 
 // WasChrootCalledWith is a helper method to check if Chroot was called with the given path
