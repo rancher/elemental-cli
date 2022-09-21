@@ -135,13 +135,13 @@ func (c *Chroot) RunCallback(callback func() error) (err error) {
 	var oldRootF *os.File
 
 	// Store current path
-	currentPath, err = c.config.Syscall.Getwd()
+	currentPath, err = os.Getwd()
 	if err != nil {
 		c.config.Logger.Error("Failed to get current path")
 		return err
 	}
 	defer func() {
-		tmpErr := c.config.Syscall.Chdir(currentPath)
+		tmpErr := os.Chdir(currentPath)
 		if err == nil && tmpErr != nil {
 			err = tmpErr
 		}

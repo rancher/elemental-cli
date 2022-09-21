@@ -16,12 +16,13 @@ limitations under the License.
 
 package v1
 
-import "syscall"
+import (
+	"syscall"
+)
 
 type SyscallInterface interface {
 	Chroot(string) error
 	Chdir(string) error
-	Getwd() (string, error)
 }
 
 type RealSyscall struct{}
@@ -32,8 +33,4 @@ func (r *RealSyscall) Chroot(path string) error {
 
 func (r *RealSyscall) Chdir(path string) error {
 	return syscall.Chdir(path)
-}
-
-func (r *RealSyscall) Getwd() (string, error) {
-	return syscall.Getwd()
 }
