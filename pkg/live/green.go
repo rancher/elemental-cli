@@ -72,7 +72,6 @@ func (g *GreenLiveBootLoader) PrepareEFI(rootDir, uefiDir string) error {
 
 func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 	const (
-		grubFont          = "/usr/share/grub2/unicode.pf2"
 		grubBootHybridImg = "/usr/share/grub2/i386-pc/boot_hybrid.img"
 		syslinuxFiles     = "/usr/share/syslinux/isolinux.bin " +
 			"/usr/share/syslinux/menu.c32 " +
@@ -87,37 +86,37 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 
 	switch g.buildCfg.Arch {
 	case constants.ArchAmd64, constants.Archx86:
-		// Create eltorito image
-		eltorito, err := g.BuildEltoritoImg(rootDir)
+		err = g.copyGrubFonts(rootDir, imageDir, isoLoaderPathX86)
 		if err != nil {
 			return err
 		}
 
-		// Inlude loaders in expected paths
-		loaderDir := filepath.Join(imageDir, isoLoaderPath)
-		err = utils.MkdirAll(g.buildCfg.Fs, loaderDir, constants.DirPerm)
-		if err != nil {
-			return err
-		}
-		loaderFiles := []string{eltorito, grubBootHybridImg}
-		loaderFiles = append(loaderFiles, strings.Split(syslinuxFiles, " ")...)
-		for _, f := range loaderFiles {
-			err = utils.CopyFile(g.buildCfg.Fs, filepath.Join(rootDir, f), loaderDir)
+		if g.spec.Firmware == v1.BIOS {
+			// Create eltorito image
+			eltorito, err := g.BuildEltoritoImg(rootDir)
 			if err != nil {
 				return err
 			}
-		}
-		fontsDir := filepath.Join(loaderDir, "/grub2/fonts")
-		err = utils.MkdirAll(g.buildCfg.Fs, fontsDir, constants.DirPerm)
-		if err != nil {
-			return err
-		}
-		err = utils.CopyFile(g.buildCfg.Fs, filepath.Join(rootDir, grubFont), fontsDir)
-		if err != nil {
-			return err
+
+			// Inlude loaders in expected paths
+			loaderFiles := []string{eltorito, grubBootHybridImg}
+			loaderFiles = append(loaderFiles, strings.Split(syslinuxFiles, " ")...)
+			for _, f := range loaderFiles {
+				err = utils.CopyFile(
+					g.buildCfg.Fs,
+					filepath.Join(rootDir, f),
+					filepath.Join(imageDir, isoLoaderPathX86),
+				)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	case constants.ArchArm64:
-		// TBC
+		err = g.copyGrubFonts(rootDir, imageDir, isoLoaderPathArm64)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("Not supported architecture: %v", g.buildCfg.Arch)
 	}
@@ -132,8 +131,29 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 		return err
 	}
 
-	// Include EFI contents in iso root too
-	return g.PrepareEFI(rootDir, imageDir)
+	if g.spec.Firmware == v1.EFI {
+		// Include EFI contents in iso root too
+		return g.PrepareEFI(rootDir, imageDir)
+	}
+
+	return nil
+}
+
+func (g *GreenLiveBootLoader) copyGrubFonts(rootDir, imageDir, isoLoaderPath string) error {
+	const grubFont = "/usr/share/grub2/unicode.pf2"
+
+	loaderDir := filepath.Join(imageDir, isoLoaderPath)
+	err := utils.MkdirAll(g.buildCfg.Fs, loaderDir, constants.DirPerm)
+	if err != nil {
+		return err
+	}
+
+	fontsDir := filepath.Join(loaderDir, "/grub2/fonts")
+	err = utils.MkdirAll(g.buildCfg.Fs, fontsDir, constants.DirPerm)
+	if err != nil {
+		return err
+	}
+	return utils.CopyFile(g.buildCfg.Fs, filepath.Join(rootDir, grubFont), fontsDir)
 }
 
 func (g *GreenLiveBootLoader) BuildEltoritoImg(rootDir string) (string, error) {
