@@ -25,19 +25,17 @@ import (
 
 const (
 	efiBootPath           = "/EFI/BOOT"
-	isoLoaderPathX86      = "/boot/x86_64/loader"
-	isoLoaderPathArm64    = "/boot/arm64/loader"
-	grubArm64Path         = grubPrefixDir + "/arm64-efi"
 	grubEfiImagex86Dest   = efiBootPath + "/bootx64.efi"
 	grubEfiImageArm64Dest = efiBootPath + "/bootaa64.efi"
 	grubCfg               = "grub.cfg"
 	grubPrefixDir         = "/boot/grub2"
+	isoBootCatalog        = "/boot/boot.catalog"
 
 	// TODO document any custom BIOS bootloader must match this setup as these are not configurable
 	// and coupled with the xorriso call
-	isoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
-	isoBootCatalog = "/boot/x86_64/boot.catalog"
-	isoBootFile    = "/boot/x86_64/loader/eltorito.img"
+	isoLoaderPath = "/boot/x86_64/loader"
+	isoHybridMBR  = isoLoaderPath + "/boot_hybrid.img"
+	isoBootFile   = isoLoaderPath + "/eltorito.img"
 
 	//TODO use some identifer known to be unique
 	grubEfiCfg = "search --no-floppy --file --set=root " + constants.IsoKernelPath +
@@ -62,14 +60,10 @@ const (
 	if [ "${grub_platform}" = "efi" ]; then
 		echo "Please press 't' to show the boot menu on this console"
 	fi
-	set font=($root)/boot/${grub_cpu}/loader/grub2/fonts/unicode.pf2
-	if [ -f ${font} ];then
-		loadfont ${font}
-	fi
 
 	menuentry "%s" --class os --unrestricted {
 		echo Loading kernel...
-		$linux ($root)` + constants.IsoKernelPath + `cdroot root=live:CDLABEL=%s rd.live.dir=/ rd.live.squashimg=rootfs.squashfs console=tty1 console=ttyS0 rd.cos.disable
+		$linux ($root)` + constants.IsoKernelPath + ` cdroot root=live:CDLABEL=%s rd.live.dir=/ rd.live.squashimg=rootfs.squashfs console=tty1 console=ttyS0 rd.cos.disable
 		echo Loading initrd...
 		$initrd ($root)` + constants.IsoInitrdPath + `
 	}                                                                               
@@ -93,7 +87,6 @@ func XorrisoBooloaderArgs(root, efiImg, firmware string) []string {
 			"-boot_image", "any", "platform_id=0xef",
 			"-boot_image", "any", "appended_part_as=gpt",
 			"-boot_image", "any", "partition_offset=16",
-			"-compliance", "no_emul_toc",
 		}
 		return args
 	case v1.BIOS:
@@ -106,8 +99,6 @@ func XorrisoBooloaderArgs(root, efiImg, firmware string) []string {
 			"-boot_image", "any", "cat_hidden=on",
 			"-boot_image", "any", "boot_info_table=on",
 			"-boot_image", "any", "platform_id=0x00",
-			"-boot_image", "any", "emul_type=no_emulation",
-			"-boot_image", "any", "load_size=2048",
 		}
 		return args
 	default:

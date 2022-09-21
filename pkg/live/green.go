@@ -84,41 +84,32 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 		return err
 	}
 
-	switch g.buildCfg.Arch {
-	case constants.ArchAmd64, constants.Archx86:
-		err = g.copyGrubFonts(rootDir, imageDir, isoLoaderPathX86)
+	if g.spec.Firmware == v1.BIOS {
+		// Create eltorito image
+		eltorito, err := g.BuildEltoritoImg(rootDir)
 		if err != nil {
 			return err
 		}
 
-		if g.spec.Firmware == v1.BIOS {
-			// Create eltorito image
-			eltorito, err := g.BuildEltoritoImg(rootDir)
+		// Create loaders folder
+		loaderDir := filepath.Join(imageDir, isoLoaderPath)
+		err = utils.MkdirAll(g.buildCfg.Fs, loaderDir, constants.DirPerm)
+		if err != nil {
+			return err
+		}
+		// Inlude loaders in expected paths
+		loaderFiles := []string{eltorito, grubBootHybridImg}
+		loaderFiles = append(loaderFiles, strings.Split(syslinuxFiles, " ")...)
+		for _, f := range loaderFiles {
+			err = utils.CopyFile(
+				g.buildCfg.Fs,
+				filepath.Join(rootDir, f),
+				filepath.Join(imageDir, isoLoaderPath),
+			)
 			if err != nil {
 				return err
 			}
-
-			// Inlude loaders in expected paths
-			loaderFiles := []string{eltorito, grubBootHybridImg}
-			loaderFiles = append(loaderFiles, strings.Split(syslinuxFiles, " ")...)
-			for _, f := range loaderFiles {
-				err = utils.CopyFile(
-					g.buildCfg.Fs,
-					filepath.Join(rootDir, f),
-					filepath.Join(imageDir, isoLoaderPathX86),
-				)
-				if err != nil {
-					return err
-				}
-			}
 		}
-	case constants.ArchArm64:
-		err = g.copyGrubFonts(rootDir, imageDir, isoLoaderPathArm64)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("Not supported architecture: %v", g.buildCfg.Arch)
 	}
 
 	// Write grub.cfg file
@@ -137,23 +128,6 @@ func (g *GreenLiveBootLoader) PrepareISO(rootDir, imageDir string) error {
 	}
 
 	return nil
-}
-
-func (g *GreenLiveBootLoader) copyGrubFonts(rootDir, imageDir, isoLoaderPath string) error {
-	const grubFont = "/usr/share/grub2/unicode.pf2"
-
-	loaderDir := filepath.Join(imageDir, isoLoaderPath)
-	err := utils.MkdirAll(g.buildCfg.Fs, loaderDir, constants.DirPerm)
-	if err != nil {
-		return err
-	}
-
-	fontsDir := filepath.Join(loaderDir, "/grub2/fonts")
-	err = utils.MkdirAll(g.buildCfg.Fs, fontsDir, constants.DirPerm)
-	if err != nil {
-		return err
-	}
-	return utils.CopyFile(g.buildCfg.Fs, filepath.Join(rootDir, grubFont), fontsDir)
 }
 
 func (g *GreenLiveBootLoader) BuildEltoritoImg(rootDir string) (string, error) {
