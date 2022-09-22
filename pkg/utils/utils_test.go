@@ -793,7 +793,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("installs with default values", func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "", true)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "", true, false)
 				Expect(err).To(BeNil())
 
 				Expect(buf).To(ContainSubstring("Installing GRUB.."))
@@ -824,7 +824,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err = fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"suse\""), constants.FilePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true, false)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// Check everything was copied
@@ -846,7 +846,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("fails with efi if no modules files exist", Label("efi"), func() {
 				grub := utils.NewGrub(config)
-				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true)
+				err := grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true, false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("grub"))
 				Expect(err.Error()).To(ContainSubstring("modules"))
@@ -857,7 +857,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err = fs.WriteFile(filepath.Join(rootDir, "/x86_64/loopback.mod"), []byte(""), constants.FilePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true, false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("os-release"))
 			})
@@ -869,7 +869,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err = fs.WriteFile(filepath.Join(rootDir, "/etc/os-release"), []byte("ID=\"suse\""), constants.FilePerm)
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "", true, "", true, false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("efi"))
 				Expect(err.Error()).To(ContainSubstring("artifacts"))
@@ -882,7 +882,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				grub := utils.NewGrub(config)
-				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "serial", false, "", true)
+				err = grub.Install(target, rootDir, bootDir, constants.GrubConf, "serial", false, "", true, false)
 				Expect(err).To(BeNil())
 
 				Expect(buf.String()).To(ContainSubstring("Adding extra tty (serial) to grub.cfg"))
@@ -894,7 +894,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err := fs.RemoveAll(filepath.Join(rootDir, constants.GrubConf))
 				Expect(err).ShouldNot(HaveOccurred())
 				grub := utils.NewGrub(config)
-				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "", true)).NotTo(BeNil())
+				Expect(grub.Install(target, rootDir, bootDir, constants.GrubConf, "", false, "", true, false)).NotTo(BeNil())
 
 				Expect(buf).To(ContainSubstring("Failed reading grub config file"))
 			})
@@ -932,10 +932,12 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err = fs.WriteFile("/EFI/test.efi", []byte(""), constants.FilePerm)
 				Expect(err).ToNot(HaveOccurred())
 				relativeTo, _ = fs.RawPath("/EFI")
+
 			})
 			It("Sets the proper entry", func() {
 				// We need to pass the relative path because bootmanager works on real paths
-				err := utils.CreateBootEntry("test.efi", relativeTo, efivars)
+				grub := utils.NewGrub(config)
+				err := grub.CreateBootEntry("test.efi", relativeTo, efivars)
 				Expect(err).ToNot(HaveOccurred())
 				vars, _ := efivars.ListVariables()
 				// Only one entry should have been created
@@ -951,7 +953,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 			It("Does not duplicate if an entry exists", func() {
 				// We need to pass the relative path because bootmanager works on real paths
-				err := utils.CreateBootEntry("test.efi", relativeTo, efivars)
+				grub := utils.NewGrub(config)
+				err := grub.CreateBootEntry("test.efi", relativeTo, efivars)
 				Expect(err).ToNot(HaveOccurred())
 				vars, _ := efivars.ListVariables()
 				// Only one entry should have been created
@@ -965,7 +968,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(option.FilePath).To(ContainSubstring("test.efi"))
 				Expect(option.FilePath.String()).To(ContainSubstring(`\EFI\test.efi`))
 				// And here we go again
-				err = utils.CreateBootEntry("test.efi", relativeTo, efivars)
+				err = grub.CreateBootEntry("test.efi", relativeTo, efivars)
 				// Reload vars!
 				vars, _ = efivars.ListVariables()
 				Expect(err).ToNot(HaveOccurred())
@@ -975,7 +978,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 				err := fs.WriteFile("/EFI/test1.efi", []byte(""), constants.FilePerm)
 				Expect(err).ToNot(HaveOccurred())
 				// We need to pass the relative path because bootmanager works on real paths
-				err = utils.CreateBootEntry("test.efi", relativeTo, efivars)
+				grub := utils.NewGrub(config)
+				err = grub.CreateBootEntry("test.efi", relativeTo, efivars)
 				Expect(err).ToNot(HaveOccurred())
 				vars, _ := efivars.ListVariables()
 				// Only one entry should have been created
@@ -990,7 +994,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 				Expect(option.FilePath.String()).To(ContainSubstring(`\EFI\test.efi`))
 
 				// And here we go again
-				err = utils.CreateBootEntry("test1.efi", relativeTo, efivars)
+				err = grub.CreateBootEntry("test1.efi", relativeTo, efivars)
 				Expect(err).ToNot(HaveOccurred())
 				// Reload vars!
 				vars, _ = efivars.ListVariables()

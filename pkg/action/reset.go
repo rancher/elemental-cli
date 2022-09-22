@@ -177,6 +177,7 @@ func (r ResetAction) Run() (err error) {
 		r.spec.Efi,
 		r.spec.Partitions.State.FilesystemLabel,
 		r.spec.DisableBootEntry,
+		false,
 	)
 	if err != nil {
 		return err

@@ -17,16 +17,21 @@ limitations under the License.
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	efi "github.com/canonical/go-efilib"
 	"github.com/canonical/nullboot/efibootmgr"
 	"github.com/rancher/elemental-cli/pkg/constants"
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 )
+
+const bootEntryName = "elemental-shim"
 
 // Grub is the struct that will allow us to install grub to the target device
 type Grub struct {
@@ -42,7 +47,7 @@ func NewGrub(config *v1.Config) *Grub {
 }
 
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, disableBootEntry bool) (err error) { // nolint:gocyclo
+func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, disableBootEntry bool, clearBootEntries bool) (err error) { // nolint:gocyclo
 	var grubargs []string
 	var grubdir, finalContent string
 	// only install grub on non-efi systems
@@ -253,37 +258,73 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		}
 
 		if !disableBootEntry {
-			g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
-			err = CreateBootEntry(shimName, filepath.Join(cnst.EfiDir, "/EFI/boot/"), efibootmgr.RealEFIVariables{})
+			efivars := efibootmgr.RealEFIVariables{}
+			if clearBootEntries {
+				err = g.ClearBootEntry(efivars)
+				if err != nil {
+					return err
+				}
+			}
+			err = g.CreateBootEntry(shimName, filepath.Join(cnst.EfiDir, "/EFI/boot/"), efivars)
 			if err != nil {
-				g.config.Logger.Errorf("error creating boot entry: %s", err.Error())
 				return err
 			}
-			g.config.Logger.Info("Entry created for elemental-shim in the EFI boot manager")
 		}
 	}
-
 	return nil
 }
 
-func CreateBootEntry(shimName string, relativeTo string, efiVariables efibootmgr.EFIVariables) error {
+// ClearBootEntry will go over the BootXXXX efi vars and remove any that matches our name
+// Used in install as we re-create the partitions, so the UUID of those partitions is no longer valid for the old entry
+// And we don't want to leave a broken entry around
+func (g Grub) ClearBootEntry(efiVariables efibootmgr.EFIVariables) error {
+	variables, _ := efiVariables.ListVariables()
+	for _, v := range variables {
+		if regexp.MustCompile(`Boot[0-9a-fA-F]{4}`).MatchString(v.Name) {
+			variable, _, _ := efi.ReadVariable(v.Name, v.GUID)
+			option, err := efi.ReadLoadOption(bytes.NewReader(variable))
+			if err != nil {
+				continue
+			}
+			// TODO: Find a way to identify the old VS new partition UUID and compare them before removing?
+			if option.Description == bootEntryName {
+				g.config.Logger.Debugf("Entry for %s already exists, removing it: %s", bootEntryName, option.String())
+				err := efibootmgr.DelVariable(efiVariables, v.GUID, v.Name)
+				if err != nil {
+					g.config.Logger.Errorf("failed to remove efi entry %s: %s", v.Name, err.Error())
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// CreateBootEntry will create an entry in the efi vars for our shim and set it to boot first in the bootorder
+func (g Grub) CreateBootEntry(shimName string, relativeTo string, efiVariables efibootmgr.EFIVariables) error {
+	g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
 	bm, err := efibootmgr.NewBootManagerForVariables(efiVariables)
 	if err != nil {
 		return err
 	}
+
+	// HINT: FindOrCreate does not find older entries if the partition UUID has changed, i.e. on a reinstall.
 	bootEntryNumber, err := bm.FindOrCreateEntry(efibootmgr.BootEntry{
 		Filename:    shimName,
-		Label:       "elemental-shim",
-		Description: "elemental-shim",
+		Label:       bootEntryName,
+		Description: bootEntryName,
 	}, relativeTo)
 	if err != nil {
+		g.config.Logger.Errorf("error creating boot entry: %s", err.Error())
 		return err
 	}
 	// Commit the new boot order by prepending our entry to the current boot order
 	err = bm.PrependAndSetBootOrder([]int{bootEntryNumber})
 	if err != nil {
+		g.config.Logger.Errorf("error setting boot order: %s", err.Error())
 		return err
 	}
+	g.config.Logger.Infof("Entry created for %s in the EFI boot manager", bootEntryName)
 	return nil
 }
 

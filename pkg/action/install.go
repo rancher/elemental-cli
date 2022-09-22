@@ -190,6 +190,7 @@ func (i InstallAction) Run() (err error) {
 		i.spec.Firmware == v1.EFI,
 		i.spec.Partitions.State.FilesystemLabel,
 		i.spec.DisableBootEntry,
+		true,
 	)
 	if err != nil {
 		return err
