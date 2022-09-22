@@ -4,12 +4,14 @@ go 1.17
 
 // until https://github.com/zloylos/grsync/pull/20 is merged we need to use our fork
 replace github.com/zloylos/grsync v1.6.1 => github.com/rancher-sandbox/grsync v1.6.2-0.20220526080038-4032e9b0e97c
+
 // This fixes incompatibilities between nullbot and its requireds deps.
 // nullboot requires this for tpm2 support, but the required version is broken
 // This is directly coming from nullboot go.mod
 replace github.com/snapcore/secboot => github.com/chrisccoulson/secboot v0.0.0-20211101133820-41f32b803753
 
 require (
+	github.com/canonical/go-efilib v0.3.1-0.20220324150059-04e254148b45
 	github.com/canonical/nullboot v0.4.0
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/distribution/distribution v2.8.1+incompatible
@@ -55,7 +57,6 @@ require (
 	github.com/aws/aws-sdk-go v1.31.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
-	github.com/canonical/go-efilib v0.3.1-0.20220324150059-04e254148b45 // indirect
 	github.com/canonical/go-sp800.108-kdf v0.0.0-20210315104021-ead800bbf9a0 // indirect
 	github.com/canonical/go-sp800.90a-drbg v0.0.0-20210314144037-6eeb1040d6c3 // indirect
 	github.com/canonical/go-tpm2 v0.1.0 // indirect
@@ -200,7 +201,7 @@ require (
 	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.10 // indirect
+	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.62.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
