@@ -161,6 +161,11 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 			g.config.Logger.Errorf("Error creating dirs: %s", err)
 			return err
 		}
+		err = MkdirAll(g.config.Fs, filepath.Join(cnst.EfiDir, "EFI/elemental/"), cnst.DirPerm)
+		if err != nil {
+			g.config.Logger.Errorf("Error creating dirs: %s", err)
+			return err
+		}
 
 		// Copy needed files for efi boot
 		system, err := IdentifySourceSystem(g.config.Fs, rootDir)
@@ -208,18 +213,26 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 						return nil
 					}
 
-					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/boot/%s", f))
-
-					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
-
 					fileContent, err := g.config.Fs.ReadFile(path)
 					if err != nil {
 						return fmt.Errorf("error reading %s: %s", path, err)
 					}
+
+					// Copy to fallback dir
+					fileWriteName := filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/boot/%s", f))
+					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
 					err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
 					if err != nil {
 						return fmt.Errorf("error writing %s: %s", fileWriteName, err)
 					}
+					// Copy to proper dir
+					fileWriteName = filepath.Join(cnst.EfiDir, fmt.Sprintf("EFI/elemental/%s", f))
+					g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
+					err = g.config.Fs.WriteFile(fileWriteName, fileContent, cnst.FilePerm)
+					if err != nil {
+						return fmt.Errorf("error writing %s: %s", fileWriteName, err)
+					}
+
 					foundEfi = true
 					return nil
 				}
@@ -252,7 +265,13 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		// Notice that we set the config to /grub2/grub.cfg which means the above we need to copy the file from
 		// the installation source into that dir
 		grubCfgContent := []byte(fmt.Sprintf("search --no-floppy --label --set=root %s\nset prefix=($root)/grub2\nconfigfile ($root)/grub2/grub.cfg", stateLabel))
+		// Fallback
 		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), grubCfgContent, cnst.FilePerm)
+		if err != nil {
+			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), err)
+		}
+		// Proper efi dir
+		err = g.config.Fs.WriteFile(filepath.Join(cnst.EfiDir, "EFI/elemental/grub.cfg"), grubCfgContent, cnst.FilePerm)
 		if err != nil {
 			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), err)
 		}
@@ -265,7 +284,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 					return err
 				}
 			}
-			err = g.CreateBootEntry(shimName, filepath.Join(cnst.EfiDir, "/EFI/boot/"), efivars)
+			err = g.CreateBootEntry(shimName, filepath.Join(cnst.EfiDir, "/EFI/elemental/"), efivars)
 			if err != nil {
 				return err
 			}
@@ -302,7 +321,7 @@ func (g Grub) ClearBootEntry(efiVariables efibootmgr.EFIVariables) error {
 
 // CreateBootEntry will create an entry in the efi vars for our shim and set it to boot first in the bootorder
 func (g Grub) CreateBootEntry(shimName string, relativeTo string, efiVariables efibootmgr.EFIVariables) error {
-	g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
+	g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/elemental/%s", shimName)
 	bm, err := efibootmgr.NewBootManagerForVariables(efiVariables)
 	if err != nil {
 		return err
