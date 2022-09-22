@@ -42,7 +42,7 @@ func NewGrub(config *v1.Config) *Grub {
 }
 
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, createBootEntry bool) (err error) { // nolint:gocyclo
+func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, disableBootEntry bool) (err error) { // nolint:gocyclo
 	var grubargs []string
 	var grubdir, finalContent string
 	// only install grub on non-efi systems
@@ -252,7 +252,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), err)
 		}
 
-		if createBootEntry {
+		if !disableBootEntry {
 			g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
 			err = CreateBootEntry(shimName, "/EFI/Boot/", efibootmgr.RealEFIVariables{})
 			if err != nil {

@@ -111,7 +111,7 @@ func NewInstallCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	c.Flags().String("tty", "", "Add named tty to grub")
 	c.Flags().Bool("force", false, "Force install")
 	c.Flags().Bool("eject-cd", false, "Try to eject the cd on reboot, only valid if booting from iso")
-	c.Flags().Bool("create-boot-entry", false, "Create an EFI entry for the system install")
+	c.Flags().Bool("disable-boot-entry", false, "Dont create an EFI entry for the system install.")
 	addSharedInstallUpgradeFlags(c)
 	addLocalImageFlag(c)
 	return c
