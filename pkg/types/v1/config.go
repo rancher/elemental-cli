@@ -146,6 +146,7 @@ type InstallSpec struct {
 	Recovery        Image               `yaml:"recovery-system,omitempty" mapstructure:"recovery-system"`
 	Passive         Image
 	GrubConf        string
+	CreateBootEntry bool `yaml:"create-boot-entry,omitempty" mapstructure:"create-boot-entry"`
 }
 
 // Sanitize checks the consistency of the struct, returns error
@@ -191,15 +192,16 @@ type ResetSpec struct {
 	FormatPersistent bool `yaml:"reset-persistent,omitempty" mapstructure:"reset-persistent"`
 	FormatOEM        bool `yaml:"reset-oem,omitempty" mapstructure:"reset-oem"`
 
-	GrubDefEntry string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
-	Tty          string `yaml:"tty,omitempty" mapstructure:"tty"`
-	Active       Image  `yaml:"system,omitempty" mapstructure:"system"`
-	Passive      Image
-	Partitions   ElementalPartitions
-	Target       string
-	Efi          bool
-	GrubConf     string
-	State        *InstallState
+	GrubDefEntry    string `yaml:"grub-entry-name,omitempty" mapstructure:"grub-entry-name"`
+	Tty             string `yaml:"tty,omitempty" mapstructure:"tty"`
+	Active          Image  `yaml:"system,omitempty" mapstructure:"system"`
+	Passive         Image
+	Partitions      ElementalPartitions
+	Target          string
+	Efi             bool
+	GrubConf        string
+	State           *InstallState
+	CreateBootEntry bool `yaml:"create-boot-entry,omitempty" mapstructure:"create-boot-entry"`
 }
 
 // Sanitize checks the consistency of the struct, returns error

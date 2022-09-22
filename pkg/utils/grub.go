@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/canonical/nullboot/efibootmgr"
 	"github.com/rancher/elemental-cli/pkg/constants"
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
@@ -41,7 +42,7 @@ func NewGrub(config *v1.Config) *Grub {
 }
 
 // Install installs grub into the device, copy the config file and add any extra TTY to grub
-func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string) (err error) { // nolint:gocyclo
+func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, stateLabel string, createBootEntry bool) (err error) { // nolint:gocyclo
 	var grubargs []string
 	var grubdir, finalContent string
 	// only install grub on non-efi systems
@@ -226,14 +227,10 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 
 		// Rename the shimName to the fallback name so the system boots from fallback. This means that we do not create
 		// any bootloader entries, so our recent installation has the lower priority if something else is on the bootloader
-		var writeShim string
+		writeShim := "bootx64.efi"
 
-		switch g.config.Arch {
-		case cnst.ArchArm64:
+		if g.config.Arch == cnst.ArchArm64 {
 			writeShim = "bootaa64.efi"
-		default:
-			writeShim = "bootx64.efi"
-
 		}
 
 		readShim, err := g.config.Fs.ReadFile(filepath.Join(cnst.EfiDir, "EFI/boot/", shimName))
@@ -254,8 +251,39 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		if err != nil {
 			return fmt.Errorf("error writing %s: %s", filepath.Join(cnst.EfiDir, "EFI/boot/grub.cfg"), err)
 		}
+
+		if createBootEntry {
+			g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
+			err = CreateBootEntry(shimName, "/EFI/Boot/", efibootmgr.RealEFIVariables{})
+			if err != nil {
+				g.config.Logger.Errorf("error creating boot entry: %s", err.Error())
+				return err
+			}
+			g.config.Logger.Info("Entry created for elemental-shim in the EFI boot manager")
+		}
 	}
 
+	return nil
+}
+
+func CreateBootEntry(shimName string, relativeTo string, efiVariables efibootmgr.EFIVariables) error {
+	bm, err := efibootmgr.NewBootManagerForVariables(efiVariables)
+	if err != nil {
+		return err
+	}
+	bootEntryNumber, err := bm.FindOrCreateEntry(efibootmgr.BootEntry{
+		Filename:    shimName,
+		Label:       "elemental-shim",
+		Description: "elemental-shim",
+	}, relativeTo)
+	if err != nil {
+		return err
+	}
+	// Commit the new boot order by prepending our entry to the current boot order
+	err = bm.PrependAndSetBootOrder([]int{bootEntryNumber})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
