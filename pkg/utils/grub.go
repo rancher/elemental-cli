@@ -254,7 +254,7 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 
 		if !disableBootEntry {
 			g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/Boot/%s", shimName)
-			err = CreateBootEntry(shimName, "/EFI/Boot/", efibootmgr.RealEFIVariables{})
+			err = CreateBootEntry(shimName, filepath.Join(cnst.EfiDir, "/EFI/boot/"), efibootmgr.RealEFIVariables{})
 			if err != nil {
 				g.config.Logger.Errorf("error creating boot entry: %s", err.Error())
 				return err
