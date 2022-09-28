@@ -140,22 +140,14 @@ func (b *BuildISOAction) ISORun() (err error) {
 		return err
 	}
 
-	err = b.prepareISORoot(isoDir, rootDir)
+	err = b.prepareISORoot(isoDir, rootDir, uefiDir)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed preparing ISO's root tree: %v", err)
 		return err
 	}
 
-	if b.spec.Firmware == v1.EFI {
-		b.cfg.Logger.Info("Creating EFI image...")
-		err = b.createEFI(uefiDir, filepath.Join(isoTmpDir, constants.IsoEFIImg))
-		if err != nil {
-			return err
-		}
-	}
-
 	b.cfg.Logger.Infof("Creating ISO image...")
-	err = b.burnISO(isoDir, filepath.Join(isoTmpDir, constants.IsoEFIImg))
+	err = b.burnISO(isoDir)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed preparing ISO's root tree: %v", err)
 		return err
@@ -164,7 +156,7 @@ func (b *BuildISOAction) ISORun() (err error) {
 	return err
 }
 
-func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string) error {
+func (b BuildISOAction) prepareISORoot(isoDir, rootDir, uefiDir string) error {
 	kernel, initrd, err := b.e.FindKernelInitrd(rootDir)
 	if err != nil {
 		b.cfg.Logger.Error("Could not find kernel and/or initrd")
@@ -185,6 +177,14 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string) error {
 	err = utils.CopyFile(b.cfg.Fs, initrd, filepath.Join(isoDir, constants.IsoInitrdPath))
 	if err != nil {
 		return err
+	}
+
+	if b.spec.Firmware == v1.EFI {
+		b.cfg.Logger.Info("Creating EFI image...")
+		err = b.createEFI(uefiDir, filepath.Join(isoDir, constants.IsoEfiImg))
+		if err != nil {
+			return err
+		}
 	}
 
 	b.cfg.Logger.Info("Creating squashfs...")
@@ -232,7 +232,7 @@ func (b BuildISOAction) createEFI(root string, img string) error {
 	return nil
 }
 
-func (b BuildISOAction) burnISO(root, efiImg string) error {
+func (b BuildISOAction) burnISO(root string) error {
 	cmd := "xorriso"
 	var outputFile string
 	var isoFileName string
@@ -258,10 +258,10 @@ func (b BuildISOAction) burnISO(root, efiImg string) error {
 	}
 
 	args := []string{
-		"-volid", b.spec.Label /*"-joliet", "on"*/, "-padding", "0",
+		"-volid", b.spec.Label, "-padding", "0",
 		"-outdev", outputFile, "-map", root, "/", "-chmod", "0755", "--",
 	}
-	args = append(args, live.XorrisoBooloaderArgs(root, efiImg, b.spec.Firmware)...)
+	args = append(args, live.XorrisoBooloaderArgs(root, b.spec.Firmware)...)
 
 	out, err := b.cfg.Runner.Run(cmd, args...)
 	b.cfg.Logger.Debugf("Xorriso: %s", string(out))

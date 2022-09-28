@@ -104,8 +104,8 @@ const (
 	// Kernel and initrd paths are arbitrary and coupled to grub.cfg
 	IsoKernelPath = "/boot/kernel"
 	IsoInitrdPath = "/boot/initrd"
+	IsoEfiImg     = "/boot/uefi.img"
 	IsoRootFile   = "rootfs.squashfs"
-	IsoEFIImg     = "uefi.img"
 	ISOLabel      = "COS_LIVE"
 
 	// Default directory and file fileModes

@@ -76,17 +76,13 @@ const (
 	fi`
 )
 
-func XorrisoBooloaderArgs(root, efiImg, firmware string) []string {
+func XorrisoBooloaderArgs(root, firmware string) []string {
 	switch firmware {
 	case v1.EFI:
 		args := []string{
-			"-append_partition", "2", "0xef", efiImg,
 			"-boot_image", "any", fmt.Sprintf("cat_path=%s", isoBootCatalog),
 			"-boot_image", "any", "cat_hidden=on",
-			"-boot_image", "any", "efi_path=--interval:appended_partition_2:all::",
-			"-boot_image", "any", "platform_id=0xef",
-			"-boot_image", "any", "appended_part_as=gpt",
-			"-boot_image", "any", "partition_offset=16",
+			"-boot_image", "any", fmt.Sprintf("efi_path=%s", constants.IsoEfiImg),
 		}
 		return args
 	case v1.BIOS:
