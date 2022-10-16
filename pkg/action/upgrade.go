@@ -160,6 +160,9 @@ func (u *UpgradeAction) Run() (err error) {
 		if err != nil {
 			u.config.Logger.Warn("could not mount persistent partition: %s", err.Error())
 		} else {
+			// Set luet tempdir
+			tmpdir := utils.GetTempDir(&u.config.Config, "")
+			u.config.Luet.SetTempDir(tmpdir)
 			// Remove the tmpdir before unmounting
 			cleanup.Push(func() error {
 				return u.config.Fs.RemoveAll(filepath.Join(persistentPart.MountPoint, "tmp"))
