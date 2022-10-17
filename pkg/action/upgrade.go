@@ -164,9 +164,7 @@ func (u *UpgradeAction) Run() (err error) {
 			tmpdir := utils.GetTempDir(&u.config.Config, "")
 			u.config.Luet.SetTempDir(tmpdir)
 			// Remove the tmpdir before unmounting
-			cleanup.Push(func() error {
-				return u.config.Fs.RemoveAll(filepath.Join(persistentPart.MountPoint, "tmp"))
-			})
+			cleanup.Push(func() error { return u.config.Fs.RemoveAll(tmpdir) })
 			cleanup.Push(umount)
 		}
 	}
