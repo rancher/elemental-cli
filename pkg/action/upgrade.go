@@ -172,7 +172,7 @@ func (u *UpgradeAction) Run() (err error) {
 	}
 
 	// before upgrade hook happens once partitions are RW mounted, just before image OS is deployed
-	err = u.upgradeHook("before-upgrade", false)
+	err = u.upgradeHook(constants.BeforeUpgradeHook, false)
 	if err != nil {
 		u.Error("Error while running hook before-upgrade: %s", err)
 		return err
@@ -208,7 +208,7 @@ func (u *UpgradeAction) Run() (err error) {
 		}
 	}
 
-	err = u.upgradeHook("after-upgrade-chroot", true)
+	err = u.upgradeHook(constants.AfterUpgradeChrootHook, true)
 	if err != nil {
 		u.Error("Error running hook after-upgrade-chroot: %s", err)
 		return err
@@ -264,7 +264,7 @@ func (u *UpgradeAction) Run() (err error) {
 
 	_, _ = u.config.Runner.Run("sync")
 
-	err = u.upgradeHook("after-upgrade", false)
+	err = u.upgradeHook(constants.AfterUpgradeHook, false)
 	if err != nil {
 		u.Error("Error running hook after-upgrade: %s", err)
 		return err
