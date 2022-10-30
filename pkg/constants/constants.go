@@ -65,6 +65,7 @@ const (
 	ActiveDir              = "/run/cos/active"
 	TransitionDir          = "/run/cos/transition"
 	EfiDir                 = "/run/cos/efi"
+	RunningStateDir        = "/run/cos/root"
 	RecoverySquashFile     = "recovery.squashfs"
 	ActiveImgFile          = "active.img"
 	PassiveImgFile         = "passive.img"
@@ -90,7 +91,6 @@ const (
 	ChannelSource          = "system/cos"
 	TransitionImgFile      = "transition.img"
 	TransitionSquashFile   = "transition.squashfs"
-	RunningStateDir        = "/run/initramfs/cos-state" // TODO: converge this constant with StateDir/RecoveryDir in dracut module from cos-toolkit
 	ActiveImgName          = "active"
 	PassiveImgName         = "passive"
 	RecoveryImgName        = "recovery"

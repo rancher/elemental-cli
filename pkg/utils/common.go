@@ -46,10 +46,10 @@ func CommandExists(command string) bool {
 	return err == nil
 }
 
-// BootedFrom will check if we are booting from the given label
-func BootedFrom(runner v1.Runner, label string) bool {
+// BootedFrom will check if we are booting from the given image
+func BootedFrom(runner v1.Runner, image string) bool {
 	out, _ := runner.Run("cat", "/proc/cmdline")
-	return strings.Contains(string(out), label)
+	return strings.Contains(string(out), image)
 }
 
 // GetDeviceByLabel will try to return the device that matches the given label.

@@ -358,9 +358,8 @@ func NewUpgradeSpec(cfg v1.Config) (*v1.UpgradeSpec, error) {
 func NewResetSpec(cfg v1.Config) (*v1.ResetSpec, error) {
 	var imgSource *v1.ImageSource
 
-	//TODO find a way to pre-load current state values such as labels
 	if !utils.BootedFrom(cfg.Runner, constants.RecoverySquashFile) &&
-		!utils.BootedFrom(cfg.Runner, constants.SystemLabel) {
+		!utils.BootedFrom(cfg.Runner, constants.RecoveryImgFile) {
 		return nil, fmt.Errorf("reset can only be called from the recovery system")
 	}
 
