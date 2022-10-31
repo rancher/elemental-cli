@@ -19,8 +19,8 @@ package action
 import (
 	"archive/tar"
 	"compress/gzip"
-	"errors"
 	"fmt"
+	eleError "github.com/rancher/elemental-cli/pkg/error"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,18 +38,19 @@ const (
 )
 
 func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string, oemLabel string, recoveryLabel string, output string) (err error) {
+	var elementalError *eleError.ElementalError
 	cfg.Logger.Infof("Building disk image type %s for arch %s", imgType, cfg.Arch)
 
 	if len(spec.Packages) == 0 {
 		msg := fmt.Sprintf("no packages in the config for arch %s", cfg.Arch)
 		cfg.Logger.Error(msg)
-		return errors.New(msg)
+		os.Exit(constants.ExitNoPackagesArchBuildDisk)
 	}
 
 	if len(cfg.Config.Repos) == 0 {
 		msg := "no repositories configured"
 		cfg.Logger.Error(msg)
-		return errors.New(msg)
+		os.Exit(constants.ExitNoRepoConfiguredBuildDisk)
 	}
 
 	if oemLabel == "" {
@@ -67,14 +68,16 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	// baseDir is where we are going install all packages
 	baseDir, err := utils.TempDir(cfg.Fs, "", "elemental-build-disk-files")
 	if err != nil {
-		return err
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitTempdirError)
 	}
 	cleanup.Push(func() error { return cfg.Fs.RemoveAll(baseDir) })
 
 	// diskTempDir is where we are going to create all the disk parts
 	diskTempDir, err := utils.TempDir(cfg.Fs, "", "elemental-build-disk-parts")
 	if err != nil {
-		return err
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitTempdirError)
 	}
 	cleanup.Push(func() error { return cfg.Fs.RemoveAll(diskTempDir) })
 
@@ -86,12 +89,14 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 		err = os.MkdirAll(filepath.Join(baseDir, pkg.Target), constants.DirPerm)
 		if err != nil {
 			cfg.Logger.Error(err)
-			return err
+			_ = cleanup.Cleanup(err)
+			os.Exit(constants.ExitCreateDirError)
 		}
 		imgSource, err := v1.NewSrcFromURI(pkg.Name)
 		if err != nil {
 			cfg.Logger.Error(err)
-			return err
+			_ = cleanup.Cleanup(err)
+			os.Exit(constants.ExitParseSourceError)
 		}
 		_, err = e.DumpSource(
 			filepath.Join(baseDir, pkg.Target),
@@ -99,7 +104,8 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 		)
 		if err != nil {
 			cfg.Logger.Error(err)
-			return err
+			_ = cleanup.Cleanup(err)
+			os.Exit(constants.ExitCreateDirError)
 		}
 	}
 
@@ -114,7 +120,8 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	)
 	if err != nil {
 		cfg.Logger.Error(err)
-		return err
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitFailedCratingPart)
 	}
 
 	// create EFI part
@@ -128,12 +135,15 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	)
 	if err != nil {
 		cfg.Logger.Error(err)
-		return err
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitFailedCratingPart)
 	}
 	// copy files to efi with mcopy
 	_, err = cfg.Runner.Run("mcopy", "-s", "-i", efiPart, filepath.Join(baseDir, "efi", "EFI"), "::EFI")
 	if err != nil {
-		return err
+		cfg.Logger.Error(err)
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitFailedRunningCmd)
 	}
 
 	// Create the oem part
@@ -141,7 +151,9 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	_ = cfg.Fs.Mkdir(filepath.Join(baseDir, "oem"), constants.DirPerm)
 	err = utils.CopyFile(cfg.Fs, filepath.Join(baseDir, "root", "etc", "cos", "grubenv_firstboot"), filepath.Join(baseDir, "oem", "grubenv"))
 	if err != nil {
-		return err
+		cfg.Logger.Error(err)
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitCopyError)
 	}
 	err = CreatePart(
 		cfg,
@@ -153,14 +165,16 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	)
 	if err != nil {
 		cfg.Logger.Error(err)
-		return err
+		_ = cleanup.Cleanup(err)
+		os.Exit(constants.ExitFailedCratingPart)
 	}
 
 	// Create final image
-	err = CreateFinalImage(cfg, output, efiPart, oemPart, rootfsPart)
+	elementalError = CreateFinalImage(cfg, output, efiPart, oemPart, rootfsPart)
 	if err != nil {
-		cfg.Logger.Error(err)
-		return err
+		cfg.Logger.Error(elementalError)
+		_ = cleanup.Cleanup(elementalError)
+		os.Exit(elementalError.ExitCode())
 	}
 
 	switch imgType {
@@ -168,15 +182,17 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 		// Nothing to do here
 		cfg.Logger.Infof("Done! Image created at %s", output)
 	case "azure":
-		err = Raw2Azure(output, cfg.Fs, cfg.Logger, false)
-		if err != nil {
-			return err
+		elementalError = Raw2Azure(output, cfg.Fs, cfg.Logger, false)
+		if elementalError != nil {
+			_ = cleanup.Cleanup(elementalError)
+			os.Exit(elementalError.ExitCode())
 		}
 		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.vhd", output))
 	case "gce":
-		err = Raw2Gce(output, cfg.Fs, cfg.Logger, false)
-		if err != nil {
-			return err
+		elementalError = Raw2Gce(output, cfg.Fs, cfg.Logger, false)
+		if elementalError != nil {
+			_ = cleanup.Cleanup(elementalError)
+			os.Exit(elementalError.ExitCode())
 		}
 		cfg.Logger.Infof("Done! Image created at %s", fmt.Sprintf("%s.tar.gz", output))
 	}
@@ -186,18 +202,18 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 
 // Raw2Gce transforms an image from RAW format into GCE format
 // THIS REMOVES THE SOURCE IMAGE BY DEFAULT
-func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error {
+func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) *eleError.ElementalError {
 	// The RAW image file must have a size in an increment of 1 GB. For example, the file must be either 10 GB or 11 GB but not 10.5 GB.
 	// The disk image filename must be disk.raw.
 	// The compressed file must be a .tar.gz file that uses gzip compression and the --format=oldgnu option for the tar utility.
 	logger.Info("Transforming raw image into gce format")
 	actImg, err := fs.Open(source)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitOpenFileError)
 	}
 	info, err := actImg.Stat()
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitStatFileError)
 	}
 	actualSize := info.Size()
 	finalSizeGB := actualSize/GB + 1
@@ -214,13 +230,13 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 	file, err := fs.Create(fmt.Sprintf("%s.tar.gz", source))
 	logger.Debugf(fmt.Sprintf("destination: %s.tar.gz", source))
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitCreateDirError)
 	}
 	defer file.Close()
 	// Create gzip writer
 	gzipWriter, err := gzip.NewWriterLevel(file, gzip.BestSpeed)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitGzipError)
 	}
 	defer gzipWriter.Close()
 	// Create tarwriter pointing to our gzip writer
@@ -242,12 +258,12 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 	// Write header with all the info
 	err = tarWriter.WriteHeader(header)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitTarError)
 	}
 	// copy the actual data
 	_, err = io.Copy(tarWriter, sourceFile)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitCopyError)
 	}
 	// Remove full raw image, we already got the compressed one
 	if !keepOldImage {
@@ -258,14 +274,14 @@ func Raw2Gce(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error
 
 // Raw2Azure transforms an image from RAW format into Azure format
 // THIS REMOVES THE SOURCE IMAGE BY DEFAULT
-func Raw2Azure(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) error {
+func Raw2Azure(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) *eleError.ElementalError {
 	// All VHDs on Azure must have a virtual size aligned to 1 MB (1024 × 1024 bytes)
 	// The Hyper-V virtual hard disk (VHDX) format isn't supported in Azure, only fixed VHD
 	logger.Info("Transforming raw image into azure format")
 	// Copy raw to new image with VHD appended
 	err := utils.CopyFile(fs, source, fmt.Sprintf("%s.vhd", source))
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitCopyError)
 	}
 	// Open it
 	vhdFile, _ := fs.OpenFile(fmt.Sprintf("%s.vhd", source), os.O_APPEND|os.O_WRONLY, 0600)
@@ -296,14 +312,14 @@ func Raw2Azure(source string, fs v1.FS, logger v1.Logger, keepOldImage bool) err
 
 // CreateFinalImage creates the final image by truncating the image with the proper sizes, concatenating the contents of the
 // given parts and creating the partition table on the image
-func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
+func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) *eleError.ElementalError {
 	err := utils.MkdirAll(c.Fs, filepath.Dir(img), constants.DirPerm)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitCreateDirError)
 	}
 	actImg, err := c.Fs.Create(img)
 	if err != nil {
-		return err
+		return eleError.New(err, constants.ExitCreateFileError)
 	}
 
 	// add 3MB of initial free space to disk, 1MB is for proper alignment, 2MB are for the hybrid legacy boot.
@@ -311,7 +327,7 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 	if err != nil {
 		actImg.Close()
 		_ = c.Fs.RemoveAll(img)
-		return err
+		return eleError.New(err, constants.ExitTruncateFileError)
 	}
 	// Seek to the end of the file, so we start copying the files at the end of those 3Mb that we truncated before
 	_, _ = actImg.Seek(0, io.SeekEnd)
@@ -320,7 +336,7 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 		toRead, _ := c.Fs.Open(p)
 		_, err = io.Copy(actImg, toRead)
 		if err != nil {
-			return err
+			return eleError.New(err, constants.ExitCopyError)
 		}
 	}
 
@@ -330,13 +346,13 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 	if err != nil {
 		actImg.Close()
 		_ = c.Fs.RemoveAll(img)
-		return err
+		return eleError.New(err, constants.ExitTruncateFileError)
 	}
 
 	err = actImg.Close()
 	if err != nil {
 		_ = c.Fs.RemoveAll(img)
-		return err
+		return eleError.New(err, constants.ExitFailedFileCloseError)
 	}
 
 	// Partition table
@@ -349,25 +365,25 @@ func CreateFinalImage(c *v1.BuildConfig, img string, parts ...string) error {
 	out, err := c.Runner.Run("sgdisk", "-n", "1:2048:+2M", "-c", "1:legacy", "-t", "1:EF02", img)
 	if err != nil {
 		c.Logger.Errorf("Error from sgdisk: %s", out)
-		return err
+		return eleError.New(err, constants.ExitFailedRunningCmd)
 	}
 	_, err = c.Runner.Run("sgdisk", "-n", "2:0:+20M", "-c", "2:UEFI", "-t", "2:EF00", img)
 	if err != nil {
 		c.Logger.Errorf("Error from sgdisk: %s", out)
-		return err
+		return eleError.New(err, constants.ExitFailedRunningCmd)
 	}
 	_, err = c.Runner.Run("sgdisk", "-n", "3:0:+64M", "-c", "3:oem", "-t", "3:8300", img)
 	if err != nil {
 		c.Logger.Errorf("Error from sgdisk: %s", out)
-		return err
+		return eleError.New(err, constants.ExitFailedRunningCmd)
 	}
 	_, err = c.Runner.Run("sgdisk", "-n", "4:0:+2048M", "-c", "4:root", "-t", "4:8300", img)
 	if err != nil {
 		c.Logger.Errorf("Error from sgdisk: %s", out)
-		return err
+		return eleError.New(err, constants.ExitFailedRunningCmd)
 	}
 
-	return err
+	return nil
 }
 
 // CreatePart creates, truncates, and formats an img.part file. if rootDir is passed it will use that as the rootdir for

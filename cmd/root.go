@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/rancher/elemental-cli/pkg/constants"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -47,6 +48,6 @@ var rootCmd = NewRootCmd()
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		os.Exit(constants.ExitUnknownError)
 	}
 }
