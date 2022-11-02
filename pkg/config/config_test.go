@@ -215,7 +215,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					runner.SideEffect = func(cmd string, args ...string) ([]byte, error) {
 						switch cmd {
 						case "cat":
-							return []byte(constants.SystemLabel), nil
+							return []byte(constants.RecoveryImgFile), nil
 						default:
 							return []byte{}, nil
 						}
@@ -298,7 +298,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					Expect(err.Error()).To(ContainSubstring("reset can only be called from the recovery system"))
 				})
 				It("fails to set defaults if no recovery partition detected", func() {
-					bootedFrom = constants.SystemLabel
+					bootedFrom = constants.RecoveryImgFile
 					_, err := config.NewResetSpec(*c)
 					Expect(err).Should(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("recovery partition not found"))
@@ -313,7 +313,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					ghwTest.CreateDevices()
 					defer ghwTest.Clean()
 
-					bootedFrom = constants.SystemLabel
+					bootedFrom = constants.RecoveryImgFile
 					_, err := config.NewResetSpec(*c)
 					Expect(err).Should(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("state partition not found"))
@@ -325,7 +325,7 @@ var _ = Describe("Types", Label("types", "config"), func() {
 					_, err = fs.Create(constants.EfiDevice)
 					Expect(err).ShouldNot(HaveOccurred())
 
-					bootedFrom = constants.SystemLabel
+					bootedFrom = constants.RecoveryImgFile
 					_, err := config.NewResetSpec(*c)
 					Expect(err).Should(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("EFI partition not found"))
