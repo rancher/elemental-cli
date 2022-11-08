@@ -17,28 +17,50 @@ limitations under the License.
 package error
 
 const (
+	// Wrong cosign flags used in cmd
 	CosignWrongFlags = iota + 10
+	// Error reading the build config
 	ReadingBuildConfig
+	// Error reading the build-disk config
 	ReadingBuildDiskConfig
+	// Output file already exists
 	OutFileExists
+	// There is not packages for the given architecture
 	NoPackagesForArch
+	// No luet repositories configured
 	NoReposConfigured
+	// Error creating a temporal dir
 	CreateTempDir
+	// Error creating a dir
 	CreateDir
+	// Error trying to identify the source
 	IdentifySource
+	// Error dumping the source
 	DumpSource
 	CreatePart
+	// Error running a command
 	CommandRun
+	// Error copying a file
 	CopyFile
 	CreateFinalImage
+	// Error opening a file
 	OpenFile
+	// Error running stat on a file
 	StatFile
+	// Error creating a file
 	CreateFile
+	// Error truncating a file
 	TruncateFile
+	// Error closing a file
 	CloseFile
+	// Error creating a gzip writer
 	GzipWriter
+	// Error creating a tar archive
 	TarHeader
+	// Error copying data
 	CopyData
+	// Error calling mkfs
 	MKFSCall
+	// Unknown error
 	Unknown
 )
