@@ -20,68 +20,76 @@ package error
 //
 // Provided exit codes for elemental-cli
 
-// Exit code 10: Error closing a file
+// To make it easy to generate them you have to respect the structure:
+//
+// comment that explains the error
+// const NamedConstant = ERRORCODE
+//
+// This way you can later run `make build_docs` to generate the elemental_exit-codes.md in the docs dir automatically
+// And they will be generated into a Markdown list of EXITCODE -> COMMENT
+
+// Error closing a file
 const CloseFile = 10
 
-// Exit code 11: Error running a command
+// Error running a command
 const CommandRun = 11
 
-// Exit code 12: Error copying data
+// Error copying data
 const CopyData = 12
 
-// Exit code 13: Error copying a file
+// Error copying a file
 const CopyFile = 13
 
-// Exit code 14: Wrong cosign flags used in cmd
+// Wrong cosign flags used in cmd
 const CosignWrongFlags = 14
 
-// Exit code 15: Error creating a dir
+// Error creating a dir
 const CreateDir = 15
 
-// Exit code 16: Error creating a file
+// Error creating a file
 const CreateFile = 16
 
-// Exit code 17: Error creating a temporal dir
+// Error creating a temporal dir
 const CreateTempDir = 17
 
-// Exit code 18: Error dumping the source
+// Error dumping the source
 const DumpSource = 18
 
-// Exit code 19: Error creating a gzip writer
+// Error creating a gzip writer
 const GzipWriter = 19
 
-// Exit code 20: Error trying to identify the source
+// Error trying to identify the source
 const IdentifySource = 20
 
-// Exit code 21: Error calling mkfs
+// Error calling mkfs
 const MKFSCall = 21
 
-// Exit code 22: There is not packages for the given architecture
+// There is not packages for the given architecture
 const NoPackagesForArch = 22
 
-// Exit code 23: No luet repositories configured
+// No luet repositories configured
 const NoReposConfigured = 23
 
-// Exit code 24: Error opening a file
+// Error opening a file
 const OpenFile = 24
 
-// Exit code 25: Output file already exists
+// Output file already exists
 const OutFileExists = 25
 
-// Exit code 26: Error reading the build config
+// Error reading the build config
 const ReadingBuildConfig = 26
 
-// Exit code 27:  Error reading the build-disk config
+// Error reading the build-disk config
 const ReadingBuildDiskConfig = 27
 
-// Exit code 28: Error running stat on a file
+// Error running stat on a file
 const StatFile = 28
 
-// Exit code 29: Error creating a tar archive
+// Error creating a tar archive
 const TarHeader = 29
 
-// Exit code 30: Error truncating a file
+// Error truncating a file
 const TruncateFile = 30
 
-// Exit code 255: Unknown error
-const Unknown = 255
+// Unknown error
+const Unknown int = 255
