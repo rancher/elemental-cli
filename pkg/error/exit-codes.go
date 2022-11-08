@@ -14,53 +14,74 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// provides a custom error interface and exit codes to use on the elemental-cli
 package error
 
-const (
-	// Wrong cosign flags used in cmd
-	CosignWrongFlags = iota + 10
-	// Error reading the build config
-	ReadingBuildConfig
-	// Error reading the build-disk config
-	ReadingBuildDiskConfig
-	// Output file already exists
-	OutFileExists
-	// There is not packages for the given architecture
-	NoPackagesForArch
-	// No luet repositories configured
-	NoReposConfigured
-	// Error creating a temporal dir
-	CreateTempDir
-	// Error creating a dir
-	CreateDir
-	// Error trying to identify the source
-	IdentifySource
-	// Error dumping the source
-	DumpSource
-	CreatePart
-	// Error running a command
-	CommandRun
-	// Error copying a file
-	CopyFile
-	CreateFinalImage
-	// Error opening a file
-	OpenFile
-	// Error running stat on a file
-	StatFile
-	// Error creating a file
-	CreateFile
-	// Error truncating a file
-	TruncateFile
-	// Error closing a file
-	CloseFile
-	// Error creating a gzip writer
-	GzipWriter
-	// Error creating a tar archive
-	TarHeader
-	// Error copying data
-	CopyData
-	// Error calling mkfs
-	MKFSCall
-	// Unknown error
-	Unknown
-)
+//
+// Provided exit codes for elemental-cli
+
+// Exit code 10: Wrong cosign flags used in cmd
+const CosignWrongFlags = 10
+
+// Exit code 11: Error reading the build config
+const ReadingBuildConfig = 11
+
+// Exit code 12:  Error reading the build-disk config
+const ReadingBuildDiskConfig = 12
+
+// Exit code 13: Output file already exists
+const OutFileExists = 13
+
+// Exit code 14: There is not packages for the given architecture
+const NoPackagesForArch = 14
+
+// Exit code 15: No luet repositories configured
+const NoReposConfigured = 15
+
+// Exit code 16: Error creating a temporal dir
+const CreateTempDir = 16
+
+// Exit code 17: Error creating a dir
+const CreateDir = 17
+
+// Exit code 18: Error trying to identify the source
+const IdentifySource = 18
+
+// Exit code 19: Error dumping the source
+const DumpSource = 19
+
+// Exit code 20: Error running a command
+const CommandRun = 20
+
+// Exit code 21: Error copying a file
+const CopyFile = 21
+
+// Exit code 22: Error opening a file
+const OpenFile = 22
+
+// Exit code 23: Error running stat on a file
+const StatFile = 23
+
+// Exit code 24: Error creating a file
+const CreateFile = 24
+
+// Exit code 25: Error truncating a file
+const TruncateFile = 25
+
+// Exit code 26: Error closing a file
+const CloseFile = 26
+
+// Exit code 27: Error creating a gzip writer
+const GzipWriter = 27
+
+// Exit code 28: Error creating a tar archive
+const TarHeader = 28
+
+// Exit code 29: Error copying data
+const CopyData = 29
+
+// Exit code 30: Error calling mkfs
+const MKFSCall = 30
+
+// Exit code 255: Unknown error
+const Unknown = 255
