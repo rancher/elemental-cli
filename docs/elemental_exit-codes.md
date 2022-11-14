@@ -41,4 +41,5 @@
 | 44 | Error occurred when labeling partition|
 | 45 | Error setting default grub entry|
 | 46 | Error occurred during selinux relabeling|
+| 47 | Error creating default grub config files|
 | 255 | Unknown error|

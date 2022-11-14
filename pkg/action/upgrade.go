@@ -227,7 +227,7 @@ func (u *UpgradeAction) Run() (err error) {
 		// Create config files for grub if needed
 		err = e.CreateDefaultGrubConfigFiles(u.spec.Partitions.State.MountPoint)
 		if err != nil {
-			return err
+			return elementalError.NewFromError(err, elementalError.GrubConfigFiles)
 		}
 	}
 

@@ -142,5 +142,8 @@ const SetDefaultGrubEntry = 45
 // Error occurred during selinux relabeling
 const SelinuxRelabel = 46
 
+// Error creating default grub config files
+const GrubConfigFiles = 47
+
 // Unknown error
 const Unknown int = 255
