@@ -53,12 +53,12 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			cfg, err := config.ReadConfigRun(viper.GetString("config-dir"), cmd.Flags(), mounter)
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
-				return elementalError.New(err.Error(), elementalError.ReadingRunConfig)
+				return elementalError.NewFromError(err, elementalError.ReadingRunConfig)
 			}
 
 			if err := validateInstallUpgradeFlags(cfg.Logger, cmd.Flags()); err != nil {
 				cfg.Logger.Errorf("Error reading install/upgrade flags: %s\n", err)
-				return elementalError.New(err.Error(), elementalError.ReadingInstallUpgradeFlags)
+				return elementalError.NewFromError(err, elementalError.ReadingInstallUpgradeFlags)
 			}
 
 			// Adapt 'docker-image' and 'directory'  deprecated flags to 'system' syntax
@@ -71,7 +71,7 @@ func NewUpgradeCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			spec, err := config.ReadUpgradeSpec(cfg, cmd.Flags())
 			if err != nil {
 				cfg.Logger.Errorf("Invalid upgrade command setup %v", err)
-				return elementalError.New(err.Error(), elementalError.ReadingRunConfig)
+				return elementalError.NewFromError(err, elementalError.ReadingRunConfig)
 			}
 
 			cfg.Logger.Infof("Upgrade called")

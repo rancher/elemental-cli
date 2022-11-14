@@ -139,12 +139,12 @@ func (u *UpgradeAction) Run() (err error) {
 
 	umount, err := e.MountRWPartition(u.spec.Partitions.State)
 	if err != nil {
-		return elementalError.New(err.Error(), elementalError.MountStatePartition)
+		return elementalError.NewFromError(err, elementalError.MountStatePartition)
 	}
 	cleanup.Push(umount)
 	umount, err = e.MountRWPartition(u.spec.Partitions.Recovery)
 	if err != nil {
-		return elementalError.New(err.Error(), elementalError.MountRecoveryPartition)
+		return elementalError.NewFromError(err, elementalError.MountRecoveryPartition)
 	}
 	cleanup.Push(umount)
 
@@ -176,7 +176,7 @@ func (u *UpgradeAction) Run() (err error) {
 	err = u.upgradeHook(constants.BeforeUpgradeHook, false)
 	if err != nil {
 		u.Error("Error while running hook before-upgrade: %s", err)
-		return elementalError.New(err.Error(), elementalError.HookBeforeUpgrade)
+		return elementalError.NewFromError(err, elementalError.HookBeforeUpgrade)
 	}
 
 	u.Info("deploying image %s to %s", upgradeImg.Source.Value(), upgradeImg.File)
@@ -205,14 +205,14 @@ func (u *UpgradeAction) Run() (err error) {
 			func() error { return e.SelinuxRelabel("/", true) },
 		)
 		if err != nil {
-			return elementalError.New(err.Error(), elementalError.SelinuxRelabel)
+			return elementalError.NewFromError(err, elementalError.SelinuxRelabel)
 		}
 	}
 
 	err = u.upgradeHook(constants.AfterUpgradeChrootHook, true)
 	if err != nil {
 		u.Error("Error running hook after-upgrade-chroot: %s", err)
-		return elementalError.New(err.Error(), elementalError.HookAfterUpgradeChroot)
+		return elementalError.NewFromError(err, elementalError.HookAfterUpgradeChroot)
 	}
 
 	// Only apply rebrand stage for system upgrades
@@ -222,14 +222,14 @@ func (u *UpgradeAction) Run() (err error) {
 		err = e.SetDefaultGrubEntry(u.spec.Partitions.State.MountPoint, upgradeImg.MountPoint, u.spec.GrubDefEntry)
 		if err != nil {
 			u.Error("failed setting default entry")
-			return elementalError.New(err.Error(), elementalError.SetDefaultGrubEntry)
+			return elementalError.NewFromError(err, elementalError.SetDefaultGrubEntry)
 		}
 	}
 
 	err = e.UnmountImage(&upgradeImg)
 	if err != nil {
 		u.Error("failed unmounting transition image")
-		return elementalError.New(err.Error(), elementalError.UnmountImage)
+		return elementalError.NewFromError(err, elementalError.UnmountImage)
 	}
 
 	// If not upgrading recovery, backup active into passive
@@ -242,7 +242,7 @@ func (u *UpgradeAction) Run() (err error) {
 		_, err := u.config.Runner.Run("mv", "-f", source, u.spec.Passive.File)
 		if err != nil {
 			u.Error("Failed to move %s to %s: %s", source, u.spec.Passive.File, err)
-			return elementalError.New(err.Error(), elementalError.MoveFile)
+			return elementalError.NewFromError(err, elementalError.MoveFile)
 		}
 		u.Info("Finished moving %s to %s", source, u.spec.Passive.File)
 		// Label the image to passive!
@@ -250,7 +250,7 @@ func (u *UpgradeAction) Run() (err error) {
 		if err != nil {
 			u.Error("Error while labeling the passive image %s: %s", u.spec.Passive.File, err)
 			u.Debug("Error while labeling the passive image %s, command output: %s", out)
-			return elementalError.New(err.Error(), elementalError.LabelImage)
+			return elementalError.NewFromError(err, elementalError.LabelImage)
 		}
 		_, _ = u.config.Runner.Run("sync")
 	}
@@ -259,7 +259,7 @@ func (u *UpgradeAction) Run() (err error) {
 	_, err = u.config.Runner.Run("mv", "-f", upgradeImg.File, finalImageFile)
 	if err != nil {
 		u.Error("Failed to move %s to %s: %s", upgradeImg.File, finalImageFile, err)
-		return elementalError.New(err.Error(), elementalError.MoveFile)
+		return elementalError.NewFromError(err, elementalError.MoveFile)
 	}
 	u.Info("Finished moving %s to %s", upgradeImg.File, finalImageFile)
 
@@ -268,7 +268,7 @@ func (u *UpgradeAction) Run() (err error) {
 	err = u.upgradeHook(constants.AfterUpgradeHook, false)
 	if err != nil {
 		u.Error("Error running hook after-upgrade: %s", err)
-		return elementalError.New(err.Error(), elementalError.HookAfterUpgrade)
+		return elementalError.NewFromError(err, elementalError.HookAfterUpgrade)
 	}
 
 	// Update state.yaml file on recovery and state partitions
@@ -283,17 +283,17 @@ func (u *UpgradeAction) Run() (err error) {
 	// Do not reboot/poweroff on cleanup errors
 	err = cleanup.Cleanup(err)
 	if err != nil {
-		return elementalError.New(err.Error(), elementalError.Cleanup)
+		return elementalError.NewFromError(err, elementalError.Cleanup)
 	}
 	if u.config.Reboot {
 		u.Info("Rebooting in 5 seconds")
 		if err = utils.Reboot(u.config.Runner, 5); err != nil {
-			return elementalError.New(err.Error(), elementalError.Reboot)
+			return elementalError.NewFromError(err, elementalError.Reboot)
 		}
 	} else if u.config.PowerOff {
 		u.Info("Shutting down in 5 seconds")
 		if err = utils.Shutdown(u.config.Runner, 5); err != nil {
-			return elementalError.New(err.Error(), elementalError.Shutdown)
+			return elementalError.NewFromError(err, elementalError.Shutdown)
 		}
 	}
 	return err
