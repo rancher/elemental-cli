@@ -354,3 +354,15 @@ func (g Grub) SetPersistentVariables(grubEnvFile string, vars map[string]string)
 	}
 	return nil
 }
+
+// CreateConfigFile will create the config file given if it doesn't exist
+func (g Grub) CreateConfigFile(file string) error {
+	if exists, _ := Exists(g.config.Fs, file); !exists {
+		g.config.Logger.Debugf("Running grub2-editenv with params: %s create", file)
+		_, err := g.config.Runner.Run("grub2-editenv", file, "create")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

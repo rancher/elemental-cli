@@ -554,6 +554,20 @@ func (e Elemental) SetDefaultGrubEntry(partMountPoint string, imgMountPoint stri
 	)
 }
 
+// CreateDefaultGrubConfigFiles creates the expected files that the grub.cfg is going to try to load if they don't exist
+func (e Elemental) CreateDefaultGrubConfigFiles(partMountPoint string) error {
+	grub := utils.NewGrub(e.config)
+	for _, file := range []string{cnst.GrubEnv, cnst.GrubCustom, cnst.GrubMenu} {
+		e.config.Logger.Debugf("Creating default grub config file: %s", file)
+		err := grub.CreateConfigFile(filepath.Join(partMountPoint, file))
+		if err != nil {
+			e.config.Logger.Errorf("Error creating grub config file %s: %s", file, err)
+			return err
+		}
+	}
+	return nil
+}
+
 // FindKernelInitrd finds for kernel and intird files inside the /boot directory of a given
 // root tree path. It assumes kernel and initrd files match certain file name prefixes.
 func (e Elemental) FindKernelInitrd(rootDir string) (kernel string, initrd string, err error) {

@@ -227,6 +227,12 @@ func (i InstallAction) Run() (err error) {
 		return err
 	}
 
+	// Create config files for grub if needed
+	err = e.CreateDefaultGrubConfigFiles(i.spec.Partitions.State.MountPoint)
+	if err != nil {
+		return err
+	}
+
 	// Unmount active image
 	err = e.UnmountImage(&i.spec.Active)
 	if err != nil {

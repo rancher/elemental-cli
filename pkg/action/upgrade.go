@@ -224,6 +224,11 @@ func (u *UpgradeAction) Run() (err error) {
 			u.Error("failed setting default entry")
 			return elementalError.NewFromError(err, elementalError.SetDefaultGrubEntry)
 		}
+		// Create config files for grub if needed
+		err = e.CreateDefaultGrubConfigFiles(u.spec.Partitions.State.MountPoint)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = e.UnmountImage(&upgradeImg)

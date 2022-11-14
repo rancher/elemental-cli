@@ -14,7 +14,7 @@ linters:
     - gocyclo # check complexity
 linters-settings:
   gocyclo:
-    min-complexity: 30
+    min-complexity: 31
   goheader:
     template: |-
       Copyright © {{year}} SUSE LLC

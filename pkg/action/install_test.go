@@ -61,7 +61,7 @@ var _ = Describe("Install action tests", func() {
 		client = &v1mock.FakeHTTPClient{}
 		memLog = &bytes.Buffer{}
 		logger = v1.NewBufferLogger(memLog)
-		//logger.SetLevel(v1.DebugLevel())
+		logger.SetLevel(v1.DebugLevel())
 		var err error
 		fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 		Expect(err).Should(BeNil())
@@ -210,6 +210,22 @@ var _ = Describe("Install action tests", func() {
 			config.Reboot = true
 			Expect(installer.Run()).To(BeNil())
 			Expect(runner.IncludesCmds([][]string{{"reboot", "-f"}}))
+		})
+
+		It("Successfully creates default grub config files if they dont exist", Label("grub"), func() {
+			spec.Target = device
+			// Create one of the config files to make sure we don't overwrite existing files
+			err = fs.Mkdir(spec.Partitions.State.MountPoint, constants.DirPerm)
+			Expect(err).ToNot(HaveOccurred())
+			err = fs.WriteFile(filepath.Join(spec.Partitions.State.MountPoint, constants.GrubCustom), []byte(""), constants.FilePerm)
+			Expect(err).ToNot(HaveOccurred())
+			// Install
+			Expect(installer.Run()).To(BeNil())
+			// Check that the other 2 default files were "created"
+			Expect(runner.IncludesCmds([][]string{{"grub2-editenv", filepath.Join(spec.Partitions.State.MountPoint, constants.GrubMenu), "create"}}))
+			Expect(runner.IncludesCmds([][]string{{"grub2-editenv", filepath.Join(spec.Partitions.State.MountPoint, constants.GrubEnv), "create"}}))
+			// Check that the existing file in the FS was not "created"
+			Expect(runner.IncludesCmds([][]string{{"grub2-editenv", filepath.Join(spec.Partitions.State.MountPoint, constants.GrubCustom), "create"}})).To(HaveOccurred())
 		})
 
 		It("Sets the executable /run/cos/ejectcd so systemd can eject the cd on restart", func() {

@@ -921,6 +921,23 @@ var _ = Describe("Utils", Label("utils"), func() {
 				})).To(BeNil())
 			})
 		})
+		Describe("CreateConfigFile", func() {
+			It("Creates default files", func() {
+				grub := utils.NewGrub(config)
+				Expect(grub.CreateConfigFile("somefile")).To(BeNil())
+				Expect(runner.IncludesCmds([][]string{
+					{"grub2-editenv", "somefile", "create"},
+				})).To(BeNil())
+			})
+			It("Fails running grub2-editenv", func() {
+				runner.ReturnError = errors.New("grub error")
+				grub := utils.NewGrub(config)
+				Expect(grub.CreateConfigFile("somefile")).NotTo(BeNil())
+				Expect(runner.CmdsMatch([][]string{
+					{"grub2-editenv", "somefile", "create"},
+				})).To(BeNil())
+			})
+		})
 		Describe("CreateBootEntry", Label("bootentry"), func() {
 			var efivars efibootmgr.EFIVariables
 			var relativeTo string
