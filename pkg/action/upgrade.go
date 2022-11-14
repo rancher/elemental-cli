@@ -183,7 +183,7 @@ func (u *UpgradeAction) Run() (err error) {
 	upgradeMeta, err := e.DeployImage(&upgradeImg, true)
 	if err != nil {
 		u.Error("Failed deploying image to file '%s': %s", upgradeImg.File, err)
-		return err
+		return elementalError.NewFromError(err, elementalError.DeployImage)
 	}
 	cleanup.Push(func() error { return e.UnmountImage(&upgradeImg) })
 
@@ -293,7 +293,7 @@ func (u *UpgradeAction) Run() (err error) {
 	} else if u.config.PowerOff {
 		u.Info("Shutting down in 5 seconds")
 		if err = utils.Shutdown(u.config.Runner, 5); err != nil {
-			return elementalError.NewFromError(err, elementalError.Shutdown)
+			return elementalError.NewFromError(err, elementalError.PowerOff)
 		}
 	}
 	return err
