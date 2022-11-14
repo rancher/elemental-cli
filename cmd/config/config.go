@@ -195,7 +195,6 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	err := viper.Unmarshal(cfg, setDecoder, decodeHook)
 	if err != nil {
 		cfg.Logger.Warnf("error unmarshalling RunConfig: %s", err)
-		return cfg, err
 	}
 
 	err = cfg.Sanitize()
