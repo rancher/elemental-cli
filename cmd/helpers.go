@@ -25,7 +25,7 @@ import (
 // CheckRoot is a helper to return on PreRunE, so we can add it to commands that require root
 func CheckRoot() error {
 	if os.Geteuid() != 0 {
-		return errors.ErrCommandRequiresRoot
+		return errors.New("this command requires root privileges", errors.RequiresRoot)
 	}
 	return nil
 }
