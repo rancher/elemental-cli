@@ -121,7 +121,9 @@ func (u *UpgradeAction) Run() (err error) {
 	var finalImageFile string
 
 	cleanup := utils.NewCleanStack()
-	defer func() { err = cleanup.Cleanup(err) }()
+	defer func() {
+		err = cleanup.Cleanup(err)
+	}()
 
 	e := elemental.NewElemental(&u.config.Config)
 
@@ -286,7 +288,7 @@ func (u *UpgradeAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.Cleanup)
 	}
 
-	return e.PowerAction(u.config)
+	return PowerAction(u.config)
 }
 
 // remove attempts to remove the given path. Does nothing if it doesn't exist

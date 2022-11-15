@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
-	elementalError "github.com/rancher/elemental-cli/pkg/error"
 	"github.com/rancher/elemental-cli/pkg/partitioner"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
@@ -582,28 +581,4 @@ func (e Elemental) DeactivateDevices() error {
 	)
 	e.config.Logger.Debugf("blkdeactivate command output: %s", string(out))
 	return err
-}
-
-// PowerAction executes a power-action (Reboot/PowerOff) after completed
-// install or upgrade and returns any encountered error.
-func (e Elemental) PowerAction(cfg *v1.RunConfig) error {
-	// Reboot, poweroff or nothing
-	var (
-		err  error
-		code int
-	)
-
-	if cfg.Reboot {
-		cfg.Logger.Infof("Rebooting in 5 seconds")
-		if err = utils.Reboot(cfg.Runner, 5); err != nil {
-			code = elementalError.Reboot
-		}
-	} else if cfg.PowerOff {
-		cfg.Logger.Infof("Shutting down in 5 seconds")
-		if err = utils.Shutdown(cfg.Runner, 5); err != nil {
-			code = elementalError.PowerOff
-		}
-	}
-
-	return elementalError.NewFromError(err, code)
 }

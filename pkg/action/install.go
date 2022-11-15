@@ -270,5 +270,5 @@ func (i InstallAction) Run() (err error) {
 		}
 	}
 
-	return e.PowerAction(i.cfg)
+	return PowerAction(i.cfg)
 }
