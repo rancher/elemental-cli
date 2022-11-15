@@ -270,17 +270,5 @@ func (i InstallAction) Run() (err error) {
 		}
 	}
 
-	// Reboot, poweroff or nothing
-	if i.cfg.Reboot {
-		i.cfg.Logger.Infof("Rebooting in 5 seconds")
-		if err = utils.Reboot(i.cfg.Runner, 5); err != nil {
-			return elementalError.NewFromError(err, elementalError.Reboot)
-		}
-	} else if i.cfg.PowerOff {
-		i.cfg.Logger.Infof("Shutting down in 5 seconds")
-		if err = utils.Shutdown(i.cfg.Runner, 5); err != nil {
-			return elementalError.NewFromError(err, elementalError.PowerOff)
-		}
-	}
-	return err
+	return e.PowerAction(i.cfg)
 }

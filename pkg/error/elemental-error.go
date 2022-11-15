@@ -33,6 +33,10 @@ func (e *ElementalError) ExitCode() int {
 // NewFromError generates an ElementalError from an existing error,
 // maintaining its error message
 func NewFromError(err error, code int) *ElementalError {
+	if err == nil {
+		return nil
+	}
+
 	errorMsg := ""
 	if err.Error() != "" {
 		errorMsg = err.Error()

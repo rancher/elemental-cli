@@ -285,18 +285,8 @@ func (u *UpgradeAction) Run() (err error) {
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.Cleanup)
 	}
-	if u.config.Reboot {
-		u.Info("Rebooting in 5 seconds")
-		if err = utils.Reboot(u.config.Runner, 5); err != nil {
-			return elementalError.NewFromError(err, elementalError.Reboot)
-		}
-	} else if u.config.PowerOff {
-		u.Info("Shutting down in 5 seconds")
-		if err = utils.Shutdown(u.config.Runner, 5); err != nil {
-			return elementalError.NewFromError(err, elementalError.PowerOff)
-		}
-	}
-	return err
+
+	return e.PowerAction(u.config)
 }
 
 // remove attempts to remove the given path. Does nothing if it doesn't exist
