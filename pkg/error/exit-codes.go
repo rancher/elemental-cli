@@ -205,5 +205,14 @@ const UnpackImage = 66
 // Error reading file
 const ReadFile = 67
 
+// No source was provided for the command
+const NoSourceProvided = 68
+
+// Error removing a file
+const RemoveFile = 69
+
+// Error calculating checksum
+const CalculateChecksum = 70
+
 // Unknown error
 const Unknown int = 255

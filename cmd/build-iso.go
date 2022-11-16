@@ -17,7 +17,6 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -27,6 +26,7 @@ import (
 	"github.com/rancher/elemental-cli/cmd/config"
 	"github.com/rancher/elemental-cli/pkg/action"
 	"github.com/rancher/elemental-cli/pkg/constants"
+	elementalError "github.com/rancher/elemental-cli/pkg/error"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
 )
@@ -52,19 +52,20 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := exec.LookPath("mount")
 			if err != nil {
-				return err
+				return elementalError.NewFromError(err, elementalError.StatFile)
 			}
 			mounter := mount.New(path)
 
 			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags(), mounter)
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
+				return elementalError.NewFromError(err, elementalError.ReadingBuildConfig)
 			}
 
 			flags := cmd.Flags()
 			err = validateCosignFlags(cfg.Logger, flags)
 			if err != nil {
-				return err
+				return elementalError.NewFromError(err, elementalError.CosignWrongFlags)
 			}
 
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
@@ -73,20 +74,20 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			spec, err := config.ReadBuildISO(cfg, flags)
 			if err != nil {
 				cfg.Logger.Errorf("invalid install command setup %v", err)
-				return err
+				return elementalError.NewFromError(err, elementalError.ReadingSpecConfig)
 			}
 
 			if len(args) == 1 {
 				imgSource, err := v1.NewSrcFromURI(args[0])
 				if err != nil {
 					cfg.Logger.Errorf("not a valid rootfs source image argument: %s", args[0])
-					return err
+					return elementalError.NewFromError(err, elementalError.IdentifySource)
 				}
 				spec.RootFS = []*v1.ImageSource{imgSource}
 			} else if len(spec.RootFS) == 0 {
 				errmsg := "rootfs source image for building ISO was not provided"
 				cfg.Logger.Errorf(errmsg)
-				return fmt.Errorf(errmsg)
+				return elementalError.NewFromError(err, elementalError.NoSourceProvided)
 			}
 
 			// Repos and overlays can't be unmarshaled directly as they require
@@ -100,24 +101,24 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				if ok, err := utils.Exists(cfg.Fs, oRootfs); ok {
 					spec.RootFS = append(spec.RootFS, v1.NewDirSrc(oRootfs))
 				} else {
-					cfg.Logger.Errorf("Invalid value for overlay-rootfs")
-					return fmt.Errorf("Invalid path '%s': %v", oRootfs, err)
+					cfg.Logger.Errorf("Invalid RootFS overlay path '%s': %v", oRootfs, err)
+					return elementalError.NewFromError(err, elementalError.StatFile)
 				}
 			}
 			if oUEFI != "" {
 				if ok, err := utils.Exists(cfg.Fs, oUEFI); ok {
 					spec.UEFI = append(spec.UEFI, v1.NewDirSrc(oUEFI))
 				} else {
-					cfg.Logger.Errorf("Invalid value for overlay-uefi")
-					return fmt.Errorf("Invalid path '%s': %v", oUEFI, err)
+					cfg.Logger.Errorf("Invalid UEFI overlay path '%s': %v", oUEFI, err)
+					return elementalError.NewFromError(err, elementalError.StatFile)
 				}
 			}
 			if oISO != "" {
 				if ok, err := utils.Exists(cfg.Fs, oISO); ok {
 					spec.Image = append(spec.Image, v1.NewDirSrc(oISO))
 				} else {
-					cfg.Logger.Errorf("Invalid value for overlay-iso")
-					return fmt.Errorf("Invalid path '%s': %v", oISO, err)
+					cfg.Logger.Errorf("Invalid ISO overlay path '%s': %v", oISO, err)
+					return elementalError.NewFromError(err, elementalError.StatFile)
 				}
 			}
 
@@ -126,13 +127,7 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			}
 
 			buildISO := action.NewBuildISOAction(cfg, spec)
-			err = buildISO.ISORun()
-			if err != nil {
-				cfg.Logger.Errorf(err.Error())
-				return err
-			}
-
-			return nil
+			return buildISO.ISORun()
 		},
 	}
 
