@@ -196,5 +196,8 @@ const HookAfterReset = 63
 // Unsupported flavor
 const UnsupportedFlavor = 64
 
+// Error encountered during cloud-init run-stage
+const CloudInitRunStage = 65
+
 // Unknown error
 const Unknown int = 255
