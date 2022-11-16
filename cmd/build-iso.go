@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -87,7 +88,7 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			} else if len(spec.RootFS) == 0 {
 				errmsg := "rootfs source image for building ISO was not provided"
 				cfg.Logger.Errorf(errmsg)
-				return elementalError.NewFromError(err, elementalError.NoSourceProvided)
+				return elementalError.New(errmsg, elementalError.NoSourceProvided)
 			}
 
 			// Repos and overlays can't be unmarshaled directly as they require
@@ -101,24 +102,27 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				if ok, err := utils.Exists(cfg.Fs, oRootfs); ok {
 					spec.RootFS = append(spec.RootFS, v1.NewDirSrc(oRootfs))
 				} else {
-					cfg.Logger.Errorf("Invalid RootFS overlay path '%s': %v", oRootfs, err)
-					return elementalError.NewFromError(err, elementalError.StatFile)
+					msg := fmt.Sprintf("Invalid path '%s': %v", oRootfs, err)
+					cfg.Logger.Errorf(msg)
+					return elementalError.New(msg, elementalError.StatFile)
 				}
 			}
 			if oUEFI != "" {
 				if ok, err := utils.Exists(cfg.Fs, oUEFI); ok {
 					spec.UEFI = append(spec.UEFI, v1.NewDirSrc(oUEFI))
 				} else {
-					cfg.Logger.Errorf("Invalid UEFI overlay path '%s': %v", oUEFI, err)
-					return elementalError.NewFromError(err, elementalError.StatFile)
+					msg := fmt.Sprintf("Invalid path '%s': %v", oUEFI, err)
+					cfg.Logger.Errorf(msg)
+					return elementalError.New(msg, elementalError.StatFile)
 				}
 			}
 			if oISO != "" {
 				if ok, err := utils.Exists(cfg.Fs, oISO); ok {
 					spec.Image = append(spec.Image, v1.NewDirSrc(oISO))
 				} else {
-					cfg.Logger.Errorf("Invalid ISO overlay path '%s': %v", oISO, err)
-					return elementalError.NewFromError(err, elementalError.StatFile)
+					msg := fmt.Sprintf("Invalid path '%s': %v", oISO, err)
+					cfg.Logger.Errorf(msg)
+					return elementalError.New(msg, elementalError.StatFile)
 				}
 			}
 

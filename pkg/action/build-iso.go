@@ -63,8 +63,9 @@ func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO, opts ...BuildISOAc
 }
 
 // BuildISORun will install the system from a given configuration
-func (b *BuildISOAction) ISORun() (err error) {
+func (b *BuildISOAction) ISORun() error {
 	cleanup := utils.NewCleanStack()
+	var err error
 	defer func() { err = cleanup.Cleanup(err) }()
 
 	isoTmpDir, err := utils.TempDir(b.cfg.Fs, "", "elemental-iso")
