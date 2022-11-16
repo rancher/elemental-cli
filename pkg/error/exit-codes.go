@@ -199,5 +199,8 @@ const UnsupportedFlavor = 64
 // Error encountered during cloud-init run-stage
 const CloudInitRunStage = 65
 
+// Error unpacking image
+const UnpackImage = 66
+
 // Unknown error
 const Unknown int = 255
