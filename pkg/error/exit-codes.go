@@ -202,5 +202,8 @@ const CloudInitRunStage = 65
 // Error unpacking image
 const UnpackImage = 66
 
+// Error reading file
+const ReadFile = 67
+
 // Unknown error
 const Unknown int = 255
