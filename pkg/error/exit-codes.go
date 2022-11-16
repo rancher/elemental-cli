@@ -193,5 +193,8 @@ const HookAfterResetChroot = 62
 // Error during after-reset hook
 const HookAfterReset = 63
 
+// Unsupported flavor
+const UnsupportedFlavor = 64
+
 // Unknown error
 const Unknown int = 255
