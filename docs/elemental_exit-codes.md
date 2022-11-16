@@ -37,7 +37,6 @@
 | 41 | Error occurred during cleanup|
 | 42 | Error occurred trying to reboot|
 | 43 | Error occurred trying to shutdown|
-| 44 | Error occurred when unmounting image|
 | 44 | Error occurred when labeling partition|
 | 45 | Error setting default grub entry|
 | 46 | Error occurred during selinux relabeling|
@@ -65,4 +64,5 @@
 | 68 | No source was provided for the command|
 | 69 | Error removing a file|
 | 70 | Error calculating checksum|
+| 71 | Error occurred when unmounting image|
 | 255 | Unknown error|

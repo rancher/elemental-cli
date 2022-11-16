@@ -133,9 +133,6 @@ const PowerOff = 43
 // Error occurred when labeling partition
 const LabelImage = 44
 
-// Error occurred when unmounting image
-const UnmountImage = 44
-
 // Error setting default grub entry
 const SetDefaultGrubEntry = 45
 
@@ -213,6 +210,9 @@ const RemoveFile = 69
 
 // Error calculating checksum
 const CalculateChecksum = 70
+
+// Error occurred when unmounting image
+const UnmountImage = 71
 
 // Unknown error
 const Unknown int = 255
