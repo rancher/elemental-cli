@@ -370,7 +370,8 @@ func GetTempDir(config *v1.Config, suffix string) string {
 		return filepath.Join("/", "tmp", elementalTmpDir)
 	}
 	// Check persistent and if its mounted
-	ep := v1.NewElementalPartitionsFromList(parts)
+	state, _ := config.LoadInstallState()
+	ep := v1.NewElementalPartitionsFromList(parts, state)
 	persistent := ep.Persistent
 	if persistent != nil {
 		if mnt, _ := IsMounted(config, persistent); mnt {
