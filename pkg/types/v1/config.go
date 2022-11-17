@@ -357,7 +357,7 @@ func NewElementalPartitionsFromList(pl PartitionList, state *InstallState) Eleme
 		constants.PersistentPartName: constants.PersistentLabel,
 	}
 	if state != nil {
-		for k, _ := range lm {
+		for k := range lm {
 			if state.Partitions[k] != nil {
 				lm[k] = state.Partitions[k].FSLabel
 			}
