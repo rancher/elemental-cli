@@ -154,7 +154,8 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	}
 
 	// merge yaml config files on top of default runconfig
-	if exists, _ := utils.Exists(cfg.Fs, configDir); exists {
+	configFilePath := fmt.Sprintf("%s/config.yaml", configDir)
+	if exists, _ := utils.Exists(cfg.Fs, configFilePath); exists {
 		viper.AddConfigPath(configDir)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
