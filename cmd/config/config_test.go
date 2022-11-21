@@ -69,6 +69,11 @@ var _ = Describe("Config", Label("config"), func() {
 				Expect(inst.GrubDefEntry).To(Equal("mockme"))
 				Expect(inst.Active.Size).To(Equal(uint(2000)), litter.Sdump(up))
 			})
+
+			It("reads empty spec correctly", func() {
+				_, err := ReadConfigRun("../../tests/fixtures/empty/", nil, mounter)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
 		})
 	})
 
