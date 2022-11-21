@@ -74,6 +74,11 @@ var _ = Describe("Config", Label("config"), func() {
 				_, err := ReadConfigRun("../../tests/fixtures/empty/", nil, mounter)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
+
+			It("returns error for broken config", func() {
+				_, err := ReadConfigRun("../../tests/fixtures/broken/", nil, mounter)
+				Expect(err).Should(HaveOccurred())
+			})
 		})
 	})
 
