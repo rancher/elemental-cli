@@ -198,8 +198,32 @@ var _ = Describe("Runtime Actions", func() {
 				Expect(err.Error()).To(ContainSubstring("cloud init"))
 			})
 			It("Successfully upgrades from docker image with custom labels", Label("docker"), func() {
-				spec.Active.Label = "CUSTOM_ACTIVE_LABEL"
-				spec.Passive.Label = "CUSTOM_PASSIVE_LABEL"
+				// Create installState with previous install state
+				statePath := filepath.Join(constants.RunningStateDir, constants.InstallStateFile)
+				installState := &v1.InstallState{
+					Partitions: map[string]*v1.PartitionState{
+						constants.StatePartName: {
+							FSLabel: "COS_STATE",
+							Images: map[string]*v1.ImageState{
+								constants.ActiveImgName: {
+									Label: "CUSTOM_ACTIVE_LABEL",
+									FS:    constants.LinuxImgFs,
+								},
+								constants.PassiveImgName: {
+									Label: "CUSTOM_PASSIVE_LABEL",
+									FS:    constants.LinuxImgFs,
+								},
+							},
+						},
+					},
+				}
+				err = config.WriteInstallState(installState, statePath, statePath)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Create a new spec to load state yaml
+				spec, err = conf.NewUpgradeSpec(config.Config)
+				spec.Active.Size = 16
+				Expect(err).ShouldNot(HaveOccurred())
 
 				spec.Active.Source = v1.NewDockerSrc("alpine")
 				upgrade = action.NewUpgradeAction(config, spec)
