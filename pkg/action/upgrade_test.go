@@ -197,7 +197,10 @@ var _ = Describe("Runtime Actions", func() {
 				// Make sure is a cloud init error!
 				Expect(err.Error()).To(ContainSubstring("cloud init"))
 			})
-			It("Successfully upgrades from docker image", Label("docker"), func() {
+			It("Successfully upgrades from docker image with custom labels", Label("docker"), func() {
+				spec.Active.Label = "CUSTOM_ACTIVE_LABEL"
+				spec.Passive.Label = "CUSTOM_PASSIVE_LABEL"
+
 				spec.Active.Source = v1.NewDockerSrc("alpine")
 				upgrade = action.NewUpgradeAction(config, spec)
 				err := upgrade.Run()
@@ -230,6 +233,22 @@ var _ = Describe("Runtime Actions", func() {
 				// Expect transition image to be gone
 				_, err = fs.Stat(spec.Active.File)
 				Expect(err).To(HaveOccurred())
+
+				// An upgraded state yaml file should exist
+				state, err := config.LoadInstallState()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(
+					state.Partitions[constants.StatePartName].
+						Images[constants.ActiveImgName].Source.String()).
+					To(Equal("oci://alpine:latest"))
+				Expect(
+					state.Partitions[constants.StatePartName].
+						Images[constants.ActiveImgName].Label).
+					To(Equal("CUSTOM_ACTIVE_LABEL"))
+				Expect(
+					state.Partitions[constants.StatePartName].
+						Images[constants.PassiveImgName].Label).
+					To(Equal("CUSTOM_PASSIVE_LABEL"))
 			})
 			It("Successfully reboots after upgrade from docker image", Label("docker"), func() {
 				spec.Active.Source = v1.NewDockerSrc("alpine")
@@ -302,6 +321,18 @@ var _ = Describe("Runtime Actions", func() {
 				_, err = fs.Stat(spec.Active.File)
 				Expect(err).To(HaveOccurred())
 				Expect(runner.IncludesCmds([][]string{{"poweroff", "-f"}})).To(BeNil())
+
+				// An upgraded state yaml file should exist
+				state, err := config.LoadInstallState()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(
+					state.Partitions[constants.StatePartName].
+						Images[constants.ActiveImgName].Source.String()).
+					To(Equal("oci://alpine:latest"))
+				Expect(
+					state.Partitions[constants.StatePartName].
+						Images[constants.PassiveImgName].Label).
+					To(Equal(constants.PassiveLabel))
 			})
 			It("Successfully upgrades from directory", Label("directory"), func() {
 				dirSrc, _ := utils.TempDir(fs, "", "elementalupgrade")
@@ -666,9 +697,17 @@ var _ = Describe("Runtime Actions", func() {
 					Expect(info.Size()).To(BeNumerically("==", int64(spec.Recovery.Size*1024*1024)))
 					Expect(info.IsDir()).To(BeFalse())
 
-					// Transition squash should not exist
+					// Transition should not exist
 					info, err = fs.Stat(spec.Recovery.File)
 					Expect(err).To(HaveOccurred())
+
+					// An upgraded state yaml file should exist
+					state, err := config.LoadInstallState()
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(
+						state.Partitions[constants.RecoveryPartName].
+							Images[constants.RecoveryImgName].Source.String()).
+						To(Equal(spec.Recovery.Source.String()))
 				})
 				It("Successfully upgrades recovery from channel upgrade", Label("channel"), func() {
 					// This should be the old image
