@@ -52,7 +52,8 @@ var _ = Describe("Config", Label("config"), func() {
 	Context("From fixtures", func() {
 		Describe("read all specs", Label("install"), func() {
 			It("reads values correctly", func() {
-				cfg, err := ReadConfigRun("../../tests/fixtures/simple/", nil, mounter)
+				flags := &pflag.FlagSet{}
+				cfg, err := ReadConfigRun("../../tests/fixtures/simple/", flags, mounter)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(cfg.Config.Cosign).To(BeTrue(), litter.Sdump(cfg))
@@ -102,7 +103,7 @@ var _ = Describe("Config", Label("config"), func() {
 			Expect(cfg.Name).To(Equal("randomname"))
 		})
 		It("fails on bad yaml manifest file", func() {
-			_, err := ReadConfigBuild("../../tests/fixtures/badconfig/", nil, mounter)
+			_, err := ReadConfigBuild("../../tests/fixtures/badconfig/", flags, mounter)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -118,6 +119,7 @@ var _ = Describe("Config", Label("config"), func() {
 		var cleanup func()
 		var memLog *bytes.Buffer
 		var err error
+		var flags *pflag.FlagSet
 
 		BeforeEach(func() {
 			runner = v1mock.NewFakeRunner()
@@ -127,11 +129,12 @@ var _ = Describe("Config", Label("config"), func() {
 			memLog = &bytes.Buffer{}
 			logger = v1.NewBufferLogger(memLog)
 			cloudInit = &v1mock.FakeCloudInitRunner{}
+			flags = pflag.NewFlagSet("testflags", 1)
 
 			fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 			Expect(err).Should(BeNil())
 
-			cfg, err = ReadConfigBuild("../../tests/fixtures/config/", nil, mounter)
+			cfg, err = ReadConfigBuild("../../tests/fixtures/config/", flags, mounter)
 			Expect(err).Should(BeNil())
 			// From defaults
 			Expect(cfg.Arch).To(Equal("x86_64"))
@@ -175,20 +178,16 @@ var _ = Describe("Config", Label("config"), func() {
 		var flags *pflag.FlagSet
 		BeforeEach(func() {
 			flags = pflag.NewFlagSet("testflags", 1)
-			flags.Bool("cosign", false, "testing flag")
-			flags.String("cosign-key", "", "testing flag")
-			flags.Set("cosign", "true")
-			flags.Set("cosign-key", "someOtherKey")
 		})
 		It("fails on bad yaml config file", func() {
-			_, err := ReadConfigRun("../../tests/fixtures/badconfig/", nil, mounter)
+			_, err := ReadConfigRun("../../tests/fixtures/badconfig/", flags, mounter)
 			Expect(err).Should(HaveOccurred())
 
-			_, err = ReadConfigRun("../../tests/fixtures/badextraconfig/", nil, mounter)
+			_, err = ReadConfigRun("../../tests/fixtures/badextraconfig/", flags, mounter)
 			Expect(err).Should(HaveOccurred())
 		})
 		It("uses defaults if no configs are provided", func() {
-			cfg, err := ReadConfigRun("", nil, mounter)
+			cfg, err := ReadConfigRun("", flags, mounter)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(cfg.Arch == "x86_64").To(BeTrue())
 			// Uses given mounter
@@ -199,6 +198,11 @@ var _ = Describe("Config", Label("config"), func() {
 			Expect(ok).To(BeTrue())
 		})
 		It("uses provided configs and flags, flags have priority", func() {
+			flags.Bool("cosign", false, "testing flag")
+			flags.String("cosign-key", "", "testing flag")
+			flags.Set("cosign", "true")
+			flags.Set("cosign-key", "someOtherKey")
+
 			cfg, err := ReadConfigRun("../../tests/fixtures/config/", flags, mounter)
 			Expect(err).To(BeNil())
 			Expect(cfg.Cosign).To(BeTrue())
@@ -212,7 +216,7 @@ var _ = Describe("Config", Label("config"), func() {
 		})
 		It("sets log level debug based on debug flag", func() {
 			// Default value
-			cfg, err := ReadConfigRun("../../tests/fixtures/config/", nil, mounter)
+			cfg, err := ReadConfigRun("../../tests/fixtures/config/", flags, mounter)
 			Expect(err).To(BeNil())
 			debug := viper.GetBool("debug")
 			Expect(cfg.Logger.GetLevel()).ToNot(Equal(logrus.DebugLevel))
@@ -220,7 +224,7 @@ var _ = Describe("Config", Label("config"), func() {
 
 			// Set it via viper, like the flag
 			viper.Set("debug", true)
-			cfg, err = ReadConfigRun("../../tests/fixtures/config/", nil, mounter)
+			cfg, err = ReadConfigRun("../../tests/fixtures/config/", flags, mounter)
 			Expect(err).To(BeNil())
 			debug = viper.GetBool("debug")
 			Expect(debug).To(BeTrue())
@@ -239,6 +243,7 @@ var _ = Describe("Config", Label("config"), func() {
 		var cleanup func()
 		var memLog *bytes.Buffer
 		var err error
+		var flags *pflag.FlagSet
 
 		BeforeEach(func() {
 			runner = v1mock.NewFakeRunner()
@@ -248,11 +253,12 @@ var _ = Describe("Config", Label("config"), func() {
 			memLog = &bytes.Buffer{}
 			logger = v1.NewBufferLogger(memLog)
 			cloudInit = &v1mock.FakeCloudInitRunner{}
+			flags = pflag.NewFlagSet("testflags", 1)
 
 			fs, cleanup, err = vfst.NewTestFS(map[string]interface{}{})
 			Expect(err).Should(BeNil())
 
-			cfg, err = ReadConfigRun("../../tests/fixtures/config/", nil, mounter)
+			cfg, err = ReadConfigRun("../../tests/fixtures/config/", flags, mounter)
 			Expect(err).Should(BeNil())
 
 			cfg.Fs = fs
@@ -267,8 +273,6 @@ var _ = Describe("Config", Label("config"), func() {
 			cleanup()
 		})
 		Describe("Read InstallSpec", Label("install"), func() {
-			var flags *pflag.FlagSet
-
 			BeforeEach(func() {
 				flags = pflag.NewFlagSet("testflags", 1)
 				flags.String("system.uri", "", "testing flag")
@@ -306,7 +310,6 @@ var _ = Describe("Config", Label("config"), func() {
 			})
 		})
 		Describe("Read ResetSpec", Label("install"), func() {
-			var flags *pflag.FlagSet
 			var bootedFrom string
 			var ghwTest v1mock.GhwMock
 
@@ -372,7 +375,6 @@ var _ = Describe("Config", Label("config"), func() {
 			})
 		})
 		Describe("Read UpgradeSpec", Label("install"), func() {
-			var flags *pflag.FlagSet
 			var ghwTest v1mock.GhwMock
 
 			BeforeEach(func() {

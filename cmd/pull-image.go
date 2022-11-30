@@ -90,13 +90,7 @@ func NewPullImageCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 		},
 	}
 	root.AddCommand(c)
-	c.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
-	c.Flags().String("auth-password", "", "Password to authenticate to registry")
-	c.Flags().String("auth-type", "", "Auth type")
-	c.Flags().String("auth-server-address", "", "Authentication server address")
-	c.Flags().String("auth-identity-token", "", "Authentication identity token")
-	c.Flags().String("auth-registry-token", "", "Authentication registry token")
-	c.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
+	addDockerAuthFlags(c)
 	c.Flags().StringArray("plugin", []string{}, "A list of runtime plugins to load. Can be repeated to add more than one plugin")
 	addLocalImageFlag(c)
 	return c

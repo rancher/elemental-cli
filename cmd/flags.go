@@ -188,3 +188,13 @@ func addSquashFsCompressionFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArrayP("squash-compression", "x", []string{}, "cmd options for compression to pass to mksquashfs. Full cmd including --comp as the whole values will be passed to mksquashfs. For a full list of options please check mksquashfs manual. (default value: '-comp xz -Xbcj ARCH')")
 	cmd.Flags().Bool("squash-no-compression", false, "Disable squashfs compression. Overrides any values on squash-compression")
 }
+
+func addDockerAuthFlags(cmd *cobra.Command) {
+	cmd.Flags().String("auth-username", "", "Username to authenticate to registry/notary")
+	cmd.Flags().String("auth-password", "", "Password to authenticate to registry")
+	cmd.Flags().String("auth-type", "", "Auth type")
+	cmd.Flags().String("auth-server-address", "", "Authentication server address")
+	cmd.Flags().String("auth-identity-token", "", "Authentication identity token")
+	cmd.Flags().String("auth-registry-token", "", "Authentication registry token")
+	cmd.Flags().Bool("verify", false, "Verify signed images to notary before to pull")
+}

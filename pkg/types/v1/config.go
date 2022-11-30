@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"path/filepath"
 	"sort"
 
@@ -56,6 +57,7 @@ type Config struct {
 	Arch                      string       `yaml:"arch,omitempty" mapstructure:"arch"`
 	SquashFsCompressionConfig []string     `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
 	SquashFsNoCompression     bool         `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
+	DockerAuth                *types.AuthConfig
 }
 
 // WriteInstallState writes the state.yaml file to the given state and recovery paths

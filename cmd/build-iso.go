@@ -153,6 +153,7 @@ func NewBuildISO(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 	addCosignFlags(c)
 	addSquashFsCompressionFlags(c)
 	addLocalImageFlag(c)
+	addDockerAuthFlags(c)
 	return c
 }
 

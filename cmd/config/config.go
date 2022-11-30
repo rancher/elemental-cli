@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -101,9 +102,26 @@ func bindGivenFlags(vp *viper.Viper, flagSet *pflag.FlagSet) {
 func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*v1.BuildConfig, error) {
 	logger := v1.NewLogger()
 
+	user, _ := flags.GetString("auth-username")
+	pass, _ := flags.GetString("auth-password")
+	authType, _ := flags.GetString("auth-type")
+	server, _ := flags.GetString("auth-server-address")
+	identity, _ := flags.GetString("auth-identity-token")
+	registryToken, _ := flags.GetString("auth-registry-token")
+
+	dockerAuth := &types.AuthConfig{
+		Username:      user,
+		Password:      pass,
+		ServerAddress: server,
+		Auth:          authType,
+		IdentityToken: identity,
+		RegistryToken: registryToken,
+	}
+
 	cfg := config.NewBuildConfig(
 		config.WithLogger(logger),
 		config.WithMounter(mounter),
+		config.WithDockerAuth(dockerAuth),
 	)
 
 	configLogger(cfg.Logger, cfg.Fs)
@@ -144,9 +162,26 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Inter
 }
 
 func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*v1.RunConfig, error) {
+	user, _ := flags.GetString("auth-username")
+	pass, _ := flags.GetString("auth-password")
+	authType, _ := flags.GetString("auth-type")
+	server, _ := flags.GetString("auth-server-address")
+	identity, _ := flags.GetString("auth-identity-token")
+	registryToken, _ := flags.GetString("auth-registry-token")
+
+	dockerAuth := &types.AuthConfig{
+		Username:      user,
+		Password:      pass,
+		ServerAddress: server,
+		Auth:          authType,
+		IdentityToken: identity,
+		RegistryToken: registryToken,
+	}
+
 	cfg := config.NewRunConfig(
 		config.WithLogger(v1.NewLogger()),
 		config.WithMounter(mounter),
+		config.WithDockerAuth(dockerAuth),
 	)
 	configLogger(cfg.Logger, cfg.Fs)
 	if configDir == "" {

@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"path/filepath"
 	"runtime"
 
@@ -90,6 +91,13 @@ func WithLuet(luet v1.LuetInterface) func(r *v1.Config) error {
 	}
 }
 
+func WithDockerAuth(dockerAuth *types.AuthConfig) func(r *v1.Config) error {
+	return func(r *v1.Config) error {
+		r.DockerAuth = dockerAuth
+		return nil
+	}
+}
+
 func WithArch(arch string) func(r *v1.Config) error {
 	return func(r *v1.Config) error {
 		r.Arch = arch
@@ -146,7 +154,10 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 
 	if c.Luet == nil {
 		tmpDir := utils.GetTempDir(c, "")
-		c.Luet = luet.NewLuet(luet.WithFs(c.Fs), luet.WithLogger(c.Logger), luet.WithLuetTempDir(tmpDir))
+		if c.DockerAuth == nil {
+			c.DockerAuth = &types.AuthConfig{}
+		}
+		c.Luet = luet.NewLuet(luet.WithFs(c.Fs), luet.WithLogger(c.Logger), luet.WithLuetTempDir(tmpDir), luet.WithAuth(c.DockerAuth))
 	}
 	return c
 }
