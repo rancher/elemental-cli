@@ -18,7 +18,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/docker/docker/api/types"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -27,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sanity-io/litter"
 	"github.com/sirupsen/logrus"

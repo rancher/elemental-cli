@@ -18,13 +18,13 @@ package v1
 
 import (
 	"fmt"
-	"github.com/docker/docker/api/types"
 	"path/filepath"
 	"sort"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/mount-utils"
 
+	"github.com/docker/docker/api/types"
 	"github.com/rancher/elemental-cli/pkg/constants"
 )
 
