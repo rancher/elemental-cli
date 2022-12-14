@@ -122,6 +122,17 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 		return err
 	}
 
+	// copy ARM firmware files
+	if g.config.Arch == cnst.ArchArm64 {
+		g.config.Logger.Infof("Copying ARM firmware files")
+		// run via shell for "*" extension
+		out, err := g.config.Runner.Run("sh", "-c", fmt.Sprintf("cp -a %s %s", filepath.Join(rootDir, "boot", "vc", "*"), cnst.EfiDir))
+		if err != nil {
+			g.config.Logger.Errorf(string(out))
+			return err
+		}
+	}
+
 	if efi {
 		// Copy required extra modules to boot dir under the state partition
 		// otherwise if we insmod it will fail to find them
