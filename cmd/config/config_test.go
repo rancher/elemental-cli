@@ -298,7 +298,7 @@ var _ = Describe("Config", Label("config"), func() {
 				Expect(spec.Target == "/env/disk")
 				// Overwrites system image, flags have priority over files and env vars
 				Expect(spec.Active.Source.Value() == "image/from:flag")
-				// Overwerites defetault value for DisableBootEntry from an env var
+				// Overwerites default value for DisableBootEntry from an env var
 				Expect(spec.DisableBootEntry).To(BeTrue())
 				// Uses recovery and no-format defined in confing.yaml
 				Expect(spec.Recovery.Source.Value() == "recovery/image:latest")
