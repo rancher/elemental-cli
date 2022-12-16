@@ -83,8 +83,17 @@ func GetFullDeviceByLabel(runner v1.Runner, label string, attempts int) (*v1.Par
 
 // CopyFile Copies source file to target file using Fs interface. If target
 // is  directory source is copied into that directory using source name file.
-func CopyFile(fs v1.FS, source string, target string) (err error) {
-	return ConcatFiles(fs, []string{source}, target)
+// File mode is preserved
+func CopyFile(fs v1.FS, source string, target string) error {
+	fInf, err := fs.Stat(source)
+	if err != nil {
+		return err
+	}
+	err = ConcatFiles(fs, []string{source}, target)
+	if err != nil {
+		return err
+	}
+	return fs.Chmod(target, fInf.Mode())
 }
 
 // ConcatFiles Copies source files to target file using Fs interface.
@@ -128,6 +137,58 @@ func ConcatFiles(fs v1.FS, sources []string, target string) (err error) {
 	}
 
 	return err
+}
+
+// CopyDirectory copies all files from a source directory to destination directory.
+// Destination directory is created if it doesn't exist.
+func CopyDirectory(fsys v1.FS, srcDir, dstDir string) error {
+
+	fInf, err := fsys.Lstat(srcDir)
+	if err != nil {
+		return err
+	}
+	if !fInf.IsDir() {
+		return fmt.Errorf("srcDir '%s' is not a directory", srcDir)
+	}
+
+	if exists, _ := Exists(fsys, dstDir); exists {
+		if dir, err := IsDir(fsys, dstDir); !dir {
+			return fmt.Errorf("dstDir '%s' is not a directory: %v", dstDir, err)
+		}
+	} else {
+		err = MkdirAll(fsys, dstDir, fInf.Mode())
+		if err != nil {
+			return err
+		}
+	}
+
+	return WalkDirFs(fsys, srcDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		var fInf fs.FileInfo
+		var link string
+
+		outpath := filepath.Join(dstDir, strings.TrimPrefix(path, srcDir))
+		fInf, err = d.Info()
+		if err != nil {
+			return err
+		}
+
+		switch fInf.Mode().Type() & os.ModeType {
+		case os.ModeDir:
+			return MkdirAll(fsys, outpath, fInf.Mode())
+		case os.ModeSymlink:
+			link, err = fsys.Readlink(path)
+			if err != nil {
+				return err
+			}
+			return fsys.Symlink(link, outpath)
+		default:
+			return CopyFile(fsys, path, outpath)
+		}
+	})
 }
 
 // Copies source file to target file using Fs interface

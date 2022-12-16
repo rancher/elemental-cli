@@ -32,6 +32,7 @@ import (
 )
 
 const bootEntryName = "elemental-shim"
+const armFirmwarePath = "/boot/vc"
 
 // Grub is the struct that will allow us to install grub to the target device
 type Grub struct {
@@ -125,10 +126,9 @@ func (g Grub) Install(target, rootDir, bootDir, grubConf, tty string, efi bool, 
 	// copy ARM firmware files
 	if g.config.Arch == cnst.ArchArm64 {
 		g.config.Logger.Infof("Copying ARM firmware files")
-		// run via shell for "*" extension
-		out, err := g.config.Runner.Run("sh", "-c", fmt.Sprintf("cp -a %s %s", filepath.Join(rootDir, "boot", "vc", "*"), cnst.EfiDir))
+		err = CopyDirectory(g.config.Fs, filepath.Join(rootDir, armFirmwarePath), cnst.EfiDir)
 		if err != nil {
-			g.config.Logger.Errorf(string(out))
+			g.config.Logger.Errorf(err.Error())
 			return err
 		}
 	}
