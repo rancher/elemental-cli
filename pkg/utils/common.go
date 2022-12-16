@@ -85,27 +85,23 @@ func GetFullDeviceByLabel(runner v1.Runner, label string, attempts int) (*v1.Par
 // is  directory source is copied into that directory using source name file.
 // File mode is preserved
 func CopyFile(fs v1.FS, source string, target string) error {
-	fInf, err := fs.Stat(source)
-	if err != nil {
-		return err
-	}
-	err = ConcatFiles(fs, []string{source}, target)
-	if err != nil {
-		return err
-	}
-	return fs.Chmod(target, fInf.Mode())
+	return ConcatFiles(fs, []string{source}, target)
 }
 
 // ConcatFiles Copies source files to target file using Fs interface.
 // Source files are concatenated into target file in the given order.
 // If target is a directory source is copied into that directory using
-// 1st source name file.
+// 1st source name file. The result keeps the file mode of the 1st source.
 func ConcatFiles(fs v1.FS, sources []string, target string) (err error) {
 	if len(sources) == 0 {
 		return fmt.Errorf("Empty sources list")
 	}
 	if dir, _ := IsDir(fs, target); dir {
 		target = filepath.Join(target, filepath.Base(sources[0]))
+	}
+	fInf, err := fs.Stat(sources[0])
+	if err != nil {
+		return err
 	}
 
 	targetFile, err := fs.Create(target)
@@ -124,19 +120,19 @@ func ConcatFiles(fs v1.FS, sources []string, target string) (err error) {
 	for _, source := range sources {
 		sourceFile, err = fs.Open(source)
 		if err != nil {
-			break
+			return err
 		}
 		_, err = io.Copy(targetFile, sourceFile)
 		if err != nil {
-			break
+			return err
 		}
 		err = sourceFile.Close()
 		if err != nil {
-			break
+			return err
 		}
 	}
 
-	return err
+	return fs.Chmod(target, fInf.Mode())
 }
 
 // CopyDirectory copies all files from a source directory to destination directory.
@@ -149,17 +145,6 @@ func CopyDirectory(fsys v1.FS, srcDir, dstDir string) error {
 	}
 	if !fInf.IsDir() {
 		return fmt.Errorf("srcDir '%s' is not a directory", srcDir)
-	}
-
-	if exists, _ := Exists(fsys, dstDir); exists {
-		if dir, err := IsDir(fsys, dstDir); !dir {
-			return fmt.Errorf("dstDir '%s' is not a directory: %v", dstDir, err)
-		}
-	} else {
-		err = MkdirAll(fsys, dstDir, fInf.Mode())
-		if err != nil {
-			return err
-		}
 	}
 
 	return WalkDirFs(fsys, srcDir, func(path string, d fs.DirEntry, err error) error {
@@ -178,7 +163,11 @@ func CopyDirectory(fsys v1.FS, srcDir, dstDir string) error {
 
 		switch fInf.Mode().Type() & os.ModeType {
 		case os.ModeDir:
-			return MkdirAll(fsys, outpath, fInf.Mode())
+			err = MkdirAll(fsys, outpath, cnst.DirPerm)
+			if err != nil {
+				return err
+			}
+			return fsys.Chmod(outpath, fInf.Mode())
 		case os.ModeSymlink:
 			link, err = fsys.Readlink(path)
 			if err != nil {

@@ -422,6 +422,95 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(err).NotTo(BeNil())
 		})
 	})
+	Describe("CopyDirectory", Label("CopyDir"), func() {
+		It("Copies source dir to non existing path", func() {
+			err := utils.MkdirAll(fs, "/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fs.Create("/root/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/root/subdir/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).ShouldNot(HaveOccurred())
+			e, _ := utils.Exists(fs, "/alternate/root/subdir/otherfile")
+			Expect(e).To(BeTrue())
+			e, _ = utils.Exists(fs, "/alternate/root/file")
+			Expect(e).To(BeTrue())
+		})
+		It("Copies source dir to target folder", func() {
+			err := utils.MkdirAll(fs, "/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = utils.MkdirAll(fs, "/alternate/root", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fs.Create("/root/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/root/subdir/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).ShouldNot(HaveOccurred())
+			e, _ := utils.Exists(fs, "/alternate/root/subdir/otherfile")
+			Expect(e).To(BeTrue())
+			e, _ = utils.Exists(fs, "/alternate/root/file")
+			Expect(e).To(BeTrue())
+		})
+		It("Fails to copy non existing source dir", func() {
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).Should(HaveOccurred())
+		})
+		It("Fails to copy source dir to a file", func() {
+			err := utils.MkdirAll(fs, "/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = utils.MkdirAll(fs, "/alternate", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fs.Create("/alternate/root")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).Should(HaveOccurred())
+		})
+		It("Copies source dir to an existing target tree without overlaps", func() {
+			err := utils.MkdirAll(fs, "/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = utils.MkdirAll(fs, "/alternate/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fs.Create("/root/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/root/subdir/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create("/alternate/root/subdir/previousfile")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).ShouldNot(HaveOccurred())
+			e, _ := utils.Exists(fs, "/alternate/root/subdir/otherfile")
+			Expect(e).To(BeTrue())
+			e, _ = utils.Exists(fs, "/alternate/root/file")
+			Expect(e).To(BeTrue())
+			e, _ = utils.Exists(fs, "/alternate/root/subdir/previousfile")
+			Expect(e).To(BeTrue())
+		})
+		It("Copies source dir to an existing target tree overwritting existing files", func() {
+			err := utils.MkdirAll(fs, "/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = utils.MkdirAll(fs, "/alternate/root/subdir", constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = fs.Create("/root/file")
+			Expect(err).ShouldNot(HaveOccurred())
+			err = fs.WriteFile("/root/subdir/otherfile", []byte("sourcefile"), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = fs.WriteFile("/alternate/root/subdir/otherfile", []byte("targetfile"), constants.FilePerm)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(utils.CopyDirectory(fs, "/root", "/alternate/root")).ShouldNot(HaveOccurred())
+			e, _ := utils.Exists(fs, "/alternate/root/subdir/otherfile")
+			Expect(e).To(BeTrue())
+			content, err := fs.ReadFile("/alternate/root/subdir/otherfile")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(content)).To(Equal("sourcefile"))
+		})
+	})
 	Describe("CreateDirStructure", Label("CreateDirStructure"), func() {
 		It("Creates essential directories", func() {
 			dirList := []string{"sys", "proc", "dev", "tmp", "boot", "usr/local", "oem"}
