@@ -28,20 +28,21 @@ import (
 	"github.com/rancher/elemental-cli/pkg/utils"
 )
 
-func (i *InstallAction) installHook(hook string, chroot bool) error {
-	if chroot {
-		extraMounts := map[string]string{}
-		persistent := i.spec.Partitions.Persistent
-		if persistent != nil && persistent.MountPoint != "" {
-			extraMounts[persistent.MountPoint] = cnst.UsrLocalPath
-		}
-		oem := i.spec.Partitions.OEM
-		if oem != nil && oem.MountPoint != "" {
-			extraMounts[oem.MountPoint] = cnst.OEMPath
-		}
-		return ChrootHook(&i.cfg.Config, hook, i.cfg.Strict, i.spec.Active.MountPoint, extraMounts, i.cfg.CloudInitPaths...)
-	}
+func (i *InstallAction) installHook(hook string) error {
 	return Hook(&i.cfg.Config, hook, i.cfg.Strict, i.cfg.CloudInitPaths...)
+}
+
+func (i *InstallAction) installChrootHook(hook string, root string) error {
+	extraMounts := map[string]string{}
+	persistent := i.spec.Partitions.Persistent
+	if persistent != nil && persistent.MountPoint != "" {
+		extraMounts[persistent.MountPoint] = cnst.UsrLocalPath
+	}
+	oem := i.spec.Partitions.OEM
+	if oem != nil && oem.MountPoint != "" {
+		extraMounts[oem.MountPoint] = cnst.OEMPath
+	}
+	return ChrootHook(&i.cfg.Config, hook, i.cfg.Strict, root, extraMounts, i.cfg.CloudInitPaths...)
 }
 
 func (i *InstallAction) createInstallStateYaml(sysMeta, recMeta interface{}) error {
@@ -169,17 +170,18 @@ func (i InstallAction) Run() (err error) {
 	})
 
 	// Before install hook happens after partitioning but before the image OS is applied
-	err = i.installHook(cnst.BeforeInstallHook, false)
+	err = i.installHook(cnst.BeforeInstallHook)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.HookBeforeInstall)
 	}
 
 	// Deploy active image
-	systemMeta, err := e.DeployImage(&i.spec.Active, true)
+	var systemMeta interface{}
+	treeCleaner, err := e.DeployImgTree(&i.spec.Active, cnst.WorkingImgDir, systemMeta)
 	if err != nil {
-		return elementalError.NewFromError(err, elementalError.DeployImage)
+		return elementalError.NewFromError(err, elementalError.DeployImgTree)
 	}
-	cleanup.Push(func() error { return e.UnmountImage(&i.spec.Active) })
+	cleanup.Push(func() error { return treeCleaner() })
 
 	// Copy cloud-init if any
 	err = e.CopyCloudConfig(i.spec.CloudInit)
@@ -190,7 +192,7 @@ func (i InstallAction) Run() (err error) {
 	grub := utils.NewGrub(&i.cfg.Config)
 	err = grub.Install(
 		i.spec.Target,
-		i.spec.Active.MountPoint,
+		cnst.WorkingImgDir,
 		i.spec.Partitions.State.MountPoint,
 		i.spec.GrubConf,
 		i.spec.Tty,
@@ -212,17 +214,17 @@ func (i InstallAction) Run() (err error) {
 		binds[i.spec.Partitions.OEM.MountPoint] = cnst.OEMPath
 	}
 	err = utils.ChrootedCallback(
-		&i.cfg.Config, i.spec.Active.MountPoint, binds, func() error { return e.SelinuxRelabel("/", true) },
+		&i.cfg.Config, cnst.WorkingImgDir, binds, func() error { return e.SelinuxRelabel("/", true) },
 	)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.SelinuxRelabel)
 	}
 
-	err = i.installHook(cnst.AfterInstallChrootHook, true)
+	err = i.installChrootHook(cnst.AfterInstallChrootHook, cnst.WorkingImgDir)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.HookAfterInstallChroot)
 	}
-	err = i.installHook(cnst.AfterInstallHook, false)
+	err = i.installHook(cnst.AfterInstallHook)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.HookAfterInstall)
 	}
@@ -230,30 +232,40 @@ func (i InstallAction) Run() (err error) {
 	// Installation rebrand (only grub for now)
 	err = e.SetDefaultGrubEntry(
 		i.spec.Partitions.State.MountPoint,
-		i.spec.Active.MountPoint,
+		cnst.WorkingImgDir,
 		i.spec.GrubDefEntry,
 	)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.SetDefaultGrubEntry)
 	}
 
-	// Unmount active image
-	err = e.UnmountImage(&i.spec.Active)
+	err = e.CreateImgFromTree(cnst.WorkingImgDir, &i.spec.Active, treeCleaner)
 	if err != nil {
-		return elementalError.NewFromError(err, elementalError.UnmountImage)
+		return elementalError.NewFromError(err, elementalError.CreateImgFromTree)
 	}
+
 	// Install Recovery
-	recoveryMeta, err := e.DeployImage(&i.spec.Recovery, false)
-	if err != nil {
-		return elementalError.NewFromError(err, elementalError.DeployImage)
+	var recoveryMeta interface{}
+	if i.spec.Recovery.Source.IsFile() && i.spec.Active.File == i.spec.Recovery.Source.Value() && i.spec.Active.FS == i.spec.Recovery.FS {
+		// Reuse image file from active image
+		err := e.CopyFileImg(&i.spec.Recovery)
+		if err != nil {
+			return elementalError.NewFromError(err, elementalError.CopyFileImg)
+		}
+	} else {
+		err = e.DeployImage(&i.spec.Recovery, recoveryMeta)
+		if err != nil {
+			return elementalError.NewFromError(err, elementalError.DeployImage)
+		}
 	}
+
 	// Install Passive
-	_, err = e.DeployImage(&i.spec.Passive, false)
+	err = e.CopyFileImg(&i.spec.Passive)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.DeployImage)
 	}
 
-	err = i.installHook(cnst.PostInstallHook, false)
+	err = i.installHook(cnst.PostInstallHook)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.HookPostInstall)
 	}
