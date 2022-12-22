@@ -22,7 +22,7 @@ const (
 )
 
 // NewBootManagerForVariables returns a boot manager for the given EFIVariables manager
-func NewBootManagerForVariables(efivars EFIVariables) (BootManager, error) {
+func NewBootManagerForVariables(efivars Variables) (BootManager, error) {
 	var err error
 	bm := BootManager{}
 	bm.efivars = efivars
@@ -173,13 +173,13 @@ func (bm *BootManager) PrependAndSetBootOrder(head []int) error {
 }
 
 // VariablesSupported indicates whether variables can be accessed.
-func VariablesSupported(efiVars EFIVariables) bool {
+func VariablesSupported(efiVars Variables) bool {
 	_, err := efiVars.ListVariables()
 	return err == nil
 }
 
 // GetVariableNames returns the names of every variable with the specified GUID.
-func GetVariableNames(efiVars EFIVariables, filterGUID efi.GUID) (names []string, err error) {
+func GetVariableNames(efiVars Variables, filterGUID efi.GUID) (names []string, err error) {
 	vars, err := efiVars.ListVariables()
 	if err != nil {
 		return nil, err

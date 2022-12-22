@@ -320,7 +320,7 @@ func (g Grub) ClearBootEntry() error {
 }
 
 // CreateBootEntry will create an entry in the efi vars for our shim and set it to boot first in the bootorder
-func (g Grub) CreateBootEntry(shimName string, relativeTo string, efiVariables eleefi.EFIVariables) error {
+func (g Grub) CreateBootEntry(shimName string, relativeTo string, efiVariables eleefi.Variables) error {
 	g.config.Logger.Debugf("Creating boot entry for elemental pointing to shim /EFI/elemental/%s", shimName)
 	bm, err := eleefi.NewBootManagerForVariables(efiVariables)
 	if err != nil {

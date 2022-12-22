@@ -17,8 +17,8 @@ import (
 	"github.com/twpayne/go-vfs"
 )
 
-// EFIVariables abstracts away the host-specific bits of the efivars module
-type EFIVariables interface {
+// Variables abstracts away the host-specific bits of the efivars module
+type Variables interface {
 	ListVariables() ([]efi.VariableDescriptor, error)
 	GetVariable(guid efi.GUID, name string) (data []byte, attrs efi.VariableAttributes, err error)
 	SetVariable(guid efi.GUID, name string, data []byte, attrs efi.VariableAttributes) error
@@ -139,7 +139,7 @@ func (m MockEFIVariables) NewFileDevicePath(fpath string, mode efi_linux.FileDev
 
 // BootManager manages the boot device selection menu entries (Boot0000...BootFFFF).
 type BootManager struct {
-	efivars        EFIVariables              // EFIVariables implementation
+	efivars        Variables                 // EFIVariables implementation
 	entries        map[int]BootEntryVariable // The Boot<number> variables
 	bootOrder      []int                     // The BootOrder variable, parsed
 	bootOrderAttrs efi.VariableAttributes    // The attributes of BootOrder variable

@@ -922,7 +922,7 @@ var _ = Describe("Utils", Label("utils"), func() {
 			})
 		})
 		Describe("CreateBootEntry", Label("bootentry"), func() {
-			var efivars eleefi.EFIVariables
+			var efivars eleefi.Variables
 			var relativeTo string
 
 			BeforeEach(func() {
