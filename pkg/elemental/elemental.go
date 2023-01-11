@@ -360,8 +360,6 @@ func (e *Elemental) CreateImgFromTree(root string, img *v1.Image, cleaner func()
 		if err != nil {
 			return err
 		}
-	}
-	if leaveMounted && img.Source.IsFile() {
 		err = e.MountImage(img, "rw")
 		if err != nil {
 			return err
