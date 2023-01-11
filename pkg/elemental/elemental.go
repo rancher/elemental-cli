@@ -299,6 +299,7 @@ func (e *Elemental) DeployImgTree(img *v1.Image, root string, info interface{}) 
 		_ = e.config.Fs.RemoveAll(tmp)
 		return nil, err
 	}
+
 	err = e.config.Mounter.Mount(tmp, root, "bind", []string{"bind"})
 	if err != nil {
 		_ = e.config.Fs.RemoveAll(tmp)
@@ -338,39 +339,33 @@ func (e *Elemental) CreateImgFromTree(root string, img *v1.Image, cleaner func()
 	if img.FS == cnst.SquashFs {
 		e.config.Logger.Infof("Creating squashed image: %s", img.File)
 		squashOptions := append(cnst.GetDefaultSquashfsOptions(), e.config.SquashFsCompressionConfig...)
-		err = utils.CreateSquashFS(e.config.Runner, e.config.Logger, root, img.File, squashOptions)
-		if err != nil {
-			return err
-		}
-	} else {
-		e.config.Logger.Infof("Creating filesystem image: %s", img.File)
-		if img.Size == 0 {
-			size, err := utils.DirSizeMB(e.config.Fs, root)
-			if err != nil {
-				return err
-			}
-			img.Size = size + cnst.ImgOverhead
-		}
-		err = e.CreateFileSystemImage(img)
-		if err != nil {
-			return err
-		}
-		err = e.MountImage(img, "rw")
-		if err != nil {
-			return err
-		}
-		defer func() {
-			mErr := e.UnmountImage(img)
-			if err == nil && mErr != nil {
-				err = mErr
-			}
-		}()
-		err = utils.SyncData(e.config.Logger, e.config.Fs, root, img.MountPoint)
-		if err != nil {
-			return err
-		}
+		return utils.CreateSquashFS(e.config.Runner, e.config.Logger, root, img.File, squashOptions)
 	}
-	return err
+
+	e.config.Logger.Infof("Creating filesystem image: %s", img.File)
+	if img.Size == 0 {
+		size, err := utils.DirSizeMB(e.config.Fs, root)
+		if err != nil {
+			return err
+		}
+		img.Size = size + cnst.ImgOverhead
+	}
+	err = e.CreateFileSystemImage(img)
+	if err != nil {
+		return err
+	}
+	err = e.MountImage(img, "rw")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		mErr := e.UnmountImage(img)
+		if err == nil && mErr != nil {
+			err = mErr
+		}
+	}()
+
+	return utils.SyncData(e.config.Logger, e.config.Fs, root, img.MountPoint)
 }
 
 // CopyFileImg copies the files targed as the source of this image. It also applies the img label over the copied image.

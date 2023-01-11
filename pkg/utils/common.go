@@ -135,7 +135,8 @@ func ConcatFiles(fs v1.FS, sources []string, target string) (err error) {
 	return fs.Chmod(target, fInf.Mode())
 }
 
-// Copies source file to target file using Fs interface
+// CreateDirStructure creates essentials directories under the root tree that might not be present
+// within a container image (/dev, /run, etc.)
 func CreateDirStructure(fs v1.FS, target string) error {
 	for _, dir := range []string{"/run", "/dev", "/boot", "/usr/local", "/oem"} {
 		err := MkdirAll(fs, filepath.Join(target, dir), cnst.DirPerm)
