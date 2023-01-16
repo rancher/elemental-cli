@@ -378,7 +378,7 @@ func (e *Elemental) CreateImgFromTree(root string, img *v1.Image, cleaner func()
 	return err
 }
 
-// CopyFileImg copies the files targed as the source of this image. It also applies the img label over the copied image.
+// CopyFileImg copies the files target as the source of this image. It also applies the img label over the copied image.
 func (e *Elemental) CopyFileImg(img *v1.Image) error {
 	if !img.Source.IsFile() {
 		return fmt.Errorf("Copying a file image requires an image source of file type")
