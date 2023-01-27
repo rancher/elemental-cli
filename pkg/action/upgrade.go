@@ -237,6 +237,22 @@ func (u *UpgradeAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.HookAfterUpgrade)
 	}
 
+	err = utils.NewGrub(&u.config.Config).SetPersistentVariables(
+		filepath.Join(u.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
+		map[string]string{
+			"state_label":    u.spec.Partitions.State.FilesystemLabel,
+			"active_label":   u.spec.Active.Label,
+			"passive_label":  u.spec.Passive.Label,
+			"recovery_label": u.spec.Partitions.Recovery.FilesystemLabel,
+			"system_label":   constants.SystemLabel,
+			"oem_label":      u.spec.Partitions.OEM.FilesystemLabel,
+		},
+	)
+	if err != nil {
+		u.Error("Error setting GRUB labels: %s", err)
+		return elementalError.NewFromError(err, elementalError.SetGrubVariables)
+	}
+
 	// Only apply rebrand stage for system upgrades
 	if !u.spec.RecoveryUpgrade {
 		u.Info("rebranding")

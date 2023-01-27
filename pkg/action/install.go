@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/rancher/elemental-cli/pkg/constants"
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	"github.com/rancher/elemental-cli/pkg/elemental"
 	elementalError "github.com/rancher/elemental-cli/pkg/error"
@@ -202,6 +203,22 @@ func (i InstallAction) Run() (err error) {
 	err = i.installHook(cnst.AfterInstallHook)
 	if err != nil {
 		return elementalError.NewFromError(err, elementalError.HookAfterInstall)
+	}
+
+	err = grub.SetPersistentVariables(
+		filepath.Join(i.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
+		map[string]string{
+			"state_label":    i.spec.Partitions.State.FilesystemLabel,
+			"active_label":   i.spec.Active.Label,
+			"passive_label":  i.spec.Passive.Label,
+			"recovery_label": i.spec.Partitions.Recovery.FilesystemLabel,
+			"system_label":   constants.SystemLabel,
+			"oem_label":      i.spec.Partitions.OEM.FilesystemLabel,
+		},
+	)
+	if err != nil {
+		i.cfg.Logger.Error("Error setting GRUB labels: %s", err)
+		return elementalError.NewFromError(err, elementalError.SetGrubVariables)
 	}
 
 	// Installation rebrand (only grub for now)

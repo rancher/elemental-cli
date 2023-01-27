@@ -212,6 +212,22 @@ func (r ResetAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.HookAfterReset)
 	}
 
+	err = grub.SetPersistentVariables(
+		filepath.Join(r.spec.Partitions.State.MountPoint, cnst.GrubOEMEnv),
+		map[string]string{
+			"state_label":    r.spec.Partitions.State.FilesystemLabel,
+			"active_label":   r.spec.Active.Label,
+			"passive_label":  r.spec.Passive.Label,
+			"recovery_label": r.spec.Partitions.Recovery.FilesystemLabel,
+			"system_label":   cnst.SystemLabel,
+			"oem_label":      r.spec.Partitions.OEM.FilesystemLabel,
+		},
+	)
+	if err != nil {
+		r.cfg.Logger.Error("Error setting GRUB labels: %s", err)
+		return elementalError.NewFromError(err, elementalError.SetGrubVariables)
+	}
+
 	// installation rebrand (only grub for now)
 	err = e.SetDefaultGrubEntry(
 		r.spec.Partitions.State.MountPoint,
