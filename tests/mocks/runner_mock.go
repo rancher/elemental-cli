@@ -42,14 +42,13 @@ func (r *FakeRunner) CommandExists(command string) bool {
 }
 
 func (r *FakeRunner) Run(command string, args ...string) ([]byte, error) {
-	if !r.CommandExists(command) {
-		err := fmt.Errorf("Command %s not found", command)
-		r.error(err.Error())
-		return []byte{}, err
-	}
 	r.debug(fmt.Sprintf("Running cmd: '%s %s'", command, strings.Join(args, " ")))
 	r.InitCmd(command, args...)
-	return r.RunCmd(nil)
+	out, err := r.RunCmd(nil)
+	if err != nil {
+		r.error(fmt.Sprintf("Error running command: %s", err.Error()))
+	}
+	return out, err
 }
 
 func (r *FakeRunner) RunCmd(cmd *exec.Cmd) ([]byte, error) {

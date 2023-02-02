@@ -49,14 +49,13 @@ func (r RealRunner) RunCmd(cmd *exec.Cmd) ([]byte, error) {
 }
 
 func (r RealRunner) Run(command string, args ...string) ([]byte, error) {
-	if !r.CommandExists(command) {
-		err := fmt.Errorf("Command %s not found", command)
-		r.error(err.Error())
-		return []byte{}, err
-	}
 	r.debug(fmt.Sprintf("Running cmd: '%s %s'", command, strings.Join(args, " ")))
 	cmd := r.InitCmd(command, args...)
-	return r.RunCmd(cmd)
+	out, err := r.RunCmd(cmd)
+	if err != nil {
+		r.error(fmt.Sprintf("Error running command: %s", err.Error()))
+	}
+	return out, err
 }
 
 func (r RealRunner) GetLogger() Logger {
