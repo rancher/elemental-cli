@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -25,12 +26,18 @@ type Runner interface {
 	InitCmd(string, ...string) *exec.Cmd
 	Run(string, ...string) ([]byte, error)
 	RunCmd(cmd *exec.Cmd) ([]byte, error)
+	CommandExists(command string) bool
 	GetLogger() Logger
 	SetLogger(logger Logger)
 }
 
 type RealRunner struct {
 	Logger Logger
+}
+
+func (r RealRunner) CommandExists(command string) bool {
+	_, err := exec.LookPath(command)
+	return err == nil
 }
 
 func (r RealRunner) InitCmd(command string, args ...string) *exec.Cmd {
@@ -42,10 +49,13 @@ func (r RealRunner) RunCmd(cmd *exec.Cmd) ([]byte, error) {
 }
 
 func (r RealRunner) Run(command string, args ...string) ([]byte, error) {
-	cmd := r.InitCmd(command, args...)
-	if r.Logger != nil {
-		r.Logger.Debugf("Running cmd: '%s %s'", command, strings.Join(args, " "))
+	if !r.CommandExists(command) {
+		err := fmt.Errorf("Command %s not found", command)
+		r.error(err.Error())
+		return []byte{}, err
 	}
+	r.debug(fmt.Sprintf("Running cmd: '%s %s'", command, strings.Join(args, " ")))
+	cmd := r.InitCmd(command, args...)
 	return r.RunCmd(cmd)
 }
 
@@ -55,4 +65,16 @@ func (r RealRunner) GetLogger() Logger {
 
 func (r *RealRunner) SetLogger(logger Logger) {
 	r.Logger = logger
+}
+
+func (r RealRunner) error(msg string) {
+	if r.Logger != nil {
+		r.Logger.Error(msg)
+	}
+}
+
+func (r RealRunner) debug(msg string) {
+	if r.Logger != nil {
+		r.Logger.Debug(msg)
+	}
 }

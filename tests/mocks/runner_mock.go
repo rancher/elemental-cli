@@ -30,13 +30,24 @@ type FakeRunner struct {
 	SideEffect  func(command string, args ...string) ([]byte, error)
 	ReturnError error
 	Logger      v1.Logger
+	CmdNotFound string
 }
 
 func NewFakeRunner() *FakeRunner {
 	return &FakeRunner{cmds: [][]string{}, ReturnValue: []byte{}, SideEffect: nil, ReturnError: nil}
 }
 
+func (r *FakeRunner) CommandExists(command string) bool {
+	return command != r.CmdNotFound
+}
+
 func (r *FakeRunner) Run(command string, args ...string) ([]byte, error) {
+	if !r.CommandExists(command) {
+		err := fmt.Errorf("Command %s not found", command)
+		r.error(err.Error())
+		return []byte{}, err
+	}
+	r.debug(fmt.Sprintf("Running cmd: '%s %s'", command, strings.Join(args, " ")))
 	r.InitCmd(command, args...)
 	return r.RunCmd(nil)
 }
@@ -127,4 +138,16 @@ func (r FakeRunner) GetLogger() v1.Logger {
 
 func (r *FakeRunner) SetLogger(logger v1.Logger) {
 	r.Logger = logger
+}
+
+func (r FakeRunner) error(msg string) {
+	if r.Logger != nil {
+		r.Logger.Error(msg)
+	}
+}
+
+func (r FakeRunner) debug(msg string) {
+	if r.Logger != nil {
+		r.Logger.Debug(msg)
+	}
 }
