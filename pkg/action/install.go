@@ -205,22 +205,10 @@ func (i InstallAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.HookAfterInstall)
 	}
 
-	grubEnv := map[string]string{
-		"state_label":    i.spec.Partitions.State.FilesystemLabel,
-		"active_label":   i.spec.Active.Label,
-		"passive_label":  i.spec.Passive.Label,
-		"recovery_label": i.spec.Recovery.Label,
-		"system_label":   i.spec.Partitions.Recovery.FilesystemLabel,
-		"oem_label":      i.spec.Partitions.OEM.FilesystemLabel,
-	}
-
-	if i.spec.Partitions.Persistent != nil {
-		grubEnv["persistent_label"] = i.spec.Partitions.Persistent.FilesystemLabel
-	}
-
+	grubVars := i.spec.GetGrubLabels()
 	err = grub.SetPersistentVariables(
 		filepath.Join(i.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
-		grubEnv,
+		grubVars,
 	)
 	if err != nil {
 		i.cfg.Logger.Error("Error setting GRUB labels: %s", err)
