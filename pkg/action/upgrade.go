@@ -237,17 +237,22 @@ func (u *UpgradeAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.HookAfterUpgrade)
 	}
 
+	grubEnv := map[string]string{
+		"state_label":    u.spec.Partitions.State.FilesystemLabel,
+		"active_label":   u.spec.Active.Label,
+		"passive_label":  u.spec.Passive.Label,
+		"recovery_label": u.spec.Recovery.Label,
+		"system_label":   u.spec.Partitions.Recovery.FilesystemLabel,
+		"oem_label":      u.spec.Partitions.OEM.FilesystemLabel,
+	}
+
+	if u.spec.Partitions.Persistent != nil {
+		grubEnv["persistent_label"] = u.spec.Partitions.Persistent.FilesystemLabel
+	}
+
 	err = utils.NewGrub(&u.config.Config).SetPersistentVariables(
 		filepath.Join(u.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
-		map[string]string{
-			"state_label":      u.spec.Partitions.State.FilesystemLabel,
-			"active_label":     u.spec.Active.Label,
-			"passive_label":    u.spec.Passive.Label,
-			"recovery_label":   u.spec.Recovery.Label,
-			"system_label":     u.spec.Partitions.Recovery.FilesystemLabel,
-			"oem_label":        u.spec.Partitions.OEM.FilesystemLabel,
-			"persistent_label": u.spec.Partitions.Persistent.FilesystemLabel,
-		},
+		grubEnv,
 	)
 	if err != nil {
 		u.Error("Error setting GRUB labels: %s", err)

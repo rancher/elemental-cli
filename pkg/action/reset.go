@@ -212,17 +212,28 @@ func (r ResetAction) Run() (err error) {
 		return elementalError.NewFromError(err, elementalError.HookAfterReset)
 	}
 
+	grubEnv := map[string]string{
+		"state_label":   r.spec.Partitions.State.FilesystemLabel,
+		"active_label":  r.spec.Active.Label,
+		"passive_label": r.spec.Passive.Label,
+		"system_label":  r.spec.Partitions.Recovery.FilesystemLabel,
+		"oem_label":     r.spec.Partitions.OEM.FilesystemLabel,
+	}
+
+	if r.spec.State != nil {
+		recoveryPart, ok := r.spec.State.Partitions[cnst.RecoveryPartName]
+		if ok {
+			grubEnv["recovery_label"] = recoveryPart.FSLabel
+		}
+	}
+
+	if r.spec.Partitions.Persistent != nil {
+		grubEnv["persistent_label"] = r.spec.Partitions.Persistent.FilesystemLabel
+	}
+
 	err = grub.SetPersistentVariables(
 		filepath.Join(r.spec.Partitions.State.MountPoint, cnst.GrubOEMEnv),
-		map[string]string{
-			"state_label":      r.spec.Partitions.State.FilesystemLabel,
-			"active_label":     r.spec.Active.Label,
-			"passive_label":    r.spec.Passive.Label,
-			"recovery_label":   r.spec.State.Partitions[cnst.RecoveryPartName].FSLabel,
-			"system_label":     r.spec.Partitions.Recovery.FilesystemLabel,
-			"oem_label":        r.spec.Partitions.OEM.FilesystemLabel,
-			"persistent_label": r.spec.Partitions.Persistent.FilesystemLabel,
-		},
+		grubEnv,
 	)
 	if err != nil {
 		r.cfg.Logger.Error("Error setting GRUB labels: %s", err)
