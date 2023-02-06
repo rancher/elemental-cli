@@ -215,12 +215,13 @@ func (r ResetAction) Run() (err error) {
 	err = grub.SetPersistentVariables(
 		filepath.Join(r.spec.Partitions.State.MountPoint, cnst.GrubOEMEnv),
 		map[string]string{
-			"state_label":    r.spec.Partitions.State.FilesystemLabel,
-			"active_label":   r.spec.Active.Label,
-			"passive_label":  r.spec.Passive.Label,
-			"recovery_label": r.spec.State.Partitions[cnst.RecoveryPartName].FSLabel,
-			"system_label":   r.spec.Partitions.Recovery.FilesystemLabel,
-			"oem_label":      r.spec.Partitions.OEM.FilesystemLabel,
+			"state_label":      r.spec.Partitions.State.FilesystemLabel,
+			"active_label":     r.spec.Active.Label,
+			"passive_label":    r.spec.Passive.Label,
+			"recovery_label":   r.spec.State.Partitions[cnst.RecoveryPartName].FSLabel,
+			"system_label":     r.spec.Partitions.Recovery.FilesystemLabel,
+			"oem_label":        r.spec.Partitions.OEM.FilesystemLabel,
+			"persistent_label": r.spec.Partitions.Persistent.FilesystemLabel,
 		},
 	)
 	if err != nil {

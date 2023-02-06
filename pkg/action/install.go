@@ -208,12 +208,13 @@ func (i InstallAction) Run() (err error) {
 	err = grub.SetPersistentVariables(
 		filepath.Join(i.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
 		map[string]string{
-			"state_label":    i.spec.Partitions.State.FilesystemLabel,
-			"active_label":   i.spec.Active.Label,
-			"passive_label":  i.spec.Passive.Label,
-			"recovery_label": i.spec.Recovery.Label,
-			"system_label":   i.spec.Partitions.Recovery.FilesystemLabel,
-			"oem_label":      i.spec.Partitions.OEM.FilesystemLabel,
+			"state_label":      i.spec.Partitions.State.FilesystemLabel,
+			"active_label":     i.spec.Active.Label,
+			"passive_label":    i.spec.Passive.Label,
+			"recovery_label":   i.spec.Recovery.Label,
+			"system_label":     i.spec.Partitions.Recovery.FilesystemLabel,
+			"oem_label":        i.spec.Partitions.OEM.FilesystemLabel,
+			"persistent_label": i.spec.Partitions.Persistent.FilesystemLabel,
 		},
 	)
 	if err != nil {

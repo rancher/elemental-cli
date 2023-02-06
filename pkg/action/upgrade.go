@@ -240,12 +240,13 @@ func (u *UpgradeAction) Run() (err error) {
 	err = utils.NewGrub(&u.config.Config).SetPersistentVariables(
 		filepath.Join(u.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
 		map[string]string{
-			"state_label":    u.spec.Partitions.State.FilesystemLabel,
-			"active_label":   u.spec.Active.Label,
-			"passive_label":  u.spec.Passive.Label,
-			"recovery_label": u.spec.Recovery.Label,
-			"system_label":   u.spec.Partitions.Recovery.FilesystemLabel,
-			"oem_label":      u.spec.Partitions.OEM.FilesystemLabel,
+			"state_label":      u.spec.Partitions.State.FilesystemLabel,
+			"active_label":     u.spec.Active.Label,
+			"passive_label":    u.spec.Passive.Label,
+			"recovery_label":   u.spec.Recovery.Label,
+			"system_label":     u.spec.Partitions.Recovery.FilesystemLabel,
+			"oem_label":        u.spec.Partitions.OEM.FilesystemLabel,
+			"persistent_label": u.spec.Partitions.Persistent.FilesystemLabel,
 		},
 	)
 	if err != nil {
