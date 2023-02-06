@@ -211,8 +211,8 @@ func (i InstallAction) Run() (err error) {
 			"state_label":    i.spec.Partitions.State.FilesystemLabel,
 			"active_label":   i.spec.Active.Label,
 			"passive_label":  i.spec.Passive.Label,
-			"recovery_label": i.spec.Partitions.Recovery.FilesystemLabel,
-			"system_label":   constants.SystemLabel,
+			"recovery_label": i.spec.Recovery.Label,
+			"system_label":   i.spec.Partitions.Recovery.FilesystemLabel,
 			"oem_label":      i.spec.Partitions.OEM.FilesystemLabel,
 		},
 	)

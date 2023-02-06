@@ -218,8 +218,8 @@ func (r ResetAction) Run() (err error) {
 			"state_label":    r.spec.Partitions.State.FilesystemLabel,
 			"active_label":   r.spec.Active.Label,
 			"passive_label":  r.spec.Passive.Label,
-			"recovery_label": r.spec.Partitions.Recovery.FilesystemLabel,
-			"system_label":   cnst.SystemLabel,
+			"recovery_label": r.spec.State.Partitions[cnst.RecoveryPartName].FSLabel,
+			"system_label":   r.spec.Partitions.Recovery.FilesystemLabel,
 			"oem_label":      r.spec.Partitions.OEM.FilesystemLabel,
 		},
 	)

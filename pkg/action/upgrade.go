@@ -243,8 +243,8 @@ func (u *UpgradeAction) Run() (err error) {
 			"state_label":    u.spec.Partitions.State.FilesystemLabel,
 			"active_label":   u.spec.Active.Label,
 			"passive_label":  u.spec.Passive.Label,
-			"recovery_label": u.spec.Partitions.Recovery.FilesystemLabel,
-			"system_label":   constants.SystemLabel,
+			"recovery_label": u.spec.Recovery.Label,
+			"system_label":   u.spec.Partitions.Recovery.FilesystemLabel,
 			"oem_label":      u.spec.Partitions.OEM.FilesystemLabel,
 		},
 	)
