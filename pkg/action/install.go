@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rancher/elemental-cli/pkg/constants"
 	cnst "github.com/rancher/elemental-cli/pkg/constants"
 	"github.com/rancher/elemental-cli/pkg/elemental"
 	elementalError "github.com/rancher/elemental-cli/pkg/error"
@@ -207,7 +206,7 @@ func (i InstallAction) Run() (err error) {
 
 	grubVars := i.spec.GetGrubLabels()
 	err = grub.SetPersistentVariables(
-		filepath.Join(i.spec.Partitions.State.MountPoint, constants.GrubOEMEnv),
+		filepath.Join(i.spec.Partitions.State.MountPoint, cnst.GrubOEMEnv),
 		grubVars,
 	)
 	if err != nil {
