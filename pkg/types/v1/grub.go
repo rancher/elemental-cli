@@ -56,11 +56,11 @@ func (u UpgradeSpec) GetGrubLabels() map[string]string {
 
 func (r ResetSpec) GetGrubLabels() map[string]string {
 	grubVars := map[string]string{
-		"state_label":   r.Partitions.State.FilesystemLabel,
-		"active_label":  r.Active.Label,
-		"passive_label": r.Passive.Label,
-		"system_label":  r.Partitions.Recovery.FilesystemLabel,
-		"oem_label":     r.Partitions.OEM.FilesystemLabel,
+		"state_label":    r.Partitions.State.FilesystemLabel,
+		"active_label":   r.Active.Label,
+		"passive_label":  r.Passive.Label,
+		"recovery_label": r.Partitions.Recovery.FilesystemLabel,
+		"oem_label":      r.Partitions.OEM.FilesystemLabel,
 	}
 
 	if r.State != nil {
