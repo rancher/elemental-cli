@@ -186,7 +186,6 @@ func GetInstallKeyEnvMap() map[string]string {
 		"firmware":            "FIRMWARE",
 		"part-table":          "PART_TABLE",
 		"no-format":           "NO_FORMAT",
-		"tty":                 "TTY",
 		"grub-entry-name":     "GRUB_ENTRY_NAME",
 		"disable-boot-entry":  "DISABLE_BOOT_ENTRY",
 	}
@@ -197,7 +196,6 @@ func GetResetKeyEnvMap() map[string]string {
 	return map[string]string{
 		"target":          "TARGET",
 		"system.uri":      "SYSTEM",
-		"tty":             "TTY",
 		"grub-entry-name": "GRUB_ENTRY_NAME",
 	}
 }
