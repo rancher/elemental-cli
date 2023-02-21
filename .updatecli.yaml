@@ -1,0 +1,43 @@
+name: Elemental CLI update
+
+sources:
+  goversion:
+    name: Go version from go.mod
+    kind: file
+    spec:
+      file: go.mod
+      line: 3
+    transformers:
+    - trimprefix: "go "
+
+targets:
+  buildyaml:
+    kind: yaml
+    sourceid: goversion
+    spec:
+      key: env.GO_VERSION
+      file: .github/workflows/build.yaml
+  testyaml:
+    kind: yaml
+    sourceid: goversion
+    spec:
+      key: env.GO_VERSION
+      file: .github/workflows/test.yaml
+  docyaml:
+    kind: yaml
+    sourceid: goversion
+    spec:
+      key: env.GO_VERSION
+      file: .github/workflows/docs.yaml
+  lintyaml:
+    kind: yaml
+    sourceid: goversion
+    spec:
+      key: env.GO_VERSION
+      file: .github/workflows/lint.yaml
+  releaseyaml:
+    kind: yaml
+    sourceid: goversion
+    spec:
+      key: env.GO_VERSION
+      file: .github/workflows/release.yaml
