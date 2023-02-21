@@ -11,33 +11,23 @@ sources:
     - trimprefix: "go "
 
 targets:
-  buildyaml:
+  githubActions:
     kind: yaml
     sourceid: goversion
     spec:
       key: env.GO_VERSION
-      file: .github/workflows/build.yaml
-  testyaml:
-    kind: yaml
-    sourceid: goversion
+      files:
+        - .github/workflows/build.yaml
+        - .github/workflows/test.yaml
+        - .github/workflows/docs.yaml
+        - .github/workflows/lint.yaml
+        - .github/workflows/release.yaml
+  goDockerfile:
+    name: "Update the value of ARG GO_VERSION in the Dockerfile"
+    sourceID: goversion
+    kind: dockerfile
     spec:
-      key: env.GO_VERSION
-      file: .github/workflows/test.yaml
-  docyaml:
-    kind: yaml
-    sourceid: goversion
-    spec:
-      key: env.GO_VERSION
-      file: .github/workflows/docs.yaml
-  lintyaml:
-    kind: yaml
-    sourceid: goversion
-    spec:
-      key: env.GO_VERSION
-      file: .github/workflows/lint.yaml
-  releaseyaml:
-    kind: yaml
-    sourceid: goversion
-    spec:
-      key: env.GO_VERSION
-      file: .github/workflows/release.yaml
+      file: Dockerfile
+      instruction:
+        keyword: "ARG"
+        matcher: "GO_VERSION"
