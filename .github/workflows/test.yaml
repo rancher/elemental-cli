@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+
+env:
+  GO_VERSION: '1.17'
+        
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,7 +27,7 @@ jobs:
         if: steps.changed-docker-files.outputs.only_changed == 'false'
         uses: actions/setup-go@v3.3.1
         with:
-          go-version: '^1.17'
+          go-version: '${{ env.GO_VERSION }}'
       - name: Deps
         if: steps.changed-docker-files.outputs.only_changed == 'false'
         run: make test_deps
