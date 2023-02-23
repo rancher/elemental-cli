@@ -1,43 +1,14 @@
 name: Elemental CLI update
 
-actions:
-  pull-request:
-    title: "updatecli: bump go version"
-    kind: github/pullrequest
-    scmid: ci
-    spec:
-      automerge: false
-      upstream: true
-      labels:
-        - dependencies
-        - kind/chore
-
-scms:
-  ci:
-    kind: github
-    spec:
-      user: "Elemental CI [bot]"
-      email: "elemental@suse.de"
-      owner: "elemental-ci"
-      repository: "elemental-cli"
-      token: '{{ requiredEnv "ELEMENTAL_BOT_GITHUB_TOKEN" }}'
-      username: 'elemental-ci-bot'
-      branch: "main"
-
 sources:
   goversion:
-    name: Get Latest Go Release
-    kind: githubrelease
+    name: Get Go Release
+    kind: file
     transformers:
-        - trimprefix: go
+        - trimprefix: 'go '
     spec:
-        owner: golang
-        repository: go
-        token: '{{ requiredEnv "ELEMENTAL_BOT_GITHUB_TOKEN" }}'
-        username: 'elemental-ci-bot'
-        versionfilter:
-            kind: regex
-            pattern: go1\.(\d*)\.(\d*)$
+      file: go.mod
+      line: 3
 
 conditions:
   dockerTag:
@@ -53,7 +24,6 @@ targets:
     name: "Update Github Actions files with new go-version"
     kind: yaml
     sourceid: goversion
-    scmid: ci
     spec:
       key: env.GO_VERSION
       files:
@@ -66,7 +36,6 @@ targets:
     name: "Update the value of ARG GO_VERSION in the Dockerfile"
     sourceid: goversion
     kind: dockerfile
-    scmid: ci
     spec:
       file: Dockerfile
       instruction:
