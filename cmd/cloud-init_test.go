@@ -49,7 +49,7 @@ var _ = Describe("cloud-init", Label("cloud-init", "cmd"), func() {
 					"-s",
 					"tests",
 					"-d",
-					`'stages.tests=foo'`,
+					"'stages.tests=foo'",
 				)
 				Expect(err).To(HaveOccurred())
 			})
