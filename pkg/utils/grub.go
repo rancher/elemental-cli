@@ -129,8 +129,17 @@ func (g Grub) InstallEFI(rootDir, bootDir, efiDir, deviceLabel string) (string, 
 	var err error
 	g.config.Logger.Infof("Generating grub files for efi on %s", efiDir)
 
+	_, arch, _, err := v1.ParsePlatform(g.config.Platform)
+	if err != nil {
+		return "", fmt.Errorf("error parsing arch from platform '%s': %s", g.config.Platform, err)
+	}
+
+	if arch == "amd64" {
+		arch = "x86_64"
+	}
+
 	// Create Needed dir under state partition to store the grub.cfg and any needed modules
-	err = MkdirAll(g.config.Fs, filepath.Join(bootDir, grubConfDir, fmt.Sprintf("%s-efi", g.config.Arch)), cnst.DirPerm)
+	err = MkdirAll(g.config.Fs, filepath.Join(bootDir, grubConfDir, fmt.Sprintf("%s-efi", arch)), cnst.DirPerm)
 	if err != nil {
 		return "", fmt.Errorf("error creating grub dir: %s", err)
 	}
@@ -142,8 +151,8 @@ func (g Grub) InstallEFI(rootDir, bootDir, efiDir, deviceLabel string) (string, 
 			if err != nil {
 				return err
 			}
-			if d.Name() == m && strings.Contains(path, g.config.Arch) {
-				fileWriteName := filepath.Join(bootDir, grubConfDir, fmt.Sprintf("%s-efi", g.config.Arch), m)
+			if d.Name() == m && strings.Contains(path, arch) {
+				fileWriteName := filepath.Join(bootDir, grubConfDir, fmt.Sprintf("%s-efi", arch), m)
 				g.config.Logger.Debugf("Copying %s to %s", path, fileWriteName)
 				err = CopyFile(g.config.Fs, path, fileWriteName)
 				if err != nil {
@@ -182,7 +191,7 @@ func (g Grub) InstallEFI(rootDir, bootDir, efiDir, deviceLabel string) (string, 
 
 	switch system {
 	case cnst.Fedora:
-		switch g.config.Arch {
+		switch arch {
 		case cnst.ArchArm64:
 			shimFiles = []string{"shimaa64.efi", "mmaa64.efi", "grubx64.efi"}
 			shimName = "shimaa64.efi"
@@ -191,7 +200,7 @@ func (g Grub) InstallEFI(rootDir, bootDir, efiDir, deviceLabel string) (string, 
 			shimName = "shimx64.efi"
 		}
 	case cnst.Ubuntu:
-		switch g.config.Arch {
+		switch arch {
 		case cnst.ArchArm64:
 			shimFiles = []string{"shimaa64.efi.signed", "mmaa64.efi", "grubx64.efi.signed"}
 			shimName = "shimaa64.efi.signed"
@@ -241,7 +250,7 @@ func (g Grub) InstallEFI(rootDir, bootDir, efiDir, deviceLabel string) (string, 
 	// any bootloader entries, so our recent installation has the lower priority if something else is on the bootloader
 	writeShim := "bootx64.efi"
 
-	if g.config.Arch == cnst.ArchArm64 {
+	if arch == cnst.ArchArm64 {
 		writeShim = "bootaa64.efi"
 	}
 

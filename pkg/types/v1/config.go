@@ -46,18 +46,17 @@ type Config struct {
 	Runner                    Runner
 	Syscall                   SyscallInterface
 	CloudInitRunner           CloudInitRunner
-	Luet                      LuetInterface
+	ImageExtractor            ImageExtractor
 	Client                    HTTPClient
-	Cosign                    bool         `yaml:"cosign,omitempty" mapstructure:"cosign"`
-	Verify                    bool         `yaml:"verify,omitempty" mapstructure:"verify"`
-	CosignPubKey              string       `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
-	LocalImage                bool         `yaml:"local,omitempty" mapstructure:"local"`
-	Repos                     []Repository `yaml:"repositories,omitempty" mapstructure:"repositories"`
-	Arch                      string       `yaml:"arch,omitempty" mapstructure:"arch"`
-	SquashFsCompressionConfig []string     `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
-	SquashFsNoCompression     bool         `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
-	CloudInitPaths            []string     `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-	Strict                    bool         `yaml:"strict,omitempty" mapstructure:"strict"`
+	Cosign                    bool     `yaml:"cosign,omitempty" mapstructure:"cosign"`
+	Verify                    bool     `yaml:"verify,omitempty" mapstructure:"verify"`
+	CosignPubKey              string   `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
+	LocalImage                bool     `yaml:"local,omitempty" mapstructure:"local"`
+	Platform                  string   `yaml:"platform,omitempty" mapstructure:"platform"`
+	SquashFsCompressionConfig []string `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
+	SquashFsNoCompression     bool     `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
+	CloudInitPaths            []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	Strict                    bool     `yaml:"strict,omitempty" mapstructure:"strict"`
 }
 
 // WriteInstallState writes the state.yaml file to the given state and recovery paths
@@ -99,18 +98,12 @@ func (c Config) LoadInstallState() (*InstallState, error) {
 // Sanitize checks the consistency of the struct, returns error
 // if unsolvable inconsistencies are found
 func (c *Config) Sanitize() error {
-	// Set Luet plugins, we only use the mtree plugin for now
-	if c.Verify {
-		c.Luet.SetPlugins(constants.LuetMtreePlugin)
-	}
 	// If no squashcompression is set, zero the compression parameters
 	// By default on NewConfig the SquashFsCompressionConfig is set to the default values, and then override
 	// on config unmarshall.
 	if c.SquashFsNoCompression {
 		c.SquashFsCompressionConfig = []string{}
 	}
-	// Ensure luet arch matches Config.Arch
-	c.Luet.SetArch(c.Arch)
 	return nil
 }
 
@@ -543,29 +536,6 @@ type BuildConfig struct {
 // if unsolvable inconsistencies are found
 func (b *BuildConfig) Sanitize() error {
 	return b.Config.Sanitize()
-}
-
-type RawDisk struct {
-	X86_64 *RawDiskArchEntry `yaml:"x86_64,omitempty" mapstructure:"x86_64"` //nolint:revive
-	Arm64  *RawDiskArchEntry `yaml:"arm64,omitempty" mapstructure:"arm64"`
-}
-
-// Sanitize checks the consistency of the struct, returns error
-// if unsolvable inconsistencies are found
-func (d *RawDisk) Sanitize() error {
-	// No checks for the time being
-	return nil
-}
-
-// RawDiskArchEntry represents an arch entry in raw_disk
-type RawDiskArchEntry struct {
-	Packages []RawDiskPackage `yaml:"packages,omitempty"`
-}
-
-// RawDiskPackage represents a package entry for raw_disk, with a package name and a target to install to
-type RawDiskPackage struct {
-	Name   string `yaml:"name,omitempty"`
-	Target string `yaml:"target,omitempty"`
 }
 
 // InstallState tracks the installation data of the whole system

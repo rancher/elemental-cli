@@ -6,8 +6,8 @@ import (
 	"sort"
 	"unicode"
 
+	"github.com/kendru/darwin/go/depgraph"
 	"github.com/mudler/topsort"
-	"github.com/philopon/go-toposort"
 	"github.com/pkg/errors"
 )
 
@@ -30,51 +30,37 @@ func (a *PackageAssert) String() string {
 	return fmt.Sprintf("%s/%s %s %s", a.Package.GetCategory(), a.Package.GetName(), a.Package.GetVersion(), msg)
 }
 
-func (assertions PackagesAssertions) EnsureOrder() PackagesAssertions {
+func (assertions PackagesAssertions) EnsureOrder(definitiondb PackageDatabase) (PackagesAssertions, error) {
 
+	allAssertions := assertions
 	orderedAssertions := PackagesAssertions{}
-	unorderedAssertions := PackagesAssertions{}
-	fingerprints := []string{}
-
 	tmpMap := map[string]PackageAssert{}
+	g := depgraph.New()
 
 	for _, a := range assertions {
-		tmpMap[a.Package.GetFingerPrint()] = a
-		fingerprints = append(fingerprints, a.Package.GetFingerPrint())
-		unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-
-		if a.Value {
-			unorderedAssertions = append(unorderedAssertions, a) // Build a list of the ones that must be ordered
-		} else {
-			orderedAssertions = append(orderedAssertions, a) // Keep last the ones which are not meant to be installed
-		}
+		tmpMap[a.Package.GetPackageName()] = a
 	}
-
-	sort.Sort(unorderedAssertions)
 
 	// Build a topological graph
-	graph := toposort.NewGraph(len(unorderedAssertions))
-	graph.AddNodes(fingerprints...)
-	for _, a := range unorderedAssertions {
+	for _, a := range allAssertions {
 		for _, req := range a.Package.GetRequires() {
-			graph.AddEdge(a.Package.GetFingerPrint(), req.GetFingerPrint())
+			if def, err := definitiondb.FindPackage(req); err == nil { // Provides: Get a chance of being override here
+				req = def
+			}
+			g.DependOn(a.Package.GetPackageName(), req.GetPackageName())
 		}
 	}
-	result, ok := graph.Toposort()
-	if !ok {
-		panic("Cycle found")
-	}
-	for _, res := range result {
-		a, ok := tmpMap[res]
-		if !ok {
-			panic("fail")
-			//	continue
+
+	for _, res := range g.TopoSortedLayers() {
+		for _, r := range res {
+			a, ok := tmpMap[r]
+			if ok {
+				orderedAssertions = append(orderedAssertions, a)
+			}
 		}
-		orderedAssertions = append(orderedAssertions, a)
-		//	orderedAssertions = append(PackagesAssertions{a}, orderedAssertions...) // push upfront
 	}
-	//helpers.ReverseAny(orderedAssertions)
-	return orderedAssertions
+	//	helpers.ReverseAny(orderedAssertions)
+	return orderedAssertions, nil
 }
 
 // SearchByName searches a string matching a package in the assetion list

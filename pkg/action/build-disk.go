@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 
 	"github.com/rancher/elemental-cli/pkg/constants"
-	"github.com/rancher/elemental-cli/pkg/elemental"
 	eleError "github.com/rancher/elemental-cli/pkg/error"
 	"github.com/rancher/elemental-cli/pkg/partitioner"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
@@ -37,20 +36,8 @@ const (
 	GB = 1024 * MB
 )
 
-func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string, oemLabel string, recoveryLabel string, output string) error {
-	cfg.Logger.Infof("Building disk image type %s for arch %s", imgType, cfg.Arch)
-
-	if len(spec.Packages) == 0 {
-		msg := fmt.Sprintf("no packages in the config for arch %s", cfg.Arch)
-		cfg.Logger.Error(msg)
-		return eleError.New(msg, eleError.NoPackagesForArch)
-	}
-
-	if len(cfg.Config.Repos) == 0 {
-		msg := "no repositories configured"
-		cfg.Logger.Error(msg)
-		return eleError.New(msg, eleError.NoReposConfigured)
-	}
+func BuildDiskRun(cfg *v1.BuildConfig, imgType string, oemLabel string, recoveryLabel string, output string) error {
+	cfg.Logger.Infof("Building disk image type %s for platform %s", imgType, cfg.Platform)
 
 	if oemLabel == "" {
 		oemLabel = constants.OEMLabel
@@ -60,7 +47,6 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 		recoveryLabel = constants.RecoveryLabel
 	}
 
-	e := elemental.NewElemental(&cfg.Config)
 	cleanup := utils.NewCleanStack()
 	var err error
 	defer func() { err = cleanup.Cleanup(err) }()
@@ -82,27 +68,6 @@ func BuildDiskRun(cfg *v1.BuildConfig, spec *v1.RawDiskArchEntry, imgType string
 	rootfsPart := filepath.Join(diskTempDir, "rootfs.part")
 	oemPart := filepath.Join(diskTempDir, "oem.part")
 	efiPart := filepath.Join(diskTempDir, "efi.part")
-	// Extract required packages to basedir
-	for _, pkg := range spec.Packages {
-		err = os.MkdirAll(filepath.Join(baseDir, pkg.Target), constants.DirPerm)
-		if err != nil {
-			cfg.Logger.Error(err)
-			return eleError.NewFromError(err, eleError.CreateDir)
-		}
-		imgSource, err := v1.NewSrcFromURI(pkg.Name)
-		if err != nil {
-			cfg.Logger.Error(err)
-			return eleError.NewFromError(err, eleError.IdentifySource)
-		}
-		_, err = e.DumpSource(
-			filepath.Join(baseDir, pkg.Target),
-			imgSource,
-		)
-		if err != nil {
-			cfg.Logger.Error(err)
-			return eleError.NewFromError(err, eleError.DumpSource)
-		}
-	}
 
 	// Create rootfs.part
 	err = CreatePart(

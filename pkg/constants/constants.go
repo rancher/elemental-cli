@@ -103,13 +103,6 @@ const (
 	PostUpgradeHook        = "post-upgrade"
 	BeforeUpgradeHook      = "before-upgrade"
 
-	// Luet constants
-	LuetCosignPlugin    = "luet-cosign"
-	LuetMtreePlugin     = "luet-mtree"
-	LuetDefaultRepoURI  = "quay.io/costoolkit/releases-green"
-	LuetRepoMaxPrio     = 1
-	LuetDefaultRepoPrio = 90
-
 	// SELinux targeted policy paths
 	SELinuxTargetedPath        = "/etc/selinux/targeted"
 	SELinuxTargetedContextFile = SELinuxTargetedPath + "/contexts/files/file_contexts"
