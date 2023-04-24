@@ -17,6 +17,6 @@ reset:
 
 upgrade:
   system:
-    uri: docker:some/image:latest
+    uri: some/image:latest
   recovery-system:
-    uri: docker:recovery/image:latest
+    uri: recovery/image:latest
