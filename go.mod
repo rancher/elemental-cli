@@ -15,7 +15,6 @@ require (
 	github.com/jaypipes/ghw v0.9.1-0.20220511134554-dac2f19e1c76
 	github.com/joho/godotenv v1.5.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/mudler/luet v0.0.0-20230312151051-5190a5126dd5
 	github.com/mudler/yip v1.0.3-0.20230331083237-3caf7670fe8d
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.6
@@ -37,7 +36,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.10.0-rc.7 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220623141421-5afb4c282135 // indirect
-	github.com/Sabayon/pkgs-checker v0.10.5 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/cavaliergopher/grab v2.0.0+incompatible // indirect
@@ -45,7 +43,6 @@ require (
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/crillab/gophersat v1.3.2-0.20210701121804-72b19f5b6b38 // indirect
 	github.com/davidcassany/linuxkit/pkg/metadata v0.0.0-20230124104020-93ac9dd5b8e1 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/diskfs/go-diskfs v1.2.1-0.20230123115902-fce1828bbbfa // indirect
@@ -66,54 +63,40 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
-	github.com/google/renameio v1.0.1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/itchyny/gojq v0.12.12 // indirect
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/jinzhu/copier v0.3.5 // indirect
 	github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
-	github.com/knqyf263/go-deb-version v0.0.0-20230223133812-3ed183d23422 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kyokomi/emoji v2.2.4+incompatible // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/moby/buildkit v0.11.5 // indirect
 	github.com/moby/moby v23.0.4+incompatible // indirect
-	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
+	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/mudler/entities v0.0.0-20220905203055-68348bae0f49 // indirect
-	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5 // indirect
-	github.com/mudler/topsort v0.0.0-20201103161459-db5c7901c290 // indirect
+	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
-	github.com/opencontainers/runc v1.1.6 // indirect
-	github.com/otiai10/copy v1.10.0 // indirect
 	github.com/packethost/packngo v0.29.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
 	github.com/phayes/permbits v0.0.0-20190612203442-39d7c581d2ee // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/xattr v0.4.9 // indirect
-	github.com/pterm/pterm v0.12.59 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.37.0 // indirect
@@ -135,9 +118,6 @@ require (
 	github.com/zcalusic/sysinfo v0.9.5 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561 // indirect
 	golang.org/x/mod v0.10.0 // indirect
