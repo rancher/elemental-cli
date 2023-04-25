@@ -155,7 +155,7 @@ var _ = Describe("Config", Label("config"), func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// From config file
-				Expect(iso.BootloaderInRootFs).To(BeTrue())
+				Expect(iso.Image[0].Value()).To(Equal("recovery/cos-img:latest"))
 				Expect(iso.Label).To(Equal("LIVE_LABEL"))
 			})
 		})

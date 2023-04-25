@@ -154,15 +154,6 @@ func GetDefaultSquashfsCompressionOptions() []string {
 	return options
 }
 
-func GetBuildDiskDefaultPackages() map[string]string {
-	return map[string]string{
-		"channel:system/grub2-efi-image": "efi",
-		"channel:system/grub2-config":    "root",
-		"channel:system/grub2-artifacts": "root/grub2",
-		"channel:recovery/cos-img":       "root/cOS",
-	}
-}
-
 // GetRunKeyEnvMap returns environment variable bindings to RunConfig data
 func GetRunKeyEnvMap() map[string]string {
 	return map[string]string{

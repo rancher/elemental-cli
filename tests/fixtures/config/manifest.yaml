@@ -1,12 +1,11 @@
 iso:
-  bootloader-in-rootfs: true
+  rootfs:
+    - oci:system/cos
+  uefi:
+    - oci:live/grub2-efi-image
+  image:
+    - oci:recovery/cos-img
   label: "LIVE_LABEL"
-
-# Raw disk creation values start
-
-raw_disk:
-
-# Raw disk creation values end
 
 name: "cOS-0"
 date: true
