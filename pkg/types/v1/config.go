@@ -19,6 +19,7 @@ package v1
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sort"
 
 	"gopkg.in/yaml.v3"
@@ -48,15 +49,17 @@ type Config struct {
 	CloudInitRunner           CloudInitRunner
 	ImageExtractor            ImageExtractor
 	Client                    HTTPClient
-	Cosign                    bool     `yaml:"cosign,omitempty" mapstructure:"cosign"`
-	Verify                    bool     `yaml:"verify,omitempty" mapstructure:"verify"`
-	CosignPubKey              string   `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
-	LocalImage                bool     `yaml:"local,omitempty" mapstructure:"local"`
-	Platform                  string   `yaml:"platform,omitempty" mapstructure:"platform"`
-	SquashFsCompressionConfig []string `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
-	SquashFsNoCompression     bool     `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
-	CloudInitPaths            []string `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
-	Strict                    bool     `yaml:"strict,omitempty" mapstructure:"strict"`
+	Platform                  *Platform `yaml:"-" mapstructure:"-"`
+	Cosign                    bool      `yaml:"cosign,omitempty" mapstructure:"cosign"`
+	Verify                    bool      `yaml:"verify,omitempty" mapstructure:"verify"`
+	CosignPubKey              string    `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
+	LocalImage                bool      `yaml:"local,omitempty" mapstructure:"local"`
+	Arch                      string    `yaml:"arch,omitempty" mapstructure:"arch"`
+	PlatformStr               string    `yaml:"platform,omitempty" mapstructure:"platform"`
+	SquashFsCompressionConfig []string  `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
+	SquashFsNoCompression     bool      `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
+	CloudInitPaths            []string  `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
+	Strict                    bool      `yaml:"strict,omitempty" mapstructure:"strict"`
 }
 
 // WriteInstallState writes the state.yaml file to the given state and recovery paths
@@ -104,7 +107,24 @@ func (c *Config) Sanitize() error {
 	if c.SquashFsNoCompression {
 		c.SquashFsCompressionConfig = []string{}
 	}
-	return nil
+
+	var (
+		p   *Platform
+		err error
+	)
+
+	switch {
+	case c.PlatformStr != "":
+		p, err = ParsePlatform(c.PlatformStr)
+	case c.Arch != "":
+		p, err = NewPlatformFromArch(c.Arch)
+	default:
+		p, err = NewPlatformFromArch(runtime.GOARCH)
+	}
+
+	c.Platform = p
+
+	return err
 }
 
 type RunConfig struct {

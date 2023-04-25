@@ -67,6 +67,7 @@ var _ = Describe("Runtime Actions", func() {
 			config.WithClient(client),
 			config.WithCloudInitRunner(cloudInit),
 			config.WithImageExtractor(extractor),
+			config.WithPlatform("linux/amd64"),
 		)
 
 	})

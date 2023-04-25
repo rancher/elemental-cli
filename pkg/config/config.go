@@ -84,8 +84,9 @@ func WithCloudInitRunner(ci v1.CloudInitRunner) func(r *v1.Config) error {
 
 func WithPlatform(platform string) func(r *v1.Config) error {
 	return func(r *v1.Config) error {
-		r.Platform = platform
-		return nil
+		p, err := v1.ParsePlatform(platform)
+		r.Platform = p
+		return err
 	}
 }
 
@@ -106,12 +107,18 @@ func WithImageExtractor(extractor v1.ImageExtractor) func(r *v1.Config) error {
 func NewConfig(opts ...GenericOptions) *v1.Config {
 	log := v1.NewLogger()
 
+	defaultPlatform, err := v1.NewPlatformFromArch(runtime.GOARCH)
+	if err != nil {
+		log.Errorf("error parsing default platform (%s): %s", runtime.GOARCH, err.Error())
+		return nil
+	}
+
 	c := &v1.Config{
 		Fs:                        vfs.OSFS,
 		Logger:                    log,
 		Syscall:                   &v1.RealSyscall{},
 		Client:                    http.NewClient(),
-		Platform:                  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		Platform:                  defaultPlatform,
 		SquashFsCompressionConfig: constants.GetDefaultSquashfsCompressionOptions(),
 	}
 	for _, o := range opts {

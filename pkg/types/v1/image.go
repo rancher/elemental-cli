@@ -70,12 +70,3 @@ func image(ref name.Reference, platform v1.Platform, local bool) (v1.Image, erro
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 	)
 }
-
-func ParsePlatform(platform string) (os, arch, variant string, err error) {
-	p, err := v1.ParsePlatform(platform)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	return p.OS, p.Architecture, p.Variant, nil
-}

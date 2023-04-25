@@ -52,11 +52,6 @@ func NewPullImageCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 				cfg.Logger.Errorf("Invalid path %s", destination)
 				return elementalError.NewFromError(err, elementalError.StatFile)
 			}
-			platform, err := cmd.Flags().GetString("platform")
-			if err != nil {
-				cfg.Logger.Error("Invalid platform: %s", err.Error())
-				return elementalError.NewFromError(err, elementalError.ReadingBuildConfig)
-			}
 
 			local, err := cmd.Flags().GetBool("local")
 			if err != nil {
@@ -68,8 +63,10 @@ func NewPullImageCmd(root *cobra.Command, addCheckRoot bool) *cobra.Command {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
+			cfg.Logger.Infof("Pulling image %s platform %s", image, cfg.Platform.String())
+
 			e := v1.OCIImageExtractor{}
-			if err = e.ExtractImage(image, destination, platform, local); err != nil {
+			if err = e.ExtractImage(image, destination, cfg.Platform.String(), local); err != nil {
 				cfg.Logger.Error(err.Error())
 				return elementalError.NewFromError(err, elementalError.UnpackImage)
 			}

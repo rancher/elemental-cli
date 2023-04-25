@@ -51,12 +51,12 @@ func (g *GreenLiveBootLoader) PrepareEFI(rootDir, uefiDir string) error {
 		return err
 	}
 
-	_, arch, _, err := v1.ParsePlatform(g.buildCfg.Platform)
-	if err != nil {
-		return err
-	}
+	// _, arch, _, err := v1.ParsePlatform(g.buildCfg.Platform)
+	// if err != nil {
+	// 	return err
+	// }
 
-	switch arch {
+	switch g.buildCfg.Platform.Arch {
 	case constants.ArchAmd64, constants.Archx86:
 		err = g.copyEfiFiles(
 			uefiDir,
@@ -74,7 +74,7 @@ func (g *GreenLiveBootLoader) PrepareEFI(rootDir, uefiDir string) error {
 			efiImgArm64,
 		)
 	default:
-		err = fmt.Errorf("Not supported architecture: %v", arch)
+		err = fmt.Errorf("Not supported architecture: %v", g.buildCfg.Platform.Arch)
 	}
 	if err != nil {
 		return err

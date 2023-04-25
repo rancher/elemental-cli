@@ -81,6 +81,7 @@ var _ = Describe("Install action tests", func() {
 			conf.WithClient(client),
 			conf.WithCloudInitRunner(cloudInit),
 			conf.WithImageExtractor(extractor),
+			conf.WithPlatform("linux/amd64"),
 		)
 	})
 

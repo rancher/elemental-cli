@@ -435,7 +435,7 @@ func (e *Elemental) DumpSource(target string, imgSrc *v1.ImageSource) (info inte
 			}
 		}
 
-		err = e.config.ImageExtractor.ExtractImage(imgSrc.Value(), target, e.config.Platform, e.config.LocalImage)
+		err = e.config.ImageExtractor.ExtractImage(imgSrc.Value(), target, e.config.Platform.String(), e.config.LocalImage)
 		if err != nil {
 			return nil, err
 		}

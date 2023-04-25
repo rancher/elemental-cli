@@ -197,15 +197,17 @@ var _ = Describe("GreenLiveBootloader", Label("green", "live"), func() {
 		Expect(err).Should(HaveOccurred())
 	})
 	It("Fails to copy the EFI image binaries for unsupported arch", func() {
-		cfg.Platform = "unknown"
+		cfg.Platform = &v1.Platform{Arch: "unknown"}
 
 		green := live.NewGreenLiveBootLoader(cfg, iso)
 		err := green.PrepareEFI(rootDir, uefiDir)
 		Expect(err).Should(HaveOccurred())
 	})
 	It("Copies the EFI image binaries for arm64", func() {
-		cfg.Platform = fmt.Sprintf("linux/%s", constants.ArchArm64)
-		err := utils.MkdirAll(fs, filepath.Join(rootDir, "/usr/share/grub2/arm64-efi"), constants.DirPerm)
+		platform, err := v1.NewPlatformFromArch(constants.ArchArm64)
+		Expect(err).ShouldNot(HaveOccurred())
+		cfg.Platform = platform
+		err = utils.MkdirAll(fs, filepath.Join(rootDir, "/usr/share/grub2/arm64-efi"), constants.DirPerm)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = fs.WriteFile(
 			filepath.Join(rootDir, "/usr/share/grub2/arm64-efi/grub.efi"),

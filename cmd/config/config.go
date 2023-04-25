@@ -147,6 +147,7 @@ func ReadConfigRun(configDir string, flags *pflag.FlagSet, mounter mount.Interfa
 	cfg := config.NewRunConfig(
 		config.WithLogger(v1.NewLogger()),
 		config.WithMounter(mounter),
+		config.WithOCIImageExtractor(),
 	)
 	configLogger(cfg.Logger, cfg.Fs)
 	if configDir == "" {

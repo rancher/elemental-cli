@@ -86,7 +86,7 @@ var _ = Describe("Config", Label("config"), func() {
 			Expect(err).To(BeNil())
 			Expect(viper.GetString("name")).To(Equal(""))
 			Expect(cfg.Name).To(Equal("elemental"))
-			Expect(cfg.Platform).To(Equal("linux/arm64"))
+			Expect(cfg.Platform.String()).To(Equal("linux/arm64"))
 		})
 		It("values filled if config path valid", Label("path", "values"), func() {
 			cfg, err := ReadConfigBuild("../../tests/fixtures/config/", flags, mounter)
@@ -95,6 +95,7 @@ var _ = Describe("Config", Label("config"), func() {
 			Expect(cfg.Name).To(Equal("cOS-0"))
 			hasSuffix := strings.HasSuffix(viper.ConfigFileUsed(), "config/manifest.yaml")
 			Expect(hasSuffix).To(BeTrue())
+			Expect(cfg.Platform.String()).To(Equal("linux/arm64"))
 		})
 
 		It("overrides values with env values", Label("env", "values"), func() {
@@ -108,6 +109,25 @@ var _ = Describe("Config", Label("config"), func() {
 			Expect(err).Should(HaveOccurred())
 		})
 	})
+
+	Describe("Build config with arch", Label("build"), func() {
+		var flags *pflag.FlagSet
+		BeforeEach(func() {
+			flags = pflag.NewFlagSet("testflags", 1)
+			flags.String("arch", "", "testing flag")
+			flags.Set("arch", "arm64")
+		})
+		It("values filled if config path valid", Label("path", "values"), func() {
+			cfg, err := ReadConfigBuild("../../tests/fixtures/config/", flags, mounter)
+			Expect(err).To(BeNil())
+			Expect(viper.GetString("name")).To(Equal("cOS-0"))
+			Expect(cfg.Name).To(Equal("cOS-0"))
+			hasSuffix := strings.HasSuffix(viper.ConfigFileUsed(), "config/manifest.yaml")
+			Expect(hasSuffix).To(BeTrue())
+			Expect(cfg.Platform.String()).To(Equal("linux/arm64"))
+		})
+	})
+
 	Describe("Read build specs", Label("build"), func() {
 		var cfg *v1.BuildConfig
 		var runner *v1mock.FakeRunner
@@ -136,7 +156,7 @@ var _ = Describe("Config", Label("config"), func() {
 			cfg, err = ReadConfigBuild("../../tests/fixtures/config/", nil, mounter)
 			Expect(err).Should(BeNil())
 			// From defaults
-			Expect(cfg.Platform).To(Equal("linux/amd64"))
+			Expect(cfg.Platform.String()).To(Equal("linux/amd64"))
 
 			cfg.Fs = fs
 			cfg.Runner = runner
@@ -179,7 +199,7 @@ var _ = Describe("Config", Label("config"), func() {
 		It("uses defaults if no configs are provided", func() {
 			cfg, err := ReadConfigRun("", nil, mounter)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(cfg.Platform == fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)).To(BeTrue())
+			Expect(cfg.Platform.String()).To(Equal(fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)))
 			// Uses given mounter
 			Expect(cfg.Mounter == mounter).To(BeTrue())
 			// Sets a RealRunner instance by default

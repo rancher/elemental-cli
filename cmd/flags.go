@@ -142,7 +142,9 @@ func validateInstallUpgradeFlags(log v1.Logger, flags *pflag.FlagSet) error {
 
 // addPlatformFlags adds the arch flag for build commands
 func addPlatformFlags(cmd *cobra.Command) {
-	cmd.Flags().StringP("platform", "p", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH), "Platform to build the image for")
+	cmd.Flags().String("arch", "", "Arch to build the image for")
+	_ = cmd.Flags().MarkDeprecated("arch", "'arch' is deprecated please use 'platform' instead")
+	cmd.Flags().String("platform", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH), "Platform to build the image for")
 }
 
 type enum struct {
