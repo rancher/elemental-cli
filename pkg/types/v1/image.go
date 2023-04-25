@@ -67,7 +67,7 @@ func image(ref name.Reference, platform v1.Platform, local bool) (v1.Image, erro
 	return remote.Image(ref,
 		remote.WithTransport(http.DefaultTransport),
 		remote.WithPlatform(platform),
-		remote.WithAuth(authn.Anonymous),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 	)
 }
 
