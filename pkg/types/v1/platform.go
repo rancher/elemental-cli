@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	registry "github.com/google/go-containerregistry/pkg/v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/rancher/elemental-cli/pkg/constants"
 )
@@ -62,8 +63,46 @@ func ParsePlatform(platform string) (*Platform, error) {
 	return NewPlatform(p.OS, p.Architecture)
 }
 
+func (p *Platform) updateFrom(platform *Platform) {
+	if platform == nil || p == nil {
+		return
+	}
+
+	p.OS = platform.OS
+	p.Arch = platform.Arch
+	p.GolangArch = platform.GolangArch
+}
+
 func (p *Platform) String() string {
+	if p == nil {
+		return ""
+	}
+
 	return fmt.Sprintf("%s/%s", p.OS, p.GolangArch)
+}
+
+func (p Platform) MarshalYAML() (interface{}, error) {
+	return p.String(), nil
+}
+
+func (p *Platform) UnmarshalYAML(value *yaml.Node) error {
+	parsed, err := ParsePlatform(value.Value)
+	if err != nil {
+		return err
+	}
+	p.updateFrom(parsed)
+	return nil
+}
+
+func (p *Platform) CustomUnmarshal(data interface{}) (bool, error) {
+	str, ok := data.(string)
+	if !ok {
+		return false, fmt.Errorf("can't unmarshal %+v to a Platform type", data)
+	}
+
+	parsed, err := ParsePlatform(str)
+	p.updateFrom(parsed)
+	return false, err
 }
 
 var errInvalidArch = fmt.Errorf("invalid arch")

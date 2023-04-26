@@ -49,13 +49,12 @@ type Config struct {
 	CloudInitRunner           CloudInitRunner
 	ImageExtractor            ImageExtractor
 	Client                    HTTPClient
-	Platform                  *Platform `yaml:"-" mapstructure:"-"`
+	Platform                  *Platform `yaml:"platform,omitempty" mapstructure:"platform"`
 	Cosign                    bool      `yaml:"cosign,omitempty" mapstructure:"cosign"`
 	Verify                    bool      `yaml:"verify,omitempty" mapstructure:"verify"`
 	CosignPubKey              string    `yaml:"cosign-key,omitempty" mapstructure:"cosign-key"`
 	LocalImage                bool      `yaml:"local,omitempty" mapstructure:"local"`
 	Arch                      string    `yaml:"arch,omitempty" mapstructure:"arch"`
-	PlatformStr               string    `yaml:"platform,omitempty" mapstructure:"platform"`
 	SquashFsCompressionConfig []string  `yaml:"squash-compression,omitempty" mapstructure:"squash-compression"`
 	SquashFsNoCompression     bool      `yaml:"squash-no-compression,omitempty" mapstructure:"squash-no-compression"`
 	CloudInitPaths            []string  `yaml:"cloud-init-paths,omitempty" mapstructure:"cloud-init-paths"`
@@ -108,23 +107,23 @@ func (c *Config) Sanitize() error {
 		c.SquashFsCompressionConfig = []string{}
 	}
 
-	var (
-		p   *Platform
-		err error
-	)
-
-	switch {
-	case c.PlatformStr != "":
-		p, err = ParsePlatform(c.PlatformStr)
-	case c.Arch != "":
-		p, err = NewPlatformFromArch(c.Arch)
-	default:
-		p, err = NewPlatformFromArch(runtime.GOARCH)
+	if c.Arch != "" {
+		p, err := NewPlatformFromArch(c.Arch)
+		if err != nil {
+			return err
+		}
+		c.Platform = p
 	}
 
-	c.Platform = p
+	if c.Platform == nil {
+		p, err := NewPlatformFromArch(runtime.GOARCH)
+		if err != nil {
+			return err
+		}
+		c.Platform = p
+	}
 
-	return err
+	return nil
 }
 
 type RunConfig struct {

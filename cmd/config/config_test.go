@@ -74,6 +74,24 @@ var _ = Describe("Config", Label("config"), func() {
 		})
 	})
 
+	Describe("Build config with arch", Label("build"), func() {
+		var flags *pflag.FlagSet
+		BeforeEach(func() {
+			flags = pflag.NewFlagSet("testflags", 1)
+			flags.String("arch", "", "testing flag")
+			flags.Set("arch", "arm64")
+		})
+		It("values filled if config path valid", Label("path", "values"), func() {
+			cfg, err := ReadConfigBuild("../../tests/fixtures/config/", flags, mounter)
+			Expect(err).To(BeNil())
+			Expect(viper.GetString("name")).To(Equal("cOS-0"))
+			Expect(cfg.Name).To(Equal("cOS-0"))
+			hasSuffix := strings.HasSuffix(viper.ConfigFileUsed(), "config/manifest.yaml")
+			Expect(hasSuffix).To(BeTrue())
+			Expect(cfg.Platform.String()).To(Equal("linux/arm64"))
+		})
+	})
+
 	Describe("Build config", Label("build"), func() {
 		var flags *pflag.FlagSet
 		BeforeEach(func() {
@@ -107,24 +125,6 @@ var _ = Describe("Config", Label("config"), func() {
 		It("fails on bad yaml manifest file", func() {
 			_, err := ReadConfigBuild("../../tests/fixtures/badconfig/", nil, mounter)
 			Expect(err).Should(HaveOccurred())
-		})
-	})
-
-	Describe("Build config with arch", Label("build"), func() {
-		var flags *pflag.FlagSet
-		BeforeEach(func() {
-			flags = pflag.NewFlagSet("testflags", 1)
-			flags.String("arch", "", "testing flag")
-			flags.Set("arch", "arm64")
-		})
-		It("values filled if config path valid", Label("path", "values"), func() {
-			cfg, err := ReadConfigBuild("../../tests/fixtures/config/", flags, mounter)
-			Expect(err).To(BeNil())
-			Expect(viper.GetString("name")).To(Equal("cOS-0"))
-			Expect(cfg.Name).To(Equal("cOS-0"))
-			hasSuffix := strings.HasSuffix(viper.ConfigFileUsed(), "config/manifest.yaml")
-			Expect(hasSuffix).To(BeTrue())
-			Expect(cfg.Platform.String()).To(Equal("linux/arm64"))
 		})
 	})
 
