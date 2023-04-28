@@ -51,8 +51,9 @@ const (
 	SquashFs           = "squashfs"
 	EfiFs              = "vfat"
 	BiosFs             = ""
-	EfiSize            = uint(64)
-	OEMSize            = uint(64)
+	MinPartSize        = uint(64)
+	EfiSize            = MinPartSize
+	OEMSize            = MinPartSize
 	StateSize          = uint(8192)
 	RecoverySize       = uint(4096)
 	PersistentSize     = uint(0)
@@ -89,7 +90,7 @@ const (
 	RecoveryImgFile   = "recovery.img"
 	TransitionImgFile = "transition.img"
 
-	// Yip stages evaluated on reset/upgrade/install action
+	// Yip stages evaluated on reset/upgrade/install/build-disk actions
 	AfterInstallChrootHook = "after-install-chroot"
 	AfterInstallHook       = "after-install"
 	PostInstallHook        = "post-install"
@@ -102,6 +103,10 @@ const (
 	AfterUpgradeHook       = "after-upgrade"
 	PostUpgradeHook        = "post-upgrade"
 	BeforeUpgradeHook      = "before-upgrade"
+	AfterDiskChrootHook    = "after-disk-chroot"
+	AfterDiskHook          = "after-disk"
+	PostDiskHook           = "post-disk"
+	BeforeDiskHook         = "before-disk"
 
 	// SELinux targeted policy paths
 	SELinuxTargetedPath        = "/etc/selinux/targeted"
@@ -115,6 +120,12 @@ const (
 	ISOEFIImg        = "uefi.img"
 	ISOLabel         = "COS_LIVE"
 	ISOCloudInitPath = LiveDir + "/iso-config"
+
+	// Constants related to disk builds
+	DiskWorkDir = "build"
+	RawType     = "raw"
+	AzureType   = "azure"
+	GCEType     = "gce"
 
 	// Default directory and file fileModes
 	DirPerm        = os.ModeDir | os.ModePerm
@@ -175,7 +186,6 @@ func GetInstallKeyEnvMap() map[string]string {
 		"firmware":            "FIRMWARE",
 		"part-table":          "PART_TABLE",
 		"no-format":           "NO_FORMAT",
-		"tty":                 "TTY",
 		"grub-entry-name":     "GRUB_ENTRY_NAME",
 		"disable-boot-entry":  "DISABLE_BOOT_ENTRY",
 	}
@@ -186,7 +196,6 @@ func GetResetKeyEnvMap() map[string]string {
 	return map[string]string{
 		"target":          "TARGET",
 		"system.uri":      "SYSTEM",
-		"tty":             "TTY",
 		"grub-entry-name": "GRUB_ENTRY_NAME",
 	}
 }

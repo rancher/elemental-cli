@@ -33,6 +33,7 @@ import (
 
 	"github.com/distribution/distribution/reference"
 	"github.com/joho/godotenv"
+	eleError "github.com/rancher/elemental-cli/pkg/error"
 	"github.com/twpayne/go-vfs"
 	"github.com/zloylos/grsync"
 
@@ -282,6 +283,26 @@ func CreateSquashFS(runner v1.Runner, logger v1.Logger, source string, destinati
 		logger.Debugf("Error running squashfs creation, stdout: %s", out)
 		logger.Errorf("Error while creating squashfs from %s to %s: %s", source, destination, err)
 		return err
+	}
+	return nil
+}
+
+// CreateRAWFile creates raw file of the given size in MB
+func CreateRAWFile(fs v1.FS, filename string, size uint) error {
+	f, err := fs.Create(filename)
+	if err != nil {
+		return eleError.NewFromError(err, eleError.CreateFile)
+	}
+	err = f.Truncate(int64(size * 1024 * 1024))
+	if err != nil {
+		f.Close()
+		_ = fs.RemoveAll(filename)
+		return eleError.NewFromError(err, eleError.TruncateFile)
+	}
+	err = f.Close()
+	if err != nil {
+		_ = fs.RemoveAll(filename)
+		return eleError.NewFromError(err, eleError.CloseFile)
 	}
 	return nil
 }

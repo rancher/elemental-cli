@@ -625,7 +625,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 				cleaned = true
 				return nil
 			}
-			err := e.CreateImgFromTree(root, img, cleaner)
+			err := e.CreateImgFromTree(root, img, false, cleaner)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(img.Size).To(Equal(32 + constants.ImgOverhead + 1))
 			exists, _ := utils.Exists(fs, "/some/mountpoint/somefile")
@@ -634,14 +634,14 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 		It("Creates an squashfs image", func() {
 			img.FS = constants.SquashFs
-			err := e.CreateImgFromTree(root, img, nil)
+			err := e.CreateImgFromTree(root, img, false, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(img.Size).To(Equal(uint(0)))
 			Expect(runner.IncludesCmds([][]string{{"mksquashfs"}}))
 		})
 		It("Creates an image of an specific size including including the root tree contents", func() {
 			img.Size = 64
-			err := e.CreateImgFromTree(root, img, nil)
+			err := e.CreateImgFromTree(root, img, false, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(img.Size).To(Equal(uint(64)))
 			exists, _ := utils.Exists(fs, "/some/mountpoint/somefile")
@@ -649,14 +649,14 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 		It("Fails to mount created filesystem image", func() {
 			mounter.ErrorOnMount = true
-			err := e.CreateImgFromTree(root, img, nil)
+			err := e.CreateImgFromTree(root, img, false, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(img.Size).To(Equal(32 + constants.ImgOverhead + 1))
 			Expect(cleaned).To(BeFalse())
 		})
 		It("Fails to mount created filesystem image", func() {
 			mounter.ErrorOnUnmount = true
-			err := e.CreateImgFromTree(root, img, nil)
+			err := e.CreateImgFromTree(root, img, false, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(img.Size).To(Equal(32 + constants.ImgOverhead + 1))
 			Expect(cleaned).To(BeFalse())
@@ -665,7 +665,7 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 		})
 		It("Fails to create image, no write permissions", func() {
 			config.Fs = vfs.NewReadOnlyFS(fs)
-			err := e.CreateImgFromTree(root, img, nil)
+			err := e.CreateImgFromTree(root, img, false, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(img.Size).To(Equal(32 + constants.ImgOverhead + 1))
 		})
@@ -969,14 +969,14 @@ var _ = Describe("Elemental", Label("elemental"), func() {
 			Expect(err).To(BeNil())
 			Expect(err).To(BeNil())
 
-			err = e.CopyCloudConfig(cloudInit)
+			err = e.CopyCloudConfig(constants.OEMDir, cloudInit)
 			Expect(err).To(BeNil())
 			copiedFile, err := fs.ReadFile(fmt.Sprintf("%s/90_custom.yaml", constants.OEMDir))
 			Expect(err).To(BeNil())
 			Expect(copiedFile).To(ContainSubstring(testString))
 		})
 		It("Doesnt do anything if the config file is not set", func() {
-			err := e.CopyCloudConfig([]string{})
+			err := e.CopyCloudConfig(constants.OEMDir, []string{})
 			Expect(err).To(BeNil())
 		})
 	})

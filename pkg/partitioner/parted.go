@@ -131,8 +131,13 @@ func (pc *PartedCall) WriteChanges() (string, error) {
 	return string(out), err
 }
 
-func (pc *PartedCall) SetPartitionTableLabel(label string) {
+func (pc *PartedCall) SetPartitionTableLabel(label string) error {
+	match, _ := regexp.MatchString("msdos|gpt", label)
+	if !match {
+		return fmt.Errorf("Invalid partition table type, only msdos and gpt are supported")
+	}
 	pc.label = label
+	return nil
 }
 
 func (pc *PartedCall) CreatePartition(p *Partition) {
@@ -196,7 +201,7 @@ func (pc PartedCall) GetPartitionTableLabel(printOut string) (string, error) {
 }
 
 // Parses the output of a GdiskCall.Print call
-func (pc PartedCall) GetPartitions(printOut string) []Partition {
+func (pc PartedCall) GetPartitions(printOut string) []Partition { //nolint:dupl
 	re := regexp.MustCompile(`^(\d+):(\d+)s:(\d+)s:(\d+)s:(.*):(.*):(.*);$`)
 	var start uint
 	var end uint

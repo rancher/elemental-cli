@@ -206,12 +206,11 @@ func (dev Disk) computeFreeSpaceWithoutLast() uint {
 }
 
 func (dev *Disk) NewPartitionTable(label string) (string, error) {
-	match, _ := regexp.MatchString("msdos|gpt", label)
-	if !match {
-		return "", errors.New("Invalid partition table type, only msdos and gpt are supported")
-	}
 	pc := NewPartedCall(dev.String(), dev.runner)
-	pc.SetPartitionTableLabel(label)
+	err := pc.SetPartitionTableLabel(label)
+	if err != nil {
+		return "", err
+	}
 	pc.WipeTable(true)
 	out, err := pc.WriteChanges()
 	if err != nil {
@@ -239,7 +238,10 @@ func (dev *Disk) AddPartition(size uint, fileSystem string, pLabel string, flags
 		}
 	}
 
-	pc.SetPartitionTableLabel(dev.label)
+	err := pc.SetPartitionTableLabel(dev.label)
+	if err != nil {
+		return 0, err
+	}
 
 	var partNum int
 	var startS uint
@@ -338,7 +340,10 @@ func (dev *Disk) ExpandLastPartition(size uint) (string, error) {
 		}
 	}
 
-	pc.SetPartitionTableLabel(dev.label)
+	err := pc.SetPartitionTableLabel(dev.label)
+	if err != nil {
+		return "", err
+	}
 
 	if len(dev.parts) == 0 {
 		return "", errors.New("There is no partition to expand")
