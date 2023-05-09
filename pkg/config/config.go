@@ -26,6 +26,7 @@ import (
 
 	"github.com/rancher/elemental-cli/pkg/cloudinit"
 	"github.com/rancher/elemental-cli/pkg/constants"
+	"github.com/rancher/elemental-cli/pkg/features"
 	"github.com/rancher/elemental-cli/pkg/http"
 	v1 "github.com/rancher/elemental-cli/pkg/types/v1"
 	"github.com/rancher/elemental-cli/pkg/utils"
@@ -213,10 +214,11 @@ func NewInstallSpec(cfg v1.Config) *v1.InstallSpec {
 }
 
 // NewInitSpec returns an InitSpec struct all based on defaults
-func NewInitSpec(cfg v1.Config) *v1.InitSpec {
+func NewInitSpec() *v1.InitSpec {
 	return &v1.InitSpec{
-		RunMkinitrd: true,
-		Force:       false,
+		Mkinitrd: true,
+		Force:    false,
+		Features: features.All,
 	}
 }
 
