@@ -43,7 +43,6 @@ require (
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/davidcassany/linuxkit/pkg/metadata v0.0.0-20230124104020-93ac9dd5b8e1 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/diskfs/go-diskfs v1.3.0 // indirect
 	github.com/docker/cli v23.0.4+incompatible // indirect
@@ -88,7 +87,6 @@ require (
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/mudler/entities v0.0.0-20220905203055-68348bae0f49 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
 	github.com/packethost/packngo v0.29.0 // indirect
